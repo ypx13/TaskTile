@@ -9,7 +9,6 @@ A ***Tactile*** Windows 11 utility written in C# and native WinUi3 designed to p
 
 *   **App Grouping ──** Bundle your workflows (e.g., Dev, Gaming, Design) into single, clean taskbar tiles.
 *   **Zero-Lag Architecture ──** Native C# implementation ensures instant execution with zero system performance cost.
-*   **WinUI3 ──** Designed to fit perfectly into modern, desktop setups.
 *   **Customizable ──** Super customizable, down to the last bytes.
 *   **Native ──** Looks super accurate to what Windows 11 looks like and purely made from WinUi3.
 
@@ -24,7 +23,7 @@ Grab the latest compiled executable from the **Releases** tab on the right side 
 Run the utility to initialize your tiles, map your application shortcuts, and customize your layouts.
 
 ### 3. Pin to Taskbar
-Right-click your newly generated TaskTile launcher and select **Pin to Taskbar**. Done! You are set.
+Drag the new TaskTile Launcher from your desktop to your taskbar and your done!
 
 ---
 
