@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Application
+    x:Class="TaskTile.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:TaskTile">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+            </ResourceDictionary.MergedDictionaries>
+            
+            <CornerRadius x:Key="ControlCornerRadius">4</CornerRadius>
+            <CornerRadius x:Key="OverlayCornerRadius">8</CornerRadius>
+            
+            <SolidColorBrush x:Key="WindowCaptionBackground" Color="Transparent"/>
+            <SolidColorBrush x:Key="WindowCaptionBackgroundDisabled" Color="Transparent"/>
+            
+            <Color x:Key="TaskTileCyan">#00D1FF</Color>
+            <SolidColorBrush x:Key="TaskTileCyanBrush" Color="{StaticResource TaskTileCyan}"/>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>
+

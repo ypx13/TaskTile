@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="TaskTile.Pages.HomePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="Transparent">
+
+    <Grid x:Name="RootGrid">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="28,28,28,16" Spacing="4">
+            <TextBlock Text="Home" Style="{ThemeResource TitleLargeTextBlockStyle}"/>
+            <TextBlock x:Name="FunFactText"
+                Text="Welcome Home!"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Style="{ThemeResource BodyTextBlockStyle}"
+                Opacity="0.8"/>
+        </StackPanel>
+
+        <!-- Banner — Custom grid to strictly lock the button to the right -->
+        <Border x:Name="GettingStartedBanner"
+                Grid.Row="1"
+                Margin="28,4,28,24"
+                Background="{ThemeResource SystemFillColorNeutralBackgroundBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="4"
+                Padding="16,12,16,12"
+                Visibility="Visible">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <FontIcon Grid.Column="0" Glyph="&#xE946;" FontSize="16" Margin="0,0,12,0" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                <TextBlock Grid.Column="1" VerticalAlignment="Center" TextWrapping="WrapWholeWords">
+                    <Run FontWeight="SemiBold" Text="Fun Fact! "/>
+                    <Run x:Name="BannerMessageRun" Text="..."/>
+                </TextBlock>
+                <Button x:Name="DismissFlyoutButton"
+                        Grid.Column="2"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Width="30" Height="30"
+                        Padding="0"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        ToolTipService.ToolTip="Dismiss">
+                    <FontIcon Glyph="&#xE711;" FontSize="12"/>
+                    <Button.Flyout>
+                        <Flyout x:Name="DismissFlyout" Placement="Bottom">
+                            <StackPanel Spacing="12" Width="220">
+                                <Grid>
+                                    <TextBlock Text="Dismiss tips?" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    <Button Background="Transparent" BorderThickness="0" Width="28" Height="28" Padding="0" HorizontalAlignment="Right" Click="CloseFlyout_Click">
+                                        <FontIcon Glyph="&#xE711;" FontSize="10"/>
+                                    </Button>
+                                </Grid>
+                                <TextBlock Text="Do you want to stop seeing these helpful tips?" 
+                                           TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Margin="0,-4,0,0"/>
+                                <StackPanel Spacing="8" Margin="0,4,0,0">
+                                    <Button Content="Forever" HorizontalAlignment="Stretch" Click="DismissForever_Click"/>
+                                    <Button Content="For today" HorizontalAlignment="Stretch" Click="DismissToday_Click"/>
+                                    <Button Content="Only this time" HorizontalAlignment="Stretch" Click="DismissOnce_Click"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- Bento Grid -->
+        <Grid Grid.Row="2" Margin="28,0,28,28" ColumnSpacing="16" RowSpacing="16" VerticalAlignment="Stretch">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="1.2*"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Total Groups (Primary Feature) — clickable, navigates to Groups -->
+            <Border x:Name="GroupsCard"
+                    Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
+                    Background="{ThemeResource LayerFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="24"
+                    
+                    PointerEntered="Card_PointerEntered"
+                    PointerExited="Card_PointerExited"
+                    Tapped="GroupsCard_Tapped">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="8">
+                    <FontIcon x:Name="GroupsIcon" Glyph="&#xF168;" FontSize="48"
+                              FontFamily="Segoe Fluent Icons"
+                              Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                              HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="TotalGroupsText" Text="0"
+                               Style="{ThemeResource DisplayTextBlockStyle}"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="TOTAL GROUPS"
+                               Style="{ThemeResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Grouped Apps (Secondary) — clickable, shows app list dialog -->
+            <Border x:Name="AppsCard"
+                    Grid.Row="0" Grid.Column="1"
+                    Background="{ThemeResource LayerFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="16"
+                    
+                    PointerEntered="Card_PointerEntered"
+                    PointerExited="Card_PointerExited"
+                    Tapped="AppsCard_Tapped">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="4">
+                    <FontIcon x:Name="AppsIcon" Glyph="&#xE71D;" FontSize="24"
+                              FontFamily="Segoe Fluent Icons"
+                              Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                              HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="TotalAppsText" Text="0"
+                               Style="{ThemeResource TitleTextBlockStyle}"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="GROUPED APPS"
+                               Style="{ThemeResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Pinned Groups (Tertiary) — clickable, navigates to Groups -->
+            <Border x:Name="PinnedCard"
+                    Grid.Row="1" Grid.Column="1"
+                    Background="{ThemeResource LayerFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="16"
+                    
+                    PointerEntered="Card_PointerEntered"
+                    PointerExited="Card_PointerExited"
+                    Tapped="GroupsCard_Tapped">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="4">
+                    <FontIcon x:Name="PinnedIcon" Glyph="&#xE840;" FontSize="24"
+                              FontFamily="Segoe Fluent Icons"
+                              Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                              HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="PinnedGroupsText" Text="0"
+                               Style="{ThemeResource TitleTextBlockStyle}"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="PINNED GROUPS"
+                               Style="{ThemeResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</Page>

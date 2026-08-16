@@ -1,0 +1,151 @@
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using System.Threading;
+
+namespace TaskTile;
+
+public partial class App : Application
+{
+    public static MainWindow? MainWindowInstance { get; set; }
+
+    // Single-instance mutex
+    static Mutex? _mutex;
+
+    public App()
+    {
+        this.InitializeComponent();
+        this.UnhandledException += App_UnhandledException;
+    }
+
+    private void App_UnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
+    {
+        System.IO.File.WriteAllText(
+            System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.Desktop), "tasktile_crash.txt"),
+            e.Exception.ToString());
+    }
+
+    protected override void OnLaunched(LaunchActivatedEventArgs args)
+    {
+        // ── Parse --group FIRST — popups bypass everything ─────────────────
+        string[] cmdArgs = Environment.GetCommandLineArgs();
+        Guid? launchGroupId = null;
+        for (int i = 1; i < cmdArgs.Length; i++)
+        {
+            if (cmdArgs[i] == "--group" && i + 1 < cmdArgs.Length && Guid.TryParse(cmdArgs[i + 1], out var g1))
+            { launchGroupId = g1; break; }
+            if (cmdArgs[i].StartsWith("--group") && cmdArgs[i].Length > 7)
+            {
+                var potentialGuid = cmdArgs[i].Substring(7).TrimStart(' ', '=');
+                if (Guid.TryParse(potentialGuid, out var g2)) { launchGroupId = g2; break; }
+            }
+        }
+
+        if (launchGroupId.HasValue)
+        {
+            // Ensure only one popup per group exists. If one is already open, 
+            // the double-click will steal focus, closing the old one gracefully. We just exit.
+            _mutex = new Mutex(true, $"TaskTile_Popup_{launchGroupId.Value}", out bool isNewPopup);
+            if (!isNewPopup)
+            {
+                Environment.Exit(0);
+                return;
+            }
+
+            // Pure popup — no installer, no service init
+            // PopupWindow manages its own delayed Activate() to prevent the WinUI 3 black frame
+            var popup = new TaskTile.Popups.PopupWindow(launchGroupId.Value);
+            return;
+        }
+
+        // ── Single-instance guard (main window only) ───────────────────────
+        _mutex = new Mutex(true, "TaskTile_SingleInstance_Mutex", out bool isNew);
+        if (!isNew)
+        {
+            // Another Settings window is running. Do NOT kill popups!
+            // Just find the main window by title and bring it to the front.
+            IntPtr hwnd = FindWindow(null, "TaskTile ALPHA");
+            if (hwnd != IntPtr.Zero)
+            {
+                ShowWindow(hwnd, 9); // SW_RESTORE
+                SetForegroundWindow(hwnd);
+            }
+            Environment.Exit(0);
+            return;
+        }
+
+        TaskTile.Services.SettingsService.Load();
+        TaskTile.Services.TrayIconService.Initialize();
+
+        // ── First-run: pin to Start Menu ──────────────────────────────────
+        var s = TaskTile.Services.SettingsService.Current;
+        if (!s.FirstRunComplete && s.PinToStart)
+        {
+            PinToStartMenu();
+            s.FirstRunComplete = true;
+            TaskTile.Services.SettingsService.Save();
+        }
+
+        // ── Installer bypass: Shift key OR DisableWizard setting ───────────
+        bool shiftHeld = (GetKeyState(0x10) & 0x8000) != 0;
+        bool skipWizard = shiftHeld || s.DisableWizard;
+
+        if (skipWizard)
+        {
+            var mw = new MainWindow();
+            MainWindowInstance = mw;
+            mw.Activate();
+        }
+        else
+        {
+            DemoInstallerWindow installer = new DemoInstallerWindow();
+            installer.Activate();
+        }
+    }
+
+    // ── First-run: create a Start Menu shortcut ───────────────────────────
+    static void PinToStartMenu()
+    {
+        try
+        {
+            var exePath   = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName;
+            if (string.IsNullOrEmpty(exePath)) return;
+
+            var startMenu = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.Programs), "TaskTile");
+            System.IO.Directory.CreateDirectory(startMenu);
+
+            var lnkPath = System.IO.Path.Combine(startMenu, "TaskTile.lnk");
+            if (System.IO.File.Exists(lnkPath)) return; // already pinned
+
+            // Use PowerShell WScript.Shell to create the shortcut (no COM reference needed)
+            var psScript = $@"
+$ws = New-Object -ComObject WScript.Shell
+$s  = $ws.CreateShortcut('{lnkPath.Replace("'", "''")}')
+$s.TargetPath   = '{exePath.Replace("'", "''")}'
+$s.Description  = 'TaskTile group launcher'
+$s.Save()";
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName               = "powershell.exe",
+                Arguments              = $"-NoProfile -NonInteractive -Command \"{psScript.Replace("\"", "\\\"")}\"",
+                UseShellExecute        = false,
+                CreateNoWindow         = true,
+            });
+        }
+        catch { }
+    }
+
+    // P/Invoke for Shift key check (no extra dependency needed)
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    static extern short GetKeyState(int nVirtKey);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Auto)]
+    static extern IntPtr FindWindow(string? lpClassName, string lpWindowName);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+}
+
