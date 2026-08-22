@@ -1,6 +1,8 @@
 ﻿<div align="center">
 
-# 🪟 TaskTile
+<img src="Assets/newicon.png" alt="TaskTile Icon" width="128" height="128" />
+
+# TaskTile
 
 **A tactile, native Windows 11 taskbar group launcher built with C# and WinUI 3.**
 
@@ -9,7 +11,7 @@
 [![UI](https://img.shields.io/badge/UI-WinUI%203-005FB8?style=flat&logo=fluentui&logoColor=white)](https://github.com/ypx13/TaskTile)
 [![License](https://img.shields.io/badge/License-Proprietary%20(Pre--v1.0)-red.svg?style=flat)](LICENSE)
 
-[📦 Download Latest Release](https://github.com/ypx13/TaskTile/releases) • [✨ Features](#-features) • [🚀 Quick Start](#-quick-start) • [🛠️ Build From Source](#%EF%B8%8F-building-from-source) • [📄 License](#-license--terms)
+[📦 Download Latest Release](https://github.com/ypx13/TaskTile/releases) • [✨ Features](#-features) • [🚀 Quick Start](#-quick-start) • [📄 License](#-license--terms)
 
 </div>
 
@@ -49,33 +51,12 @@
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Start (Portable — No Installation Needed)
 
 1. **Download**: Grab `TaskTile.zip` from the [Releases](https://github.com/ypx13/TaskTile/releases) page.
-2. **Extract**: Unzip the folder anywhere on your PC (fully portable, no installation needed).
+2. **Extract**: Unzip the folder anywhere on your PC (**100% portable**, no installer or setup required).
 3. **Launch**: Run `TaskTile.exe` to create your first group.
 4. **Pin to Taskbar**: Click **Desktop Shortcut** on any group card and pin the generated shortcut to your Windows Taskbar.
-
----
-
-## 🛠️ Building from Source
-
-### Prerequisites
-- [Visual Studio 2022](https://visualstudio.microsoft.com/) (17.8+) with **.NET Desktop Development** and **Windows App SDK** workloads, or [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0).
-- Windows 11 (Build 22621+ recommended).
-
-### Build & Run
-```powershell
-# Clone the repository
-git clone https://github.com/ypx13/TaskTile.git
-cd TaskTile
-
-# Build Debug
-dotnet build -c Debug
-
-# Publish Standalone Release
-dotnet publish -c Release -r win-x64 --self-contained true
-```
 
 ---
 
