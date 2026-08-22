@@ -1,11 +1,23 @@
-﻿# TaskTile Non-Commercial Community License
+﻿# TaskTile Pre-Release License & Community Terms
 
 Copyright (c) 2026 ypx13. All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to inspect,
-run, modify, merge, and create derived versions (e.g., forks or community editions),
-subject to the following conditions:
+==============================================================================
+SECTION 1: CURRENT STATUS (PRE-VERSION 1.0 — PROPRIETARY & CLOSED SOURCE)
+==============================================================================
+All pre-v1.0 source code, development builds, and beta releases are PROPRIETARY
+and ALL RIGHTS RESERVED. 
+
+During this pre-release phase:
+- You may NOT copy, modify, distribute, publish, or sublicense the source code.
+- You may NOT create forks or derived works.
+- Source code is made available strictly for evaluation and personal testing.
+
+==============================================================================
+SECTION 2: VERSION 1.0 STABLE & BEYOND (NON-COMMERCIAL COMMUNITY LICENSE)
+==============================================================================
+Upon the official release of Version 1.0 Stable, the Software will transition
+to the following Community Terms:
 
 1. ATTRIBUTION (CREDIT)
    - The original author ("ypx13") and the original project ("TaskTile") must be
@@ -21,11 +33,13 @@ subject to the following conditions:
      software without explicit prior written permission from the original author.
    - The Software and all derived distributions must remain 100% free and open to the community.
 
-3. PRE-RELEASE & VERSIONING
-   - These community fork and modification permissions officially apply to Version 1.0 Stable
-     and subsequent releases. Pre-v1.0 development snapshots are provided for evaluation
-     and preview purposes.
+3. FORKS & DERIVED WORKS
+   - Starting from Version 1.0 Stable, community members are welcome to fork and improve
+     TaskTile, provided all terms in Section 2 are strictly adhered to.
 
+==============================================================================
+DISCLAIMER
+==============================================================================
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
