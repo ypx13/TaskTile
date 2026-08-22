@@ -4,14 +4,14 @@
 
 # TaskTile
 
-**A tactile, native Windows 11 taskbar group launcher built with C# and WinUI 3.**
+**A truly *tactile* Windows 11 taskbar utility — lightweight, snappy, and click-perfect.**
 
 [![Platform](https://img.shields.io/badge/Platform-Windows%2011-0078D4?style=flat&logo=windows11&logoColor=white)](https://github.com/ypx13/TaskTile)
 [![Framework](https://img.shields.io/badge/Framework-.NET%208%20%7C%20WinAppSDK%201.6-512BD4?style=flat&logo=dotnet&logoColor=white)](https://github.com/ypx13/TaskTile)
 [![UI](https://img.shields.io/badge/UI-WinUI%203-005FB8?style=flat&logo=fluentui&logoColor=white)](https://github.com/ypx13/TaskTile)
-[![License](https://img.shields.io/badge/License-Proprietary%20(Pre--v1.0)-red.svg?style=flat)](LICENSE)
+[![License](https://img.shields.io/badge/License-Study%20%26%20Preview%20(Pre--v1.0)-orange.svg?style=flat)](LICENSE)
 
-[📦 Download Latest Release](https://github.com/ypx13/TaskTile/releases) • [✨ Features](#-features) • [🚀 Quick Start](#-quick-start) • [📄 License](#-license--terms)
+[📦 Download Latest Release](https://github.com/ypx13/TaskTile/releases) • [✨ Features](#-features) • [🚀 Quick Start](#-quick-start-portable--no-installation-needed) • [📄 License](#-license--terms)
 
 </div>
 
@@ -19,7 +19,9 @@
 
 ## ✦ Overview
 
-**TaskTile** allows you to organize your desktop workflow by bundling apps, files, and dynamic folders into clean, native taskbar popups. Designed from the ground up with **WinUI 3** and the **Windows App SDK**, TaskTile looks and feels like an integral part of Windows 11.
+Meet **TaskTile** — yes, the name is a pun on *tactile*, because every interaction feels responsive, snappy, and click-perfect with zero system overhead.
+
+TaskTile lets you bundle your apps, files, and dynamic folders into clean, organized taskbar popup launchers. Designed natively with **WinUI 3** and the **Windows App SDK**, it feels like a built-in piece of Windows 11 without any of the bloat.
 
 ---
 
@@ -51,7 +53,7 @@
 
 ---
 
-## 🚀 Quick Start (Portable — No Installation Needed, for now)
+## 🚀 Quick Start (Portable — No Installation Needed)
 
 1. **Download**: Grab `TaskTile.zip` from the [Releases](https://github.com/ypx13/TaskTile/releases) page.
 2. **Extract**: Unzip the folder anywhere on your PC (**100% portable**, no installer or setup required).
@@ -64,8 +66,8 @@
 
 See [LICENSE](LICENSE) for full details.
 
-* **Current Status (Pre-v1.0)**: **Proprietary & All Rights Reserved**. Source code is provided for preview/evaluation only. Copying, redistributing, or forking is prohibited during this phase.
-* **Starting from Version 1.0 Stable**: Will open to the community for free personal use and forks/enhancements, under strict **Attribution (Credit to ypx13)** and **Non-Commercial** terms.
+* **Current Status (Pre-v1.0)**: **Source-Available (Study & Preview Only)**. You are welcome to view, read, and study the code for learning purposes. Forking, copying, redistributing, or creating derivative builds is not permitted during this pre-release phase.
+* **Starting from Version 1.0 Stable**: Will open for community forks and enhancements (e.g. *TaskTile+*), under strict **Attribution (Credit to ypx13)** and **Non-Commercial** terms.
 
 <p align="center">
   <sub>Built with 💖 using WinUI 3 & .NET 8 • TaskTile by ypx13</sub>

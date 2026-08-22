@@ -1,23 +1,22 @@
-﻿# TaskTile Pre-Release License & Community Terms
+﻿# TaskTile Pre-Release License & Terms
 
 Copyright (c) 2026 ypx13. All rights reserved.
 
 ==============================================================================
-SECTION 1: CURRENT STATUS (PRE-VERSION 1.0 — PROPRIETARY & CLOSED SOURCE)
+SECTION 1: CURRENT STATUS (PRE-VERSION 1.0 — STUDY & PREVIEW ONLY)
 ==============================================================================
-All pre-v1.0 source code, development builds, and beta releases are PROPRIETARY
-and ALL RIGHTS RESERVED. 
+All pre-v1.0 source code, development builds, and beta releases are PROPRIETARY.
 
 During this pre-release phase:
-- You may NOT copy, modify, distribute, publish, or sublicense the source code.
-- You may NOT create forks or derived works.
-- Source code is made available strictly for evaluation and personal testing.
+- PERMITTED: You are welcome to view, read, inspect, and study the source code for educational purposes.
+- RESTRICTED: You may NOT fork, copy, modify, distribute, publish, or sublicense the source code.
+- RESTRICTED: You may NOT create derived works, clones, or community builds until the official Version 1.0 Stable release.
 
 ==============================================================================
 SECTION 2: VERSION 1.0 STABLE & BEYOND (NON-COMMERCIAL COMMUNITY LICENSE)
 ==============================================================================
-Upon the official release of Version 1.0 Stable, the Software will transition
-to the following Community Terms:
+Upon the official release of Version 1.0 Stable, the Software will open to the community
+under the following terms:
 
 1. ATTRIBUTION (CREDIT)
    - The original author ("ypx13") and the original project ("TaskTile") must be
@@ -33,9 +32,9 @@ to the following Community Terms:
      software without explicit prior written permission from the original author.
    - The Software and all derived distributions must remain 100% free and open to the community.
 
-3. FORKS & DERIVED WORKS
-   - Starting from Version 1.0 Stable, community members are welcome to fork and improve
-     TaskTile, provided all terms in Section 2 are strictly adhered to.
+3. FORKS & COMMUNITY EDITIONS
+   - Starting from Version 1.0 Stable, community members are welcome to fork, enhance,
+     and build upon TaskTile, provided all attribution and non-commercial terms are strictly honored.
 
 ==============================================================================
 DISCLAIMER
