@@ -35,30 +35,30 @@ TaskTile might be the **first 100% native C# and WinUI 3 app group launcher/task
 ## features i think you might like 🫣
 
 ### 🗂️ app groups (obv), file groups & dynamic folders
-- **app groups**: Group your messy apps (*Dev, Gaming, Media*) into single taskbar icon you can click to launch everything from one menu, sort of like a mini start-menu.
-- **file groups**: Pin sets of documents, design assets, or portable tools together that launch with their default apps.
-- **📁 dynamic folders (live sync)**: Point to any local directory—TaskTile will automatically reads its contents and extracts native Windows icons in real-time. Drop a file in the folder, and it's immediately in your popup launching with it's default app!
+- **app groups**: group your messy apps (*Dev, Gaming, Media*) into single taskbar icon you can click to launch everything from one menu, sort of like a mini start-menu.
+- **file groups**: pin sets of documents, design assets, or portable tools together that launch with their default apps.
+- **📁 dynamic folders (live sync)**: point to any local directory—TaskTile will automatically reads its contents and extracts native Windows icons in real-time. Drop a file in the folder, and it's immediately in your popup launching with it's default app!
 
 ### 5 layout Styles, more to come 👀
-1. **Classic Grid**: The classic and original style here since the first version, it's styled to look Windows 11 Start Menu experience, but smol. Supports multi-page paging, pagination indicator dots, and smooth mouse wheel page switching.
-2. **Compact (Row / Column)**: Ultra-slim 30px dock that can sit horizontally or vertically. Perfect for minimalist desktop setups.
-3. **Modern Grid**: Floating card layout with customizable column counts (1 to 10 columns) and responsive spacing, it has no labels and more rounded hover styles to really push the clean aesthetic. 
-4. **List**: Clean vertical list with **built-in continuous marquee** and **hover auto-scrolling** for long application and file names.
-5. **Dialog-ish**: Framed card layout featuring a centered footer title bar and compact action buttons, sort of like a Windows Dialog.
+1. **classic Grid**: the classic and original style here since the first version, it's styled to look Windows 11 Start Menu experience, but smol. Supports multi-page paging, pagination indicator dots, and smooth mouse wheel page switching.
+2. **compact (Row / Column)**: ultra-slim 30px dock that can sit horizontally or vertically. Perfect for minimalist desktop setups.
+3. **modern Grid**: floating card layout with customizable column counts (1 to 10 columns) and responsive spacing, it has no labels and more rounded hover styles to really push the clean aesthetic. 
+4. **list**: clean vertical list with **built-in continuous marquee** and **hover auto-scrolling** for long application and file names.
+5. **dialog-ish**: framed card layout featuring a centered footer title bar and compact action buttons, sort of like a Windows Dialog.
 
 ### Windows 11 design & materials 🫟
-- **native backdrops**: Choose between **Mica**, **Mica Alt**, **Desktop Acrylic**, or **Solid** backgrounds for each individual group.
-- **live taskbar auto-hide tracking**: If your Windows taskbar is set to auto-hide, TaskTile dynamically syncs its position with the sliding taskbar in real-time, This one took a heck of a long time to figure out 🙄.
-- **focus mode**: Optional background dimming and desktop blur overlay for a distraction-free launch experience.
+- **native backdrops**: choose between **Mica**, **Mica Alt**, **Desktop Acrylic**, or **Solid** backgrounds for each individual group.
+- **live taskbar auto-hide tracking**: if your Windows taskbar is set to auto-hide, TaskTile dynamically syncs its position with the sliding taskbar in real-time, This one took a heck of a long time to figure out 🙄.
+- **focus mode**: optional background dimming and desktop blur overlay for a distraction-free launch experience.
 
 ---
 
 ## quick start
 
-1. **download**: Grab `TaskTile.zip` from the [releases](https://github.com/ypx13/TaskTile/releases) page.
-2. **extract**: Unzip the folder anywhere you want. TaskTile is currently portable, but there will be an installer soon.
-3. **create a group**: Launch `TaskTile.exe` and customize your first app or file group.
-4. **pin to taskbar**: Click **Desktop Shortcut** on your card and pin the generated shortcut directly to your taskbar.
+1. **download**: grab `TaskTile.zip` from the [releases](https://github.com/ypx13/TaskTile/releases) page.
+2. **extract**: unzip the folder anywhere you want. TaskTile is currently portable, but there will be an installer soon.
+3. **create a group**: launch `TaskTile.exe` and customize your first app or file group.
+4. **pin to taskbar**: click **Desktop Shortcut** on your card and pin the generated shortcut directly to your taskbar.
 
 ---
 
@@ -68,7 +68,7 @@ TaskTile might be the **first 100% native C# and WinUI 3 app group launcher/task
 
 TaskTile is being built by a **solo developer** (`ypx13`) who is learning advanced WinUI 3, XAML, and Windows API internals as he builds. 
 
-Every pixel, custom backdrop shader, icon extraction pipeline, and animation is being hand-crafted from scratch. If updates take a bit of time, it's because each release is being refined and tested to ensure it feels like real Windows 11 software. Feedback, testing, and issue reports are always greatly appreciated! 💖
+icon extraction pipelines and animation, style programming and auto-hide tracking, literally everything is being made from scratch. If updates take a bit of time, it's because each release is being refined and tested to ensure it feels like real Windows 11 software. Feedback, testing, and issue reports are always greatly appreciated! 💖
 
 ---
 
