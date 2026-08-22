@@ -1,0 +1,1152 @@
+using System;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.IO;
+using System.Text.Json;
+using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.WindowsRuntime;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
+using Microsoft.UI.Xaml.Media.Animation;
+using WinRT.Interop;
+using Microsoft.UI;
+using Microsoft.UI.Windowing;
+using Windows.Graphics;
+using Microsoft.UI.Composition.SystemBackdrops;
+using Microsoft.UI.Xaml.Input;
+
+namespace TaskTile.Popups;
+
+// ─── ViewModel ────────────────────────────────────────────────────────────────
+public class AppEntryViewModel : System.ComponentModel.INotifyPropertyChanged
+{
+    private ImageSource? _iconImage;
+    public string        Name              { get; set; } = string.Empty;
+    public string        ExePath           { get; set; } = string.Empty;
+    public ImageSource?  IconImage
+    {
+        get => _iconImage;
+        set
+        {
+            if (_iconImage != value)
+            {
+                _iconImage = value;
+                PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(IconImage)));
+            }
+        }
+    }
+    public Visibility    NormalVisibility  { get; set; } = Visibility.Visible;
+    public Visibility    MonotoneVisibility{ get; set; } = Visibility.Collapsed;
+    public Visibility    LabelVisibility   { get; set; } = Visibility.Visible;
+    public Brush         UwpBackground     { get; set; } = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
+    public CornerRadius  TileCornerRadius  { get; set; } = new CornerRadius(10);
+    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+}
+
+// Start Menu-style acrylic (matches AcrylicBackgroundFillColorBaseBrush exactly)
+public class StartMenuAcrylicBackdrop : Microsoft.UI.Xaml.Media.SystemBackdrop
+{
+    DesktopAcrylicController? _ctrl; SystemBackdropConfiguration? _cfg;
+    bool _isDark;
+    public StartMenuAcrylicBackdrop(bool isDark = true) { _isDark = isDark; }
+
+    protected override void OnTargetConnected(Microsoft.UI.Composition.ICompositionSupportsSystemBackdrop t, XamlRoot r)
+    {
+        base.OnTargetConnected(t, r);
+        // Light: SystemChromeMediumColor = ~#F2F2F2, Dark: ~#1F1F1F
+        var tint = _isDark
+            ? Windows.UI.Color.FromArgb(255, 31,  31,  31)   // dark chrome medium
+            : Windows.UI.Color.FromArgb(255, 242, 242, 242);  // light chrome medium
+        _ctrl = new DesktopAcrylicController
+        {
+            TintColor            = tint,
+            TintOpacity          = 0.50f,
+            LuminosityOpacity    = 0.96f,
+            FallbackColor        = tint,
+        };
+        _cfg = new SystemBackdropConfiguration { IsInputActive = true };
+        _ctrl.AddSystemBackdropTarget(t); _ctrl.SetSystemBackdropConfiguration(_cfg);
+    }
+    protected override void OnTargetDisconnected(Microsoft.UI.Composition.ICompositionSupportsSystemBackdrop t)
+    { base.OnTargetDisconnected(t); _ctrl?.RemoveSystemBackdropTarget(t); _ctrl?.Dispose(); _ctrl = null; }
+}
+
+// ─── Backdrops kept for Mica and Dim-overlay ──────────────────────────────────
+public class MicaBackdropAlways : Microsoft.UI.Xaml.Media.SystemBackdrop
+{
+    MicaController? _ctrl; SystemBackdropConfiguration? _cfg;
+    bool _isDark;
+    
+    public MicaBackdropAlways(bool isDark) { _isDark = isDark; }
+    
+    protected override void OnTargetConnected(Microsoft.UI.Composition.ICompositionSupportsSystemBackdrop t, XamlRoot r)
+    {
+        base.OnTargetConnected(t, r);
+        _ctrl = new MicaController { Kind = MicaKind.Base };
+        _cfg = new SystemBackdropConfiguration 
+        { 
+            IsInputActive = true,
+            Theme = _isDark ? SystemBackdropTheme.Dark : SystemBackdropTheme.Light
+        };
+        _ctrl.AddSystemBackdropTarget(t); _ctrl.SetSystemBackdropConfiguration(_cfg);
+    }
+    protected override void OnTargetDisconnected(Microsoft.UI.Composition.ICompositionSupportsSystemBackdrop t)
+    { base.OnTargetDisconnected(t); _ctrl?.RemoveSystemBackdropTarget(t); _ctrl?.Dispose(); _ctrl = null; }
+}
+public class DimBlurBackdrop : Microsoft.UI.Xaml.Media.SystemBackdrop
+{
+    DesktopAcrylicController? _ctrl; SystemBackdropConfiguration? _cfg;
+    protected override void OnTargetConnected(Microsoft.UI.Composition.ICompositionSupportsSystemBackdrop t, XamlRoot r)
+    {
+        base.OnTargetConnected(t, r);
+        _ctrl = new DesktopAcrylicController { TintColor = Windows.UI.Color.FromArgb(255, 0, 0, 0), TintOpacity = 0.2f, LuminosityOpacity = 0.1f, FallbackColor = Windows.UI.Color.FromArgb(60, 0, 0, 0) };
+        _cfg = new SystemBackdropConfiguration { IsInputActive = true };
+        _ctrl.AddSystemBackdropTarget(t); _ctrl.SetSystemBackdropConfiguration(_cfg);
+    }
+    protected override void OnTargetDisconnected(Microsoft.UI.Composition.ICompositionSupportsSystemBackdrop t)
+    { base.OnTargetDisconnected(t); _ctrl?.RemoveSystemBackdropTarget(t); _ctrl?.Dispose(); _ctrl = null; }
+}
+
+// ─── PopupWindow ──────────────────────────────────────────────────────────────
+public sealed partial class PopupWindow : Window
+{
+    // Win32
+    [DllImport("user32.dll")] [return:MarshalAs(UnmanagedType.Bool)]
+    static extern bool GetCursorPos(out global::Windows.Graphics.PointInt32 p);
+    [DllImport("user32.dll")]
+    static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int w, int ht, uint f);
+    [DllImport("user32.dll")]
+    static extern int GetSystemMetrics(int nIndex);
+    [DllImport("user32.dll")]
+    static extern uint GetDpiForWindow(IntPtr h);
+    [DllImport("user32.dll")]
+    static extern int GetWindowLong(IntPtr h, int i);
+    [DllImport("user32.dll")]
+    static extern int SetWindowLong(IntPtr h, int i, int v);
+    [DllImport("dwmapi.dll")]
+    static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+    [DllImport("Shell32.dll", CharSet=CharSet.Auto)]
+    static extern IntPtr ExtractAssociatedIcon(IntPtr hInst, string lpIconPath, out ushort lpiIcon);
+    [DllImport("user32.dll")]
+    static extern bool DestroyIcon(IntPtr h);
+    [DllImport("gdi32.dll")]
+    static extern IntPtr CreateRoundRectRgn(int x1, int y1, int x2, int y2, int cx, int cy);
+    [DllImport("user32.dll")]
+    static extern int SetWindowRgn(IntPtr hWnd, IntPtr hRgn, bool bRedraw);
+
+    [StructLayout(LayoutKind.Sequential)]
+    struct APPBARDATA
+    {
+        public int cbSize;
+        public IntPtr hWnd;
+        public int uCallbackMessage;
+        public int uEdge;
+        public Windows.Graphics.RectInt32 rc;
+        public IntPtr lParam;
+    }
+    [DllImport("shell32.dll")]
+    static extern nint SHAppBarMessage(int dwMessage, ref APPBARDATA pData);
+    const int ABM_GETSTATE = 0x00000004;
+    const int ABS_AUTOHIDE = 0x00000001;
+
+    const int    GWL_STYLE       = -16;
+    const int    GWL_EXSTYLE     = -20;
+    const int    WS_EX_TOOLWINDOW= 0x00000080;
+    const int    WS_EX_APPWINDOW = 0x00040000;
+    const int    WS_CAPTION      = 0x00C00000;
+    const int    WS_THICKFRAME   = 0x00040000;
+    const int    WS_SYSMENU      = 0x00080000;
+    static readonly IntPtr HWND_TOPMOST = new(-1);
+    const uint   SWP_NOMOVE      = 0x0002;
+    const uint   SWP_NOSIZE      = 0x0001;
+    const uint   SWP_NOZORDER    = 0x0004;
+    const uint   SWP_NOACTIVATE  = 0x0010;
+
+    const int    SM_XVIRTUALSCREEN  = 76;
+    const int    SM_YVIRTUALSCREEN  = 77;
+    const int    SM_CXVIRTUALSCREEN = 78;
+    const int    SM_CYVIRTUALSCREEN = 79;
+    
+    const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
+    const int DWMWCP_ROUND = 2;
+    const int DWMWA_CLOAK = 14;
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RECT { public int Left, Top, Right, Bottom; }
+
+    [DllImport("user32.dll")]
+    static extern bool GetWindowRect(IntPtr hwnd, out RECT lpRect);
+
+    [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+    static extern IntPtr FindWindow(string? lpClassName, string? lpWindowName);
+
+    RECT _lastTrayRect;
+
+    DispatcherTimer _taskbarTracker = null!;
+
+    // Classic paging
+    List<List<AppEntryViewModel>> _classicPages = new();
+    int             _classicPage = 0;
+
+    Guid _groupId;
+    bool _activated;
+    bool _makeMainFocus;
+    private bool _isDesktopMode;
+    private int _physW;
+    private int _physH_original;
+    // max visible apps per classic page
+    const int PAGE_SIZE = 6;
+
+    public PopupWindow(Guid groupId)
+    {
+        _groupId = groupId;
+        ExtendsContentIntoTitleBar = true;
+        AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Collapsed;
+
+        // Disable resize, remove titlebar and border, hide from taskbar
+        if (AppWindow.Presenter is OverlappedPresenter op)
+        {
+            op.IsResizable   = false;
+            op.IsMaximizable = false;
+            op.IsMinimizable = false;
+            op.SetBorderAndTitleBar(false, false);
+            op.IsAlwaysOnTop = true;
+        }
+        AppWindow.IsShownInSwitchers = false;
+        
+        // Set Window Icon
+        try
+        {
+            var iconPath = System.IO.Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "Assets", "newicon.png");
+            if (System.IO.File.Exists(iconPath))
+            {
+                var bmp = new System.Drawing.Bitmap(iconPath);
+                var iconId = Microsoft.UI.Win32Interop.GetIconIdFromIcon(bmp.GetHicon());
+                AppWindow.SetIcon(iconId);
+            }
+        } catch { }
+
+        this.InitializeComponent();
+
+        // Cloak the window BEFORE Activation or sizing to mask the compositor initialization
+        var h = WindowNative.GetWindowHandle(this);
+        int cloak = 1;
+        DwmSetWindowAttribute(h, DWMWA_CLOAK, ref cloak, sizeof(int));
+        
+        LoadAndPosition(); // Call this BEFORE activating, so _dimWin doesn't steal focus later
+
+        ApplyWindowFlags();
+        this.Activated += OnActivated;
+        this.Activate(); // Shows window (cloaked), stealing focus back correctly!
+
+        // Wait 65ms for the SystemBackdrop (Acrylic/Mica) to paint over the black frame
+        _ = System.Threading.Tasks.Task.Delay(65).ContinueWith(_ =>
+        {
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                int uncloak = 0;
+                DwmSetWindowAttribute(h, DWMWA_CLOAK, ref uncloak, sizeof(int));
+                _popIn.Begin();
+            });
+        });
+    }
+
+    void ApplyWindowFlags()
+    {
+        var h  = WindowNative.GetWindowHandle(this);
+        int policy = DWMWCP_ROUND;
+        DwmSetWindowAttribute(h, DWMWA_WINDOW_CORNER_PREFERENCE, ref policy, sizeof(int));
+    }
+
+    // ─── Icon loading ───────────────────────────────────────────────────────
+    static async System.Threading.Tasks.Task<ImageSource?> LoadIconAsync(string exePath, string? cachedPng)
+    {
+        // Try cached PNG first
+        if (!string.IsNullOrEmpty(cachedPng) && File.Exists(cachedPng))
+            return new BitmapImage(new Uri(cachedPng));
+
+        // Fallback: extract from EXE on thread-pool
+        if (!string.IsNullOrEmpty(exePath) && File.Exists(exePath))
+        {
+            return await System.Threading.Tasks.Task.Run(() =>
+            {
+                try
+                {
+                    ushort idx = 0;
+                    IntPtr hIcon = ExtractAssociatedIcon(IntPtr.Zero, exePath, out idx);
+                    if (hIcon == IntPtr.Zero) return null;
+
+                    using var icon = System.Drawing.Icon.FromHandle(hIcon);
+                    using var bmp  = icon.ToBitmap();
+                    DestroyIcon(hIcon);
+
+                    using var ms = new MemoryStream();
+                    bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+                    ms.Seek(0, SeekOrigin.Begin);
+                    byte[] bytes = ms.ToArray();
+
+                    // Must marshal back to UI thread
+                    return (ImageSource?) null; // return bytes as a flag
+                }
+                catch { return null; }
+            });
+        }
+        return null;
+    }
+
+    // Synchronous icon extraction via System.Drawing (runs on STA thread)
+    static string? ExtractIconSync(string exePath, string? cachedPng)
+    {
+        if (!string.IsNullOrEmpty(cachedPng) && File.Exists(cachedPng))
+            return cachedPng;
+        if (string.IsNullOrEmpty(exePath) || !File.Exists(exePath)) return null;
+        try
+        {
+            var icon = System.Drawing.Icon.ExtractAssociatedIcon(exePath);
+            if (icon == null) return null;
+            using var bmp = icon.ToBitmap();
+            using var ms  = new MemoryStream();
+            bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+            ms.Seek(0, SeekOrigin.Begin);
+            string tmp = Path.Combine(Path.GetTempPath(), $"ti_{Path.GetFileNameWithoutExtension(exePath)}.png");
+            if (!File.Exists(tmp)) File.WriteAllBytes(tmp, ms.ToArray());
+            return tmp;
+        }
+        catch { return null; }
+    }
+
+    // ─── Event Handlers for XAML ─────────────────────────────────────────────
+
+    private void ClassicSV_PointerWheelChanged(object sender, PointerRoutedEventArgs pArgs)
+    {
+        var delta = pArgs.GetCurrentPoint(null).Properties.MouseWheelDelta;
+        if (delta < 0 && _classicPage < _classicPages.Count - 1)
+            GoToPage(_classicPage + 1, +1);
+        else if (delta > 0 && _classicPage > 0)
+            GoToPage(_classicPage - 1, -1);
+        pArgs.Handled = true;
+    }
+
+    // ─── Start Menu hover effect ─────────────────────────────────────────────
+    // Replicates the Win11 Start Menu folder tile: delayed grow + gradient border on enter,
+    // quick shrink + dark flash + fade out on exit.
+    static readonly LinearGradientBrush _elevationBorder = new LinearGradientBrush
+    {
+        StartPoint = new Windows.Foundation.Point(0.5, 0),
+        EndPoint   = new Windows.Foundation.Point(0.5, 1),
+        GradientStops =
+        {
+            new GradientStop { Color = Windows.UI.Color.FromArgb(90, 255, 255, 255), Offset = 0 },
+            new GradientStop { Color = Windows.UI.Color.FromArgb(20, 255, 255, 255), Offset = 1 },
+        }
+    };
+
+    // ─── Load data + position ───────────────────────────────────────────────
+    void LoadAndPosition()
+    {
+        var apps = new ObservableCollection<AppEntryViewModel>();
+        string name="Group"; bool hideName=false, hideAppLabels=false, showCardLabels=false; int popupStyle=0,backdropStyle=0,compactAlign=0,gridCols=3,gridRows=0,themeOverride=0,appIconStyle=0;
+        bool launchAtCenter=false, makeMainFocus=false, overrideLaunchSide=false; int groupLaunchSide=0;
+
+        Brush accentBrush = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
+        if (Application.Current.Resources.TryGetValue("SystemControlHighlightAccentBrush", out var res) && res is Brush ab)
+            accentBrush = ab;
+
+        try
+        {
+            var file = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TaskTile","groups.json");
+            if (File.Exists(file))
+            {
+                using var doc = JsonDocument.Parse(File.ReadAllText(file));
+                foreach (var g in doc.RootElement.EnumerateArray())
+                {
+                    if (Guid.Parse(g.GetProperty("Id").GetString()!) != _groupId) continue;
+                    name = g.GetProperty("Name").GetString()!;
+                    if (g.TryGetProperty("HideName",          out var p)) hideName       = p.GetBoolean();
+                    if (g.TryGetProperty("HideAppLabels",     out p))    hideAppLabels  = p.GetBoolean();
+                    if (g.TryGetProperty("ShowCardLabels",    out p))    showCardLabels = p.GetBoolean();
+                    if (g.TryGetProperty("PopupStyle",         out p))    popupStyle      = p.GetInt32();
+                    if (g.TryGetProperty("BackdropStyle",      out p))    backdropStyle   = p.GetInt32();
+                    if (g.TryGetProperty("CompactAlignment",   out p))    compactAlign    = p.GetInt32();
+                    
+                    // Legacy fallback
+                    if (g.TryGetProperty("MonotoneIcon",       out p) && p.GetBoolean()) appIconStyle = 1;
+
+                    if (g.TryGetProperty("AppIconStyle",       out p))    appIconStyle    = p.GetInt32();
+                    if (g.TryGetProperty("ThemeOverride",      out p))    themeOverride   = p.GetInt32();
+                    if (g.TryGetProperty("GridColumns",        out p))    gridCols        = p.GetInt32();
+                    if (g.TryGetProperty("GridRows",           out p))    gridRows        = p.GetInt32();
+                    if (g.TryGetProperty("LaunchAtCenter",     out p))    launchAtCenter  = p.GetBoolean();
+                    if (g.TryGetProperty("MakeMainFocus",      out p))    makeMainFocus   = p.GetBoolean();
+                    if (g.TryGetProperty("OverrideLaunchSide", out p))    overrideLaunchSide = p.GetBoolean();
+                    if (g.TryGetProperty("GroupLaunchSide",    out p))    groupLaunchSide = p.GetInt32();
+                    if (g.TryGetProperty("IsDesktopMode",      out p))    _isDesktopMode  = p.GetBoolean();
+
+                    bool isDynamicFolder = false;
+                    string dynamicFolderPath = string.Empty;
+                    if (g.TryGetProperty("IsDynamicFolder", out p)) isDynamicFolder = p.GetBoolean();
+                    if (g.TryGetProperty("DynamicFolderPath", out p)) dynamicFolderPath = p.GetString() ?? "";
+
+                    bool monotone = appIconStyle == 1;
+                    bool uwp = appIconStyle == 2;
+
+                    if (isDynamicFolder && !string.IsNullOrEmpty(dynamicFolderPath) && System.IO.Directory.Exists(dynamicFolderPath))
+                    {
+                        var files = System.IO.Directory.GetFiles(dynamicFolderPath);
+                        foreach (var f in files)
+                        {
+                            var info = new System.IO.FileInfo(f);
+                            if ((info.Attributes & System.IO.FileAttributes.Hidden) != 0 || (info.Attributes & System.IO.FileAttributes.System) != 0)
+                                continue;
+                                
+                            var entry = new AppEntryViewModel
+                            {
+                                Name               = System.IO.Path.GetFileName(f),
+                                ExePath            = f,
+                                IconImage          = null,
+                                NormalVisibility   = monotone ? Visibility.Collapsed : Visibility.Visible,
+                                MonotoneVisibility = monotone ? Visibility.Visible   : Visibility.Collapsed,
+                                LabelVisibility    = hideAppLabels ? Visibility.Collapsed : Visibility.Visible,
+                                UwpBackground      = uwp ? accentBrush : new SolidColorBrush(Microsoft.UI.Colors.Transparent),
+                                TileCornerRadius   = uwp ? new CornerRadius(0) : new CornerRadius(10)
+                            };
+                            apps.Add(entry);
+
+                            var dispatcher = this.DispatcherQueue;
+                            _ = System.Threading.Tasks.Task.Run(() =>
+                            {
+                                var extracted = ExtractIconSync(f, "");
+                                if (extracted != null)
+                                {
+                                    dispatcher.TryEnqueue(() => entry.IconImage = new BitmapImage(new Uri(extracted)));
+                                }
+                            });
+                        }
+                    }
+                    else if (g.TryGetProperty("Apps", out var arr))
+                    {
+                        foreach (var a in arr.EnumerateArray())
+                        {
+                            var exe  = a.GetProperty("ExePath").GetString()!;
+                            var icon = a.TryGetProperty("IconPath", out var ic) ? ic.GetString() : "";
+                            var entry = new AppEntryViewModel
+                            {
+                                Name               = a.GetProperty("Name").GetString()!,
+                                ExePath            = exe,
+                                IconImage          = null,
+                                NormalVisibility   = monotone ? Visibility.Collapsed : Visibility.Visible,
+                                MonotoneVisibility = monotone ? Visibility.Visible   : Visibility.Collapsed,
+                                LabelVisibility    = hideAppLabels ? Visibility.Collapsed : Visibility.Visible,
+                                UwpBackground      = uwp ? accentBrush : new SolidColorBrush(Microsoft.UI.Colors.Transparent),
+                                TileCornerRadius   = uwp ? new CornerRadius(0) : new CornerRadius(10)
+                            };
+                            apps.Add(entry);
+
+                            var dispatcher = this.DispatcherQueue;
+                            _ = System.Threading.Tasks.Task.Run(() =>
+                            {
+                                var extracted = ExtractIconSync(exe, icon);
+                                if (extracted != null)
+                                {
+                                    dispatcher.TryEnqueue(() => entry.IconImage = new BitmapImage(new Uri(extracted)));
+                                }
+                            });
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+        catch { }
+
+        // Theme / backdrop
+        var s = TaskTile.Services.SettingsService.Current;
+        
+        var finalLaunchSide = overrideLaunchSide ? (TaskTile.Models.LaunchSide)(groupLaunchSide + 1) : s.LaunchSide;
+        launchAtCenter = (finalLaunchSide == TaskTile.Models.LaunchSide.Center);
+        if (!overrideLaunchSide) makeMainFocus = s.GlobalMakeMainFocus;
+
+        _makeMainFocus = makeMainFocus && launchAtCenter;
+
+        if (s.ApplyGlobalConfigToPopups)
+        {
+            themeOverride = s.Theme;
+            backdropStyle = s.BackdropStyle;
+        }
+
+        if (Content is FrameworkElement fe)
+        {
+            if (themeOverride == 1) fe.RequestedTheme = ElementTheme.Light;
+            else if (themeOverride == 2) fe.RequestedTheme = ElementTheme.Dark;
+            else fe.RequestedTheme = ElementTheme.Default;
+
+            if (s.ApplyGlobalConfigToPopups && s.AmoledMode)
+            {
+                fe.RequestedTheme = ElementTheme.Dark; // force dark for AMOLED
+                if (fe is Panel panel)
+                {
+                    panel.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(255, 0, 0, 0));
+                }
+                backdropStyle = -1; // disable backdrop
+            }
+        }
+        
+        bool popupIsDark = themeOverride != 1; // dark unless light override
+        if (backdropStyle == -1 || backdropStyle == 3)
+        {
+            SystemBackdrop = null;
+            _root.Background = new SolidColorBrush(Microsoft.UI.Colors.Black); // OLED black background
+        }
+        else if (backdropStyle == 1)
+        {
+            SystemBackdrop = new MicaBackdropAlways(popupIsDark);
+        }
+        else if (backdropStyle == 2)
+        {
+            SystemBackdrop = new StartMenuAcrylicBackdrop(popupIsDark);
+        }
+        else
+        {
+            SystemBackdrop = new StartMenuAcrylicBackdrop(popupIsDark);
+        }
+
+        // Title
+        bool noTitle = hideName || popupStyle == 1;
+        _title.Visibility = noTitle ? Visibility.Collapsed : Visibility.Visible;
+        if (!noTitle) _title.Text = name;
+
+        int n = apps.Count;
+        int logW, logH;
+
+        if (popupStyle == 0) // Classic
+        {
+            _classicSV.Visibility  = Visibility.Visible;
+            _compactR.Visibility   = Visibility.Collapsed;
+            _modernSV.Visibility   = Visibility.Collapsed;
+            _listSV.Visibility     = Visibility.Collapsed;
+            _cardContainer.Visibility = Visibility.Collapsed;
+
+            if (gridCols <= 2 && n > 2) gridCols = 3;
+            int requestedCols = gridCols > 0 ? gridCols : 3;
+            int cols = Math.Min(n, requestedCols);
+            if (cols == 0) cols = 1;
+            int rowMax  = gridRows > 0 ? gridRows : 3;
+            int pageSize = cols * rowMax;            // default 3×3 = 9
+
+            // GridView wraps automatically based on width, no need to set Layout.MaximumRowsOrColumns
+
+            // ── Pagination ──────────────────────────────────────────────────
+            _classicPages.Clear();
+            _classicPage = 0;
+
+            if (n <= pageSize)
+            {
+                // Single page — no dots needed
+                _classicR.ItemsSource = apps;
+                _pageDots.Visibility  = Visibility.Collapsed;
+            }
+            else
+            {
+                // Split into groups of pageSize just for pagination logic
+                for (int i = 0; i < n; i += pageSize)
+                    _classicPages.Add(apps.Skip(i).Take(pageSize).ToList());
+
+                _classicR.ItemsSource = apps;
+
+                UpdateClassicPagingUI();
+                _pageDots.Visibility = Visibility.Visible;
+
+                // Size the window for one page of content
+                n = Math.Min(pageSize, _classicPages[0].Count);
+            }
+
+            int rows = (int)Math.Ceiling((double)n / requestedCols);
+            if (rows == 0) rows = 1;
+
+            int cell = 84, sp = 0;
+            int gW = cols * cell + (cols - 1) * sp;
+            int gH = rows * cell + (rows - 1) * sp;
+
+            _classicSV.Height = gH;
+            _classicSV.MaxHeight = double.PositiveInfinity;
+
+            _content.Padding = new Thickness(0);
+            logW = 24 + gW + 24; // left padding + grid + right padding
+            logH = (noTitle ? 0 : 38) + gH + 24; // title space + grid + top/bottom padding
+        }
+        else if (popupStyle == 1) // Compact
+        {
+            _classicSV.Visibility = Visibility.Collapsed;
+            _modernSV.Visibility  = Visibility.Collapsed;
+            _listSV.Visibility    = Visibility.Collapsed;
+            _cardContainer.Visibility = Visibility.Collapsed;
+            _compactR.Visibility  = Visibility.Visible;
+            _compactR.ItemsSource = apps;
+            if (_compactR.ItemsPanelRoot is ItemsStackPanel sp) sp.Orientation = compactAlign == 0 ? Orientation.Horizontal : Orientation.Vertical;
+            _content.Padding = new Thickness(6); // Tight tray-like padding
+
+            if (compactAlign == 0) 
+            { 
+                logW = 10 + n*42 + 8;  // +8 for ItemsRepeater Margin(4)
+                logH = 60; 
+                _compactR.HorizontalAlignment = HorizontalAlignment.Left;
+                _holder.HorizontalAlignment   = HorizontalAlignment.Left;
+                _holder.ClearValue(FrameworkElement.WidthProperty);
+            }
+            else                   
+            { 
+                logH = 10 + n*42 + 8;  
+                logW = 60; 
+                _compactR.HorizontalAlignment = HorizontalAlignment.Center;
+                _holder.HorizontalAlignment   = HorizontalAlignment.Center;
+                _holder.ClearValue(FrameworkElement.WidthProperty);
+            }
+        }
+        else if (popupStyle == 2) // Modern
+        {
+            _classicSV.Visibility  = Visibility.Collapsed;
+            _compactR.Visibility   = Visibility.Collapsed;
+            _listSV.Visibility     = Visibility.Collapsed;
+            _cardContainer.Visibility = Visibility.Collapsed;
+            _modernSV.Visibility   = Visibility.Visible;
+            _pageDots.Visibility   = Visibility.Collapsed;
+            _modernR.ItemsSource   = apps;
+            _title.HorizontalAlignment = HorizontalAlignment.Left;
+            _title.Margin = new Thickness(4, 0, 0, 8);
+
+            int requestedCols = gridCols > 0 ? gridCols : 4;
+            int cols = Math.Min(n, requestedCols);
+            if (cols == 0) cols = 1;
+            int allRows = (int)Math.Ceiling((double)n / requestedCols);
+            // GridView wraps automatically based on width, no need to set Layout.MaximumRowsOrColumns
+
+            _content.Padding = new Thickness(12, noTitle ? 12 : 18, 12, 12);
+            logW = 24 + cols * 64 + 8 + 12; // +12 for ItemsRepeater Margin(6)
+            int overhead = noTitle ? 38 : 62;
+            logH = overhead + allRows * 66 + 2 + 12; // +12 for Margin(6)
+        }
+        else if (popupStyle == 3) // List
+        {
+            _classicSV.Visibility  = Visibility.Collapsed;
+            _compactR.Visibility   = Visibility.Collapsed;
+            _modernSV.Visibility   = Visibility.Collapsed;
+            _cardContainer.Visibility = Visibility.Collapsed;
+            _pageDots.Visibility   = Visibility.Collapsed;
+            
+            _listSV.Visibility     = Visibility.Visible;
+            _listR.ItemsSource     = apps;
+            _title.HorizontalAlignment = HorizontalAlignment.Left;
+            _title.Margin = new Thickness(4, 0, 0, 8);
+
+            _content.Padding = new Thickness(12, noTitle ? 12 : 18, 12, 12);
+            // Default width for the list mode
+            logW = 180 + 24; 
+            
+            int overhead = noTitle ? 28 : 52;
+            // Height = Overhead + (n * (36 button height + 2 spacing)) + padding bottom
+            logH = overhead + n * 38 + 12;
+            // Prevent ridiculous heights if they add 100 items (ScrollViewer handles the rest)
+            _listSV.MaxHeight = 800; // Constrained by display area anyway
+        }
+        else // Card
+        {
+            _classicSV.Visibility  = Visibility.Collapsed;
+            _compactR.Visibility   = Visibility.Collapsed;
+            _modernSV.Visibility   = Visibility.Collapsed;
+            _listSV.Visibility     = Visibility.Collapsed;
+            _pageDots.Visibility   = Visibility.Collapsed;
+            _title.Visibility      = Visibility.Collapsed; // Hide title at top
+            
+            _cardContainer.Visibility = Visibility.Visible;
+            _cardFooterName.Text      = name;
+
+            foreach (var app in apps)
+            {
+                app.LabelVisibility = showCardLabels ? Visibility.Visible : Visibility.Collapsed;
+            }
+
+            _cardR.ItemsSource     = apps;
+            _title.HorizontalAlignment = HorizontalAlignment.Left;
+            _title.Margin = new Thickness(4, 0, 0, 8);
+
+            int requestedCols = gridCols > 0 ? gridCols : 3;
+            int cols = Math.Min(n, requestedCols);
+            if (cols == 0) cols = 1;
+            int allRows = (int)Math.Ceiling((double)n / requestedCols);
+
+            _border.CornerRadius = new CornerRadius(8);
+            _content.Padding = new Thickness(0); // Removing padding so the footer sticks to bottom
+            logW = cols * 68 + 24; 
+            logH = allRows * (showCardLabels ? 78 : 68) + 48 + 24; // footer is around 48px
+        }
+
+        // "Make main focus" dim overlay (covers entire screen behind popup)
+        if (_makeMainFocus)
+            ShowDimOverlay();
+
+        // Position
+        GetCursorPos(out var pt);
+        var hwnd  = WindowNative.GetWindowHandle(this);
+        var winId = Win32Interop.GetWindowIdFromWindow(hwnd);
+        var da    = DisplayArea.GetFromWindowId(winId, DisplayAreaFallback.Primary);
+
+        uint dpi   = GetDpiForWindow(hwnd);
+        float sc   = dpi == 0 ? 1f : dpi / 96f;
+
+        int chromeW = AppWindow.Size.Width  - AppWindow.ClientSize.Width;
+        int chromeH = AppWindow.Size.Height - AppWindow.ClientSize.Height;
+
+        // Modern: cap at work area; content-sized formula already tight above
+        if (popupStyle == 2)
+        {
+            int availLogH = (int)(da.WorkArea.Height / sc) - 24;
+            logH = Math.Min(logH, availLogH);
+        }
+
+        double scale = _root.XamlRoot?.RasterizationScale ?? 1.0;
+        int physW = (int)Math.Round(logW * scale);
+        int physH = (int)Math.Round(logH * scale);
+
+        _physW = physW;
+        _physH_original = physH;
+
+        var work = da.WorkArea;
+        var outer = da.OuterBounds;
+        physH = Math.Min(physH, work.Height - 64);
+
+        int x, y;
+        if (launchAtCenter && popupStyle != 1 && popupStyle != 3) // Disallow for List/Compact
+        {
+            x = work.X + work.Width  / 2 - physW / 2;
+            y = work.Y + work.Height / 2 - physH / 2;
+        }
+        else if (_isDesktopMode)
+        {
+            // Offset gracefully from the cursor to not cover the clicked icon
+            x = pt.X + 16;
+            y = pt.Y + 16;
+            
+            // Push it left/up if too close to right/bottom edges
+            if (x + physW > work.X + work.Width)  x = pt.X - physW - 8;
+            if (y + physH > work.Y + work.Height) y = pt.Y - physH - 8;
+
+            x = Math.Clamp(x, work.X, work.X + work.Width  - physW);
+            y = Math.Clamp(y, work.Y, work.Y + work.Height - physH);
+        }
+        else
+        {
+            // Respect explicit LaunchSide from settings
+            var launchSide = finalLaunchSide;
+
+            bool isTop = false, isLeft = false, isRight = false;
+            if (launchSide == TaskTile.Models.LaunchSide.Top)         { isTop = true;  }
+            else if (launchSide == TaskTile.Models.LaunchSide.Left)   { isLeft = true; }
+            else if (launchSide == TaskTile.Models.LaunchSide.Right)  { isRight = true; }
+            else if (launchSide == TaskTile.Models.LaunchSide.Bottom) { }
+            else // Auto / Fallback
+            {
+                isTop   = work.Y > outer.Y;
+                isLeft  = work.X > outer.X;
+                isRight = work.Width < outer.Width && work.X == outer.X;
+            }
+
+            const int gap = 12;
+            APPBARDATA abd = new APPBARDATA { cbSize = Marshal.SizeOf<APPBARDATA>() };
+            nint state = SHAppBarMessage(ABM_GETSTATE, ref abd);
+            bool isAutoHidden = (state.ToInt32() & ABS_AUTOHIDE) != 0;
+            int autoHideBuffer = isAutoHidden ? 48 : 0;
+
+            if      (isLeft)  { x = work.X + gap;                                              y = pt.Y - physH / 2; }
+            else if (isRight) { x = work.X + work.Width - physW - gap;                         y = pt.Y - physH / 2; }
+            else if (isTop)   { y = work.Y + gap;                                              x = pt.X - physW / 2; }
+            else              { y = work.Y + work.Height - physH - gap - autoHideBuffer;       x = pt.X - physW / 2; }
+
+            x = Math.Clamp(x, work.X, work.X + work.Width  - physW);
+            y = Math.Clamp(y, work.Y, work.Y + work.Height - physH - autoHideBuffer);
+
+            // Apply launch-side-aware pop-in scale animation
+            DoubleAnimation? sideSc = null;
+            if (!_isDesktopMode && _popIn != null)
+            {
+                if (isTop)
+                {
+                    _rootScale.CenterX = 0.5; _rootScale.CenterY = 0; // grow from top
+                    sideSc = new DoubleAnimation { From = 0.94, To = 1, Duration = new Duration(TimeSpan.FromMilliseconds(160)), EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
+                    Storyboard.SetTargetProperty(sideSc, "ScaleY");
+                }
+                else if (isLeft)
+                {
+                    _rootScale.CenterX = 0; _rootScale.CenterY = 0.5; // grow from left
+                    sideSc = new DoubleAnimation { From = 0.94, To = 1, Duration = new Duration(TimeSpan.FromMilliseconds(160)), EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
+                    Storyboard.SetTargetProperty(sideSc, "ScaleX");
+                }
+                else if (isRight)
+                {
+                    _rootScale.CenterX = 1; _rootScale.CenterY = 0.5; // grow from right
+                    sideSc = new DoubleAnimation { From = 0.94, To = 1, Duration = new Duration(TimeSpan.FromMilliseconds(160)), EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
+                    Storyboard.SetTargetProperty(sideSc, "ScaleX");
+                }
+                else // bottom (default)
+                {
+                    _rootScale.CenterX = 0.5; _rootScale.CenterY = 1;
+                    sideSc = new DoubleAnimation { From = 0.94, To = 1, Duration = new Duration(TimeSpan.FromMilliseconds(160)), EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
+                    Storyboard.SetTargetProperty(sideSc, "ScaleY");
+                }
+
+                if (sideSc != null)
+                {
+                    Storyboard.SetTarget(sideSc, _rootScale);
+                    _popIn.Children.Add(sideSc);
+                }
+            }
+        }
+
+        // Resize + move using native AppWindow
+        AppWindow.MoveAndResize(new Windows.Graphics.RectInt32(x, y, physW, physH));
+
+        // Strip scale animation if Desktop Mode is active to prevent visual edge clipping
+        if (_isDesktopMode && _popIn.Children.Count > 1)
+        {
+            _popIn.Children.RemoveAt(1); // remove the ScaleY animation
+            _rootScale.ScaleY = 1;
+        }
+
+        // Live taskbar binding (Auto-hide sliding animation sync)
+        if (!_isDesktopMode)
+        {
+            var trayHwnd = FindWindow("Shell_TrayWnd", null);
+            GetWindowRect(trayHwnd, out _lastTrayRect);
+
+            _taskbarTracker = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+            _taskbarTracker.Tick += (s, e) =>
+            {
+                if (GetWindowRect(trayHwnd, out var currentTrayRect))
+                {
+                    int dx = currentTrayRect.Left - _lastTrayRect.Left;
+                    int dy = currentTrayRect.Top - _lastTrayRect.Top;
+                    if (dx != 0 || dy != 0)
+                    {
+                        GetWindowRect(hwnd, out var myRect);
+                        SetWindowPos(hwnd, HWND_TOPMOST, myRect.Left + dx, myRect.Top + dy, 0, 0, SWP_NOSIZE | SWP_NOACTIVATE);
+                        _lastTrayRect = currentTrayRect;
+                    }
+                }
+            };
+            _taskbarTracker.Start();
+        }
+    }
+
+    Window? _dimWin;
+    bool _isClosing = false;
+
+    // ─── "Make main focus" — full-screen dim/blur overlay ──────────────────
+    void ShowDimOverlay()
+    {
+        _dimWin = new Window();
+        _dimWin.ExtendsContentIntoTitleBar = true;
+        _dimWin.AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Collapsed;
+
+        // Completely transparent, but IsHitTestVisible allows it to catch background clicks
+        var dimGrid = new Grid { Background = new SolidColorBrush(Windows.UI.Color.FromArgb(1, 0, 0, 0)), IsHitTestVisible = true };
+        dimGrid.PointerPressed += async (_, _) => { await CloseWithFadeAsync(); };
+        _dimWin.Content = dimGrid;
+
+        var dimHwnd = WindowNative.GetWindowHandle(_dimWin);
+        int ex = GetWindowLong(dimHwnd, GWL_EXSTYLE);
+        SetWindowLong(dimHwnd, GWL_EXSTYLE, (ex | WS_EX_TOOLWINDOW) & ~WS_EX_APPWINDOW);
+
+        var hwnd = WindowNative.GetWindowHandle(this);
+        var da = DisplayArea.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(hwnd), DisplayAreaFallback.Primary);
+        
+        // Move dim window to the matching display then full-screen it natively
+        _dimWin.AppWindow.Move(new Windows.Graphics.PointInt32(da.WorkArea.X, da.WorkArea.Y));
+        _dimWin.AppWindow.SetPresenter(Microsoft.UI.Windowing.AppWindowPresenterKind.FullScreen);
+
+        _dimWin.Activate();
+
+        // Fade in color over backdrop
+        var sbDim = new Storyboard();
+        var opDim = new DoubleAnimation { From = 0, To = 1, Duration = new Duration(TimeSpan.FromMilliseconds(200)) };
+        Storyboard.SetTarget(opDim, dimGrid);
+        Storyboard.SetTargetProperty(opDim, "Opacity");
+        sbDim.Children.Add(opDim);
+        sbDim.Begin();
+
+        SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+
+        this.Closed += (_, _) => { try { _dimWin?.Close(); } catch { } };
+    }
+
+    async System.Threading.Tasks.Task CloseWithFadeAsync()
+    {
+        if (_isClosing) return;
+        _isClosing = true;
+
+        var sbPopup = new Storyboard();
+        var daPopup = new DoubleAnimation { To = 0, Duration = new Duration(TimeSpan.FromMilliseconds(150)), EasingFunction = new QuinticEase { EasingMode = EasingMode.EaseInOut } };
+        Storyboard.SetTarget(daPopup, _root);
+        Storyboard.SetTargetProperty(daPopup, "Opacity");
+        sbPopup.Children.Add(daPopup);
+
+        var tyPopup = new DoubleAnimation { To = 24, Duration = new Duration(TimeSpan.FromMilliseconds(150)), EasingFunction = new QuinticEase { EasingMode = EasingMode.EaseInOut } };
+        Storyboard.SetTarget(tyPopup, _rootTranslate);
+        Storyboard.SetTargetProperty(tyPopup, "Y");
+        sbPopup.Children.Add(tyPopup);
+
+        if (_dimWin?.Content is Grid dg)
+        {
+            var daDim = new DoubleAnimation { To = 0, Duration = new Duration(TimeSpan.FromMilliseconds(150)) };
+            Storyboard.SetTarget(daDim, dg);
+            Storyboard.SetTargetProperty(daDim, "Opacity");
+            sbPopup.Children.Add(daDim);
+        }
+
+        sbPopup.Begin();
+
+        if (_taskbarTracker != null)
+        {
+            _taskbarTracker.Stop();
+        }
+
+        await System.Threading.Tasks.Task.Delay(150);
+        this.Close();
+    }
+
+    // ─── Events ──────────────────────────────────────────────────────────────
+    void OnActivated(object s, WindowActivatedEventArgs e)
+    {
+        if (e.WindowActivationState != WindowActivationState.Deactivated)
+            _activated = true;
+        else if (_activated && !_makeMainFocus)
+            _ = CloseWithFadeAsync();
+        else if (_activated && _makeMainFocus)
+            _ = CloseWithFadeAsync();
+    }
+
+    void App_ItemClick(object sender, ItemClickEventArgs e)
+    {
+        if (e.ClickedItem is AppEntryViewModel vm && !string.IsNullOrEmpty(vm.ExePath))
+        {
+            try { Process.Start(new ProcessStartInfo(vm.ExePath) { UseShellExecute = true }); } catch { }
+        }
+        _ = CloseWithFadeAsync();
+    }
+    void Open_Click(object s, RoutedEventArgs e)
+    {
+        if (s is MenuFlyoutItem i && i.Tag is string p && !string.IsNullOrEmpty(p))
+        { try { Process.Start(new ProcessStartInfo(p) { UseShellExecute = true }); } catch { } }
+        _ = CloseWithFadeAsync();
+    }
+    void EditGroup_Click(object s, RoutedEventArgs e)
+    {
+        if (App.MainWindowInstance != null)
+        {
+            App.MainWindowInstance.AppWindow.Show();
+            App.MainWindowInstance.NavigateTo(typeof(TaskTile.Pages.GroupsPage));
+        }
+        _ = CloseWithFadeAsync();
+    }
+    void LaunchAll_Click(object s, RoutedEventArgs e)
+    {
+        var group = TaskTile.Services.GroupService.Instance.Groups.FirstOrDefault(g => g.Id == _groupId);
+        if (group?.Apps != null)
+        {
+            foreach (var app in group.Apps)
+            {
+                var exe = app.ExePath;
+                if (!string.IsNullOrEmpty(exe))
+                { try { Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true }); } catch { } }
+            }
+        }
+        _ = CloseWithFadeAsync();
+    }
+    void RunAdmin_Click(object s, RoutedEventArgs e)
+    {
+        if (s is MenuFlyoutItem i && i.Tag is string p && !string.IsNullOrEmpty(p))
+        { try { Process.Start(new ProcessStartInfo(p) { UseShellExecute = true, Verb = "runas" }); } catch { } }
+        _ = CloseWithFadeAsync();
+    }
+    void OpenLoc_Click(object s, RoutedEventArgs e)
+    {
+        if (s is MenuFlyoutItem item && item.Tag is string p && !string.IsNullOrEmpty(p))
+        {
+            try
+            {
+                // For real files: /select highlights the item in Explorer
+                // For non-file paths (UWP), fallback to just opening Explorer
+                string arg = System.IO.File.Exists(p) ? $"/select,\"{p}\"" : $"\"{System.IO.Path.GetDirectoryName(p)}\"";
+                Process.Start(new ProcessStartInfo("explorer.exe", arg) { UseShellExecute = true });
+            }
+            catch { }
+        }
+        _ = CloseWithFadeAsync();
+    }
+    void GoToPage(int page, int direction = 0)
+    {
+        if (page < 0 || page >= _classicPages.Count) return;
+        _classicPage = page;
+        
+        // Scroll smoothly to the exact vertical offset for the target page
+        double pageHeight = _classicSV.ViewportHeight;
+        if (pageHeight == 0) pageHeight = _classicSV.ActualHeight;
+        
+        _classicSV.ChangeView(null, page * pageHeight, null, false); // false = enable animation
+
+        UpdateClassicPagingVisuals();
+    }
+
+    private bool _isAreaHovered = false;
+    private int _hoveredDotIndex = -1;
+
+    private void UpdateClassicPagingVisuals()
+    {
+        if (_pageDots == null) return;
+        bool canGoUp = (_classicPage > 0);
+        bool canGoDown = (_classicPage < _classicPages.Count - 1);
+
+        foreach (var child in _pageDots.Children)
+        {
+            if (child is Grid g && g.Children.Count > 0 && g.Tag is string tag)
+            {
+                if (tag.StartsWith("dot_"))
+                {
+                    int pi = int.Parse(tag.Substring(4));
+                    var dot = (Border)g.Children[0];
+                    bool isDotHovered = (pi == _hoveredDotIndex);
+                    bool isActive = (pi == _classicPage);
+
+                    double targetSize = (isActive || isDotHovered) ? 6 : 4;
+                    double targetOpacity = isDotHovered ? 1.0 : (_isAreaHovered ? 0.8 : 0.4);
+
+                    dot.Width = targetSize;
+                    dot.Height = targetSize;
+
+                    var vis = Microsoft.UI.Xaml.Hosting.ElementCompositionPreview.GetElementVisual(dot);
+                    var anim = vis.Compositor.CreateScalarKeyFrameAnimation();
+                    anim.InsertKeyFrame(1f, (float)targetOpacity);
+                    anim.Duration = TimeSpan.FromMilliseconds(150);
+                    vis.StartAnimation("Opacity", anim);
+                }
+                else if (tag == "upArrow")
+                {
+                    var icon = (FontIcon)g.Children[0];
+                    float targetOpacity = (_isAreaHovered && canGoUp) ? 1.0f : 0.0f;
+
+                    var vis = Microsoft.UI.Xaml.Hosting.ElementCompositionPreview.GetElementVisual(icon);
+                    var anim = vis.Compositor.CreateScalarKeyFrameAnimation();
+                    anim.InsertKeyFrame(1f, targetOpacity);
+                    anim.Duration = TimeSpan.FromMilliseconds(150);
+                    vis.StartAnimation("Opacity", anim);
+
+                    g.IsHitTestVisible = (_isAreaHovered && canGoUp);
+                }
+                else if (tag == "downArrow")
+                {
+                    var icon = (FontIcon)g.Children[0];
+                    float targetOpacity = (_isAreaHovered && canGoDown) ? 1.0f : 0.0f;
+
+                    var vis = Microsoft.UI.Xaml.Hosting.ElementCompositionPreview.GetElementVisual(icon);
+                    var anim = vis.Compositor.CreateScalarKeyFrameAnimation();
+                    anim.InsertKeyFrame(1f, targetOpacity);
+                    anim.Duration = TimeSpan.FromMilliseconds(150);
+                    vis.StartAnimation("Opacity", anim);
+
+                    g.IsHitTestVisible = (_isAreaHovered && canGoDown);
+                }
+            }
+        }
+    }
+
+    private void UpdateClassicPagingUI()
+    {
+        _pageDots.Children.Clear();
+
+        if (_classicPages.Count <= 1)
+        {
+            _pageDots.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        bool canGoUp = (_classicPage > 0);
+        bool canGoDown = (_classicPage < _classicPages.Count - 1);
+
+        // Up Arrow
+        var upHitGrid = new Grid { Width = 16, Height = 12, Background = new SolidColorBrush(Windows.UI.Color.FromArgb(1, 0, 0, 0)), Tag = "upArrow" };
+        var upArrow = new FontIcon
+        {
+            Glyph = "\uEDDB", // Caret Up Solid 8
+            FontSize = 6,
+            Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 255, 255, 255)),
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            Opacity = 0 // handled by visual state
+        };
+        upHitGrid.Children.Add(upArrow);
+        upHitGrid.PointerPressed += (_, _) => { if (_classicPage > 0) GoToPage(_classicPage - 1, -1); };
+        _pageDots.Children.Add(upHitGrid);
+
+        // Dots
+        for (int pi = 0; pi < _classicPages.Count; pi++)
+        {
+            int capture = pi;
+            var hitGrid = new Grid { Width = 10, Height = 10, Background = new SolidColorBrush(Windows.UI.Color.FromArgb(1, 0, 0, 0)), Tag = "dot_" + pi };
+            var dot = new Border
+            {
+                Width = (pi == _classicPage) ? 6 : 4,
+                Height = (pi == _classicPage) ? 6 : 4,
+                CornerRadius = new CornerRadius(99),
+                Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 255, 255, 255)),
+                Opacity = 0.4,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            hitGrid.Children.Add(dot);
+
+            hitGrid.PointerEntered += (s, e) => { _hoveredDotIndex = capture; UpdateClassicPagingVisuals(); };
+            hitGrid.PointerExited += (s, e) => { if (_hoveredDotIndex == capture) _hoveredDotIndex = -1; UpdateClassicPagingVisuals(); };
+            hitGrid.PointerPressed += (_, _) => GoToPage(capture, capture > _classicPage ? 1 : -1);
+            _pageDots.Children.Add(hitGrid);
+        }
+
+        // Down Arrow
+        var downHitGrid = new Grid { Width = 16, Height = 12, Background = new SolidColorBrush(Windows.UI.Color.FromArgb(1, 0, 0, 0)), Tag = "downArrow" };
+        var downArrow = new FontIcon
+        {
+            Glyph = "\uEDDC", // Caret Down Solid 8
+            FontSize = 6,
+            Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 255, 255, 255)),
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            Opacity = 0 // handled by visual state
+        };
+        downHitGrid.Children.Add(downArrow);
+        downHitGrid.PointerPressed += (_, _) => { if (_classicPage < _classicPages.Count - 1) GoToPage(_classicPage + 1, 1); };
+        _pageDots.Children.Add(downHitGrid);
+
+        UpdateClassicPagingVisuals();
+        _pageDots.Visibility = Visibility.Visible;
+    }
+
+    private void PageDots_PointerEntered(object sender, PointerRoutedEventArgs e)
+    {
+        _isAreaHovered = true;
+        UpdateClassicPagingVisuals();
+    }
+
+    private void PageDots_PointerExited(object sender, PointerRoutedEventArgs e)
+    {
+        _isAreaHovered = false;
+        UpdateClassicPagingVisuals();
+    }
+}
+
+// ─── Infrastructure ───────────────────────────────────────────────────────────
+public class CustomTemplate : Microsoft.UI.Xaml.IElementFactory
+{
+    readonly Func<UIElement> _f;
+    public CustomTemplate(Func<UIElement> f) => _f = f;
+    public UIElement GetElement(ElementFactoryGetArgs a) => _f();
+    public void RecycleElement(ElementFactoryRecycleArgs a) { }
+}

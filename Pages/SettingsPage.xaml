@@ -1,0 +1,506 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="TaskTile.Pages.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="Transparent">
+
+    <Grid>
+        <!-- Top margin prevents the scrollbar and content from going under the title bar / window buttons -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled"
+                      Margin="0,48,0,0" Padding="0,0,16,0">
+            <!-- Fixed 600px column, centered in the page -->
+            <Grid HorizontalAlignment="Stretch" MaxWidth="600" Margin="32,0,32,32">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <TextBlock Grid.Row="0" Text="Settings" Style="{ThemeResource TitleLargeTextBlockStyle}" Margin="0,0,0,12"/>
+
+            <!-- ═══════════════════════════ APPEARANCE ═══════════════════════════ -->
+            <StackPanel Grid.Row="1" Spacing="4" Margin="0,0,0,32">
+                <TextBlock Text="Appearance" Style="{ThemeResource SubtitleTextBlockStyle}" />
+
+                <InfoBar IsOpen="True" Severity="Informational" Title="Global Configuration"
+                         Message="These settings apply to both the configuration app and the launcher popup."
+                         IsClosable="False" Margin="0,0,0,8" />
+
+                <!-- Theme -->
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" CornerRadius="{ThemeResource OverlayCornerRadius}" Padding="16">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                            <TextBlock Text="App Theme" FontWeight="SemiBold"/>
+                            <TextBlock Text="Select the color theme for the application"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
+                        </StackPanel>
+                        <ComboBox x:Name="ThemeCombo" Grid.Column="1" Width="150" VerticalAlignment="Center"
+                                  SelectionChanged="ThemeCombo_SelectionChanged">
+                            <ComboBoxItem Content="System default"/>
+                            <ComboBoxItem Content="Light"/>
+                            <ComboBoxItem Content="Dark"/>
+                        </ComboBox>
+                    </Grid>
+                </Border>
+
+                <!-- Title Alignment -->
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" CornerRadius="{ThemeResource OverlayCornerRadius}" Padding="16">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="200"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                            <TextBlock Text="Title Alignment" FontWeight="SemiBold"/>
+                            <TextBlock Text="Set the alignment of the app group title (Left, Center, Right)" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <Slider x:Name="TitleAlignmentSlider" Grid.Column="1" VerticalAlignment="Center" 
+                                Minimum="0" Maximum="2" StepFrequency="1" TickFrequency="1" TickPlacement="Outside" 
+                                ValueChanged="TitleAlignmentSlider_ValueChanged" />
+                    </Grid>
+                </Border>
+
+                <!-- Backdrop -->
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" CornerRadius="{ThemeResource OverlayCornerRadius}" Padding="16">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                            <TextBlock Text="Window Backdrop" FontWeight="SemiBold"/>
+                            <TextBlock Text="Choose the transparency material effect"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
+                        </StackPanel>
+                        <ComboBox x:Name="BackdropCombo" Grid.Column="1" Width="150" VerticalAlignment="Center"
+                                  SelectionChanged="BackdropCombo_SelectionChanged">
+                            <ComboBoxItem Content="Acrylic"/>
+                            <ComboBoxItem Content="Mica"/>
+                            <ComboBoxItem Content="Mica Alt"/>
+                            <ComboBoxItem Content="None"/>
+                        </ComboBox>
+                    </Grid>
+                </Border>
+            </StackPanel>
+
+            <!-- ═══════════════════════════ BEHAVIOR ════════════════════════════ -->
+            <StackPanel Grid.Row="2" Spacing="4" Margin="0,0,0,32">
+                <TextBlock Text="Behavior" Style="{ThemeResource SubtitleTextBlockStyle}" />
+
+                <!-- System Tray (moved from Appearance) -->
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" CornerRadius="{ThemeResource OverlayCornerRadius}" Padding="16">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                            <TextBlock Text="System Tray Icon" FontWeight="SemiBold"/>
+                            <TextBlock Text="Close straight to the system tray to keep background responsiveness"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <ToggleSwitch x:Name="TrayToggle" Grid.Column="1" VerticalAlignment="Center"
+                                      HorizontalAlignment="Right" MinWidth="0"
+                                      OnContent="" OffContent="" Toggled="TrayToggle_Toggled"/>
+                    </Grid>
+                </Border>
+
+                <!-- Start Pop-ups in Background -->
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" CornerRadius="{ThemeResource OverlayCornerRadius}" Padding="16">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                            <TextBlock Text="Start Pop-ups in background" FontWeight="SemiBold"/>
+                            <TextBlock Text="Keep the pop-up window alive in the background for 0ms instant launch times."
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <ToggleSwitch x:Name="BackgroundPopupToggle" Grid.Column="1" VerticalAlignment="Center"
+                                      HorizontalAlignment="Right" MinWidth="0"
+                                      OnContent="" OffContent="" Toggled="BackgroundPopupToggle_Toggled"/>
+                    </Grid>
+                </Border>
+
+                <!-- Run at Startup (moved from Appearance) -->
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" CornerRadius="{ThemeResource OverlayCornerRadius}" Padding="16">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                            <TextBlock Text="Run at Startup" FontWeight="SemiBold"/>
+                            <TextBlock Text="Launch automatically when Windows starts"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
+                        </StackPanel>
+                        <ToggleSwitch x:Name="StartupToggle" Grid.Column="1" VerticalAlignment="Center"
+                                      HorizontalAlignment="Right" MinWidth="0"
+                                      OnContent="" OffContent="" Toggled="StartupToggle_Toggled"/>
+                    </Grid>
+                </Border>
+
+                <!-- Disable Installer Wizard -->
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" CornerRadius="{ThemeResource OverlayCornerRadius}" Padding="16">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                            <TextBlock Text="Disable Installer Wizard" FontWeight="SemiBold"/>
+                            <TextBlock Text="Skip the Alpha installer on every launch. Hold Shift at startup for a one-time skip."
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <ToggleSwitch x:Name="WizardToggle" Grid.Column="1" VerticalAlignment="Center"
+                                      HorizontalAlignment="Right" MinWidth="0"
+                                      OnContent="" OffContent="" Toggled="WizardToggle_Toggled"/>
+                    </Grid>
+                </Border>
+
+                <!-- Pin to Start Menu -->
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" CornerRadius="{ThemeResource OverlayCornerRadius}" Padding="16">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                            <TextBlock Text="Pin to Start Menu" FontWeight="SemiBold"/>
+                            <TextBlock Text="Add TaskTile to the Windows Start Menu on first launch"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
+                        </StackPanel>
+                        <ToggleSwitch x:Name="PinStartToggle" Grid.Column="1" VerticalAlignment="Center"
+                                      HorizontalAlignment="Right" MinWidth="0"
+                                      OnContent="" OffContent="" Toggled="PinStartToggle_Toggled"/>
+                    </Grid>
+                </Border>
+
+                <!-- Apply Global Config to Popups -->
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" CornerRadius="{ThemeResource OverlayCornerRadius}" Padding="16">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                            <TextBlock Text="Apply Global Config to Popups" FontWeight="SemiBold"/>
+                            <TextBlock Text="When enabled, popups (launchers) will inherit the main app's theme and backdrop settings."
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
+                        </StackPanel>
+                        <ToggleSwitch x:Name="PopupsConfigToggle" Grid.Column="1" VerticalAlignment="Center"
+                                      HorizontalAlignment="Right" MinWidth="0"
+                                      OnContent="" OffContent="" Toggled="PopupsConfigToggle_Toggled"/>
+                    </Grid>
+                </Border>
+
+                <!-- Suppress Explorer on Edit -->
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" CornerRadius="{ThemeResource OverlayCornerRadius}" Padding="16">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                            <TextBlock Text="Suppress File Explorer on Edit" FontWeight="SemiBold"/>
+                            <TextBlock Text="Prevent File Explorer from opening automatically when updating group icons or names."
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
+                        </StackPanel>
+                        <ToggleSwitch x:Name="SuppressExplorerToggle" Grid.Column="1" VerticalAlignment="Center"
+                                      HorizontalAlignment="Right" MinWidth="0"
+                                      OnContent="" OffContent="" Toggled="SuppressExplorerToggle_Toggled"/>
+                    </Grid>
+                </Border>
+
+                <!-- App Group Launch Side -->
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" CornerRadius="{ThemeResource OverlayCornerRadius}" Padding="16">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                            <TextBlock Text="App Group Launch Side" FontWeight="SemiBold"/>
+                            <TextBlock Text="Which screen edge app groups pop up from"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
+                        </StackPanel>
+                        <ComboBox x:Name="LaunchSideCombo" Grid.Column="1" Width="160" VerticalAlignment="Center"
+                                  SelectionChanged="LaunchSideCombo_SelectionChanged">
+                            <ComboBoxItem Content="Top"/>
+                            <ComboBoxItem Content="Bottom"/>
+                            <ComboBoxItem>
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <TextBlock Text="Left"/>
+                                    <TextBlock Text="🧪" FontSize="11" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </ComboBoxItem>
+                            <ComboBoxItem>
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <TextBlock Text="Right"/>
+                                    <TextBlock Text="🧪" FontSize="11" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </ComboBoxItem>
+                            <ComboBoxItem Content="Center"/>
+                        </ComboBox>
+                    </Grid>
+                </Border>
+
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" CornerRadius="{ThemeResource OverlayCornerRadius}" Padding="16">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Disable entrance animation" FontWeight="SemiBold"/>
+                            <TextBlock Text="Disables sliding and fading animations for pop-ups."
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
+                        </StackPanel>
+                        <ToggleSwitch x:Name="GlobalDisableAnimationToggle" Grid.Column="1" VerticalAlignment="Center"
+                                      HorizontalAlignment="Right" MinWidth="0"
+                                      OnContent="" OffContent="" Toggled="GlobalDisableAnimationToggle_Toggled"/>
+                    </Grid>
+                </Border>
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" CornerRadius="{ThemeResource OverlayCornerRadius}" Padding="16">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Disable auto-hide support" FontWeight="SemiBold"/>
+                            <TextBlock Text="Prevents pop-ups from closing automatically when losing focus."
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
+                        </StackPanel>
+                        <ToggleSwitch x:Name="GlobalDisableAutoHideToggle" Grid.Column="1" VerticalAlignment="Center"
+                                      HorizontalAlignment="Right" MinWidth="0"
+                                      OnContent="" OffContent="" Toggled="GlobalDisableAutoHideToggle_Toggled"/>
+                    </Grid>
+                </Border>
+                                  <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" CornerRadius="{ThemeResource OverlayCornerRadius}" Padding="16">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Disable float" FontWeight="SemiBold"/>
+                            <TextBlock Text="Makes the bottom corners sharp and removes the gap between the taskbar and the app group."
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
+                        </StackPanel>
+                        <ToggleSwitch x:Name="GlobalDisableFloatToggle" Grid.Column="1" VerticalAlignment="Center"
+                                      HorizontalAlignment="Right" MinWidth="0"
+                                      OnContent="" OffContent="" Toggled="GlobalDisableFloatToggle_Toggled"/>
+                    </Grid>
+                </Border>
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" CornerRadius="{ThemeResource OverlayCornerRadius}" Padding="16">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Disable rounded corners" FontWeight="SemiBold"/>
+                            <TextBlock Text="Makes the app group corners sharp and removes the border, making it look like Windows 10."
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
+                        </StackPanel>
+                        <ToggleSwitch x:Name="GlobalDisableRoundedCornersToggle" Grid.Column="1" VerticalAlignment="Center"
+                                      HorizontalAlignment="Right" MinWidth="0"
+                                      OnContent="" OffContent="" Toggled="GlobalDisableRoundedCornersToggle_Toggled"/>
+                    </Grid>
+                </Border>
+                  <!-- Global Make Main Focus -->
+                <Border x:Name="GlobalMakeMainFocusContainer" Visibility="Collapsed" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" CornerRadius="{ThemeResource OverlayCornerRadius}" Padding="16">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                            <TextBlock Text="Make main focus" FontWeight="SemiBold"/>
+                            <TextBlock Text="Focus the pop-up and dim the background when launched at center."
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
+                        </StackPanel>
+                        <ToggleSwitch x:Name="GlobalMakeMainFocusToggle" Grid.Column="1" VerticalAlignment="Center"
+                                      HorizontalAlignment="Right" MinWidth="0"
+                                      OnContent="" OffContent="" Toggled="GlobalMakeMainFocusToggle_Toggled"/>
+                    </Grid>
+                </Border>
+                
+                <!-- Footer — moved right after last settings card -->
+                <Grid Margin="0,16,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    
+                    <Button Content="Delete Data" Foreground="Red" Click="DeleteData_Click" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="0,0,0,12" />
+                    
+                    <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Bottom" Orientation="Horizontal">
+                        <TextBlock x:Name="MadeByText" Text="made by ypx.13 • v0.7" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Bottom" Tapped="MadeBy_Tapped" Margin="0,0,0,16"/>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Grid>
+        </ScrollViewer>
+
+        <!-- Star Wars Credits Overlay -->
+        <Grid x:Name="StarWarsOverlay" Visibility="Collapsed" Background="Black">
+            <MediaPlayerElement x:Name="StarWarsMusicPlayer" AutoPlay="False" AreTransportControlsEnabled="False" Visibility="Collapsed"/>
+            <Canvas x:Name="CreditsCanvas" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                <TextBlock x:Name="CreditsText" TextAlignment="Center" Foreground="#FFE81F" FontFamily="Consolas" FontWeight="Bold" FontSize="24" Width="800" TextWrapping="Wrap" />
+            </Canvas>
+        </Grid>
+
+        <!-- Debug Mode Overlay — slide-in panel with pull tab -->
+        <!-- Outer container: pull tab + panel side by side -->
+        <Grid x:Name="DebugOuterContainer" HorizontalAlignment="Right" VerticalAlignment="Stretch" Visibility="Collapsed">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Pull Tab (always visible when panel is shown, click to toggle) -->
+            <Border x:Name="DebugPullTab"
+                    Grid.Column="0"
+                    VerticalAlignment="Center"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1,1,0,1"
+                    CornerRadius="8,0,0,8"
+                    Padding="6,16"
+                    Tapped="DebugPullTab_Tapped">
+                <StackPanel Spacing="6">
+                    <FontIcon Glyph="&#xE8B0;" FontSize="14" Foreground="{ThemeResource SystemFillColorCautionBrush}"/>
+                    <FontIcon x:Name="PullTabArrow" Glyph="&#xE76C;" FontSize="12" Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Debug Panel -->
+            <Border x:Name="DebugOverlay"
+                    Grid.Column="1"
+                    VerticalAlignment="Stretch"
+                    CornerRadius="0"
+                    Background="{ThemeResource SolidBackgroundFillColorBaseBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1,0,0,0"
+                    Padding="16"
+                    MinWidth="300"
+                    MaxWidth="340">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Header -->
+                    <Grid Grid.Row="0" Margin="0,0,0,12">
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE8B0;" FontSize="18" Foreground="{ThemeResource SystemFillColorCautionBrush}"/>
+                            <TextBlock Text="DTM Mode" FontWeight="SemiBold" FontSize="16" Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Scrollable Content -->
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <StackPanel Spacing="6">
+
+                            <!-- System Info -->
+                            <TextBlock Text="SYSTEM" FontSize="10" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorTertiaryBrush}" CharacterSpacing="200"/>
+                            <TextBlock x:Name="DbgVersion"    FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontFamily="Consolas"/>
+                            <TextBlock x:Name="DbgOS"         FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontFamily="Consolas"/>
+                            <TextBlock x:Name="DbgMachine"    FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontFamily="Consolas"/>
+                            <TextBlock x:Name="DbgUser"       FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontFamily="Consolas"/>
+                            <TextBlock x:Name="DbgUptime"     FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontFamily="Consolas"/>
+
+                            <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="0,6,0,6"/>
+
+                            <!-- App Config -->
+                            <TextBlock Text="APP CONFIG" FontSize="10" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorTertiaryBrush}" CharacterSpacing="200"/>
+                            <TextBlock x:Name="DbgBackdrop"   FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontFamily="Consolas"/>
+                            <TextBlock x:Name="DbgTheme"      FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontFamily="Consolas"/>
+                            <TextBlock x:Name="DbgLaunchSide" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontFamily="Consolas"/>
+                            <TextBlock x:Name="DbgGroups"     FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontFamily="Consolas"/>
+
+                            <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="0,6,0,6"/>
+
+                            <!-- Detection -->
+                            <TextBlock Text="BAR DETECTION" FontSize="10" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorTertiaryBrush}" CharacterSpacing="200"/>
+                            <TextBlock x:Name="DbgDetected"        FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontFamily="Consolas"/>
+                            <TextBlock x:Name="DbgDetectionResult" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontFamily="Consolas" TextWrapping="Wrap"/>
+
+                            <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="0,6,0,6"/>
+
+                            <!-- Paths -->
+                            <TextBlock Text="PATHS" FontSize="10" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorTertiaryBrush}" CharacterSpacing="200"/>
+                            <TextBlock x:Name="DbgSettingsPath" FontSize="10" Foreground="{ThemeResource TextFillColorTertiaryBrush}" FontFamily="Consolas" TextWrapping="Wrap"/>
+
+                            <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="0,6,0,6"/>
+
+                            <!-- Actions -->
+                            <TextBlock Text="ACTIONS" FontSize="10" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorTertiaryBrush}" CharacterSpacing="200"/>
+                            <Button Click="DbgTriggerDemo_Click" HorizontalAlignment="Stretch" Style="{ThemeResource DefaultButtonStyle}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE7BA;" FontSize="12" FontFamily="Segoe Fluent Icons"/>
+                                    <TextBlock Text="Trigger Alert Demo"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Click="DbgFrostedGlass_Click" HorizontalAlignment="Stretch" Style="{ThemeResource DefaultButtonStyle}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE81D;" FontSize="12" FontFamily="Segoe Fluent Icons"/>
+                                    <TextBlock Text="Test Frosted Glass"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- Footer -->
+                    <StackPanel Grid.Row="2" Spacing="8" Margin="0,12,0,0">
+                        <Button x:Name="DbgCopyBtn" Content="Copy Debug Log" Click="DbgCopy_Click" HorizontalAlignment="Stretch" Style="{ThemeResource DefaultButtonStyle}"/>
+                        <Button x:Name="DbgDisableBtn" Content="Disable Debug Mode" Click="DbgDisable_Click" HorizontalAlignment="Stretch" Background="{ThemeResource SystemFillColorCriticalBrush}" BorderBrush="Transparent" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Page>
