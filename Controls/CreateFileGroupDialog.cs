@@ -15,7 +15,7 @@ public sealed class CreateFileGroupDialog : ContentDialog
     private readonly ListView _listView;
     private readonly TextBox _nameBox;
     private readonly TextBlock _countText;
-    private readonly ToggleSwitch _dynamicFolderToggle;
+    private readonly CheckBox _dynamicFolderCheck;
     private readonly Button _addBtn;
 
     public CreateFileGroupDialog()
@@ -41,37 +41,29 @@ public sealed class CreateFileGroupDialog : ContentDialog
         };
         _addBtn.Click += AddFiles_Click;
 
-        var expTitle = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
-        expTitle.Children.Add(new TextBlock { Text = "Dynamic folder", VerticalAlignment = VerticalAlignment.Center });
+        var expTitle = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+        expTitle.Children.Add(new TextBlock { Text = "Dynamic folder (auto-sync folder contents)", VerticalAlignment = VerticalAlignment.Center });
         expTitle.Children.Add(new Border { CornerRadius = new Microsoft.UI.Xaml.CornerRadius(4), Background = new SolidColorBrush(Windows.UI.Color.FromArgb(40, 255, 180, 0)), Padding = new Thickness(6, 2, 6, 2), VerticalAlignment = VerticalAlignment.Center, Child = new TextBlock { Text = "Experimental", FontSize = 10, Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 255, 200, 50)) } });
 
-        // Experimental badge
-        var badge = new InfoBar
+        _dynamicFolderCheck = new CheckBox
         {
-            Title      = "Experimental Feature",
-            Message    = "File groups open files directly — not an app popup.\nSome file types may not launch correctly.",
-            Severity   = InfoBarSeverity.Warning,
-            IsOpen     = true,
-            IsClosable = false,
-            Margin     = new Thickness(0, 8, 0, 12)
+            Content = expTitle,
+            Margin = new Thickness(0, 4, 0, 12)
         };
-
-        _dynamicFolderToggle = new ToggleSwitch
-        {
-            Header = expTitle,
-            OffContent = "Select specific files",
-            OnContent = "Select a folder (auto-syncs)",
-            Margin = new Thickness(0, 0, 0, 12)
-        };
-        _dynamicFolderToggle.Toggled += (_, _) =>
+        _dynamicFolderCheck.Checked += (_, _) =>
         {
             _files.Clear();
             UpdateCountText();
             UpdateCreateEnabled();
             UpdateAddButtonUI();
-            badge.Message = _dynamicFolderToggle.IsOn 
-                ? "Dynamic folder will automatically load the directory contents each time you open the popup."
-                : "File groups open files directly — not an app popup.\nSome file types may not launch correctly.";
+            AddFiles_Click(this, new RoutedEventArgs());
+        };
+        _dynamicFolderCheck.Unchecked += (_, _) =>
+        {
+            _files.Clear();
+            UpdateCountText();
+            UpdateCreateEnabled();
+            UpdateAddButtonUI();
         };
 
         _countText = new TextBlock
@@ -98,9 +90,8 @@ public sealed class CreateFileGroupDialog : ContentDialog
             Children =
             {
                 _nameBox,
+                _dynamicFolderCheck,
                 _addBtn,
-                badge,
-                _dynamicFolderToggle,
                 _countText,
                 _listView
             }
@@ -113,8 +104,8 @@ public sealed class CreateFileGroupDialog : ContentDialog
     private void UpdateAddButtonUI()
     {
         var sp = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Center };
-        sp.Children.Add(new FontIcon { Glyph = _dynamicFolderToggle.IsOn ? "\xE838" : "\xE710", FontSize = 14, Margin = new Thickness(0, 2, 0, 0) });
-        sp.Children.Add(new TextBlock { Text = _dynamicFolderToggle.IsOn ? "Choose Folder…" : "Add Files…" });
+        sp.Children.Add(new FontIcon { Glyph = (_dynamicFolderCheck.IsChecked == true) ? "\xE838" : "\xE710", FontSize = 14, Margin = new Thickness(0, 2, 0, 0) });
+        sp.Children.Add(new TextBlock { Text = (_dynamicFolderCheck.IsChecked == true) ? "Choose Folder…" : "Add Files…" });
         _addBtn.Content = sp;
     }
 
@@ -174,7 +165,7 @@ public sealed class CreateFileGroupDialog : ContentDialog
 
     private async void AddFiles_Click(object sender, RoutedEventArgs e)
     {
-        if (_dynamicFolderToggle.IsOn)
+        if (_dynamicFolderCheck.IsChecked == true)
         {
             var folderPicker = new Windows.Storage.Pickers.FolderPicker
             {
@@ -189,13 +180,22 @@ public sealed class CreateFileGroupDialog : ContentDialog
             var pickedFolder = await folderPicker.PickSingleFolderAsync();
             if (pickedFolder != null)
             {
+                var folderName = System.IO.Path.GetFileName(pickedFolder.Path);
+                if (string.IsNullOrWhiteSpace(folderName)) folderName = pickedFolder.Path;
+
                 _files.Clear();
                 _files.Add(new AppEntry
                 {
-                    Name = System.IO.Path.GetFileName(pickedFolder.Path),
+                    Name = folderName,
                     ExePath = pickedFolder.Path,
                     IconPath = string.Empty
                 });
+                
+                if (string.IsNullOrWhiteSpace(_nameBox.Text))
+                {
+                    _nameBox.Text = folderName;
+                }
+
                 UpdateCountText();
                 UpdateCreateEnabled();
             }
@@ -235,12 +235,26 @@ public sealed class CreateFileGroupDialog : ContentDialog
                 return System.IO.Path.GetFileNameWithoutExtension(f.Path);
             });
 
+            string cachedIcon = IconHelper.GetOrExtractIcon(f.Path);
+
             _files.Add(new AppEntry
             {
                 Name    = friendlyName,
                 ExePath = f.Path,
-                IconPath = string.Empty
+                IconPath = cachedIcon
             });
+        }
+
+        if (string.IsNullOrWhiteSpace(_nameBox.Text) && _files.Count > 0)
+        {
+            if (_files.Count == 1)
+            {
+                _nameBox.Text = _files[0].Name;
+            }
+            else
+            {
+                _nameBox.Text = "New File Group";
+            }
         }
 
         UpdateCountText();
@@ -249,7 +263,7 @@ public sealed class CreateFileGroupDialog : ContentDialog
 
     private void UpdateCountText()
     {
-        if (_dynamicFolderToggle.IsOn)
+        if (_dynamicFolderCheck.IsChecked == true)
         {
             _countText.Text = _files.Count > 0 ? $"Folder selected: {_files[0].ExePath}" : "No folder selected";
             return;
@@ -279,12 +293,13 @@ public sealed class CreateFileGroupDialog : ContentDialog
             return;
         }
 
+        bool isDyn = _dynamicFolderCheck.IsChecked == true;
         ResultGroup = new AppGroup
         {
             Name      = name,
             GroupType = GroupType.Files,
-            IsDynamicFolder = _dynamicFolderToggle.IsOn,
-            DynamicFolderPath = _dynamicFolderToggle.IsOn ? _files[0].ExePath : string.Empty,
+            IsDynamicFolder = isDyn,
+            DynamicFolderPath = isDyn ? _files[0].ExePath : string.Empty,
             Apps      = _files.ToList()
         };
         Hide();

@@ -1,0 +1,25 @@
+﻿## Build & Output
+bin/
+obj/
+publish_temp/
+zip_stage/
+
+## Visual Studio / Rider / VS Code
+.vs/
+.vscode/
+.idea/
+*.user
+*.userosscache
+*.suo
+*.sln.docstates
+
+## Temporary / Logs / Python scripts
+*.log
+*.txt
+*.py
+*.backup
+*.tmp
+thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/

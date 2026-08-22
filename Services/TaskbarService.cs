@@ -55,12 +55,6 @@ public class TaskbarService
         pngPath = null;
         try
         {
-            if (group.GroupType == GroupType.Files)
-            {
-                // Rely on fallback folder icons
-                return null;
-            }
-
             string iconsDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TaskTile", "Icons");
             Directory.CreateDirectory(iconsDir);
             
@@ -119,8 +113,19 @@ public class TaskbarService
                     g.DrawPath(borderPen, path);
                 }
 
-                // Draw up to 4 icons inside
-                var appsToDraw = group.Apps.Take(4).ToList();
+                // Collect up to 4 paths to draw
+                var pathsToDraw = new List<string>();
+                if (group.IsDynamicFolder && !string.IsNullOrEmpty(group.DynamicFolderPath) && Directory.Exists(group.DynamicFolderPath))
+                {
+                    var dirFiles = Directory.GetFileSystemEntries(group.DynamicFolderPath)
+                        .Where(f => (new FileInfo(f).Attributes & (FileAttributes.Hidden | FileAttributes.System)) == 0)
+                        .Take(4).ToList();
+                    pathsToDraw.AddRange(dirFiles);
+                }
+                else
+                {
+                    pathsToDraw.AddRange(group.Apps.Take(4).Select(a => a.ExePath));
+                }
                 
                 // Adjust if transparent bg
                 int innerPadding = group.FolderIconStyle == 1 ? 0 : 2;
@@ -133,35 +138,62 @@ public class TaskbarService
                 int startX = innerPadding + (innerRectSize - totalIconSpan) / 2;
                 int startY = innerPadding + (innerRectSize - totalIconSpan) / 2;
 
-                if (appsToDraw.Count == 1)
+                if (pathsToDraw.Count <= 1)
                 {
                     iconSize = 112;
                     startX = innerPadding + (innerRectSize - iconSize) / 2;
                     startY = innerPadding + (innerRectSize - iconSize) / 2;
                 }
 
-                for (int i = 0; i < appsToDraw.Count; i++)
+                if (pathsToDraw.Count == 0 && group.IsDynamicFolder)
                 {
-                    int row = 0;
-                    int col = 0;
-                    if (appsToDraw.Count > 1)
+                    // Draw single folder icon
+                    using var folderBmp = IconHelper.ExtractFolderIcon();
+                    if (folderBmp != null)
                     {
-                        row = i / 2;
-                        col = i % 2;
+                        g.DrawImage(folderBmp, new System.Drawing.Rectangle(startX, startY, iconSize, iconSize));
                     }
-                    
-                    int x = startX + col * (iconSize + spacing);
-                    int y = startY + row * (iconSize + spacing);
-                    
-                    try
+                }
+                else
+                {
+                    for (int i = 0; i < pathsToDraw.Count; i++)
                     {
-                        if (File.Exists(appsToDraw[i].ExePath))
+                        int row = 0;
+                        int col = 0;
+                        if (pathsToDraw.Count > 1)
                         {
-                            using var sysIcon = System.Drawing.Icon.ExtractAssociatedIcon(appsToDraw[i].ExePath);
-                            if (sysIcon != null)
+                            row = i / 2;
+                            col = i % 2;
+                        }
+                        
+                        int x = startX + col * (iconSize + spacing);
+                        int y = startY + row * (iconSize + spacing);
+                        
+                        try
+                        {
+                            string itemPath = pathsToDraw[i];
+                            System.Drawing.Bitmap? iconBmp = null;
+
+                            if (Directory.Exists(itemPath))
                             {
-                                using var iconBmp = sysIcon.ToBitmap();
-                                
+                                iconBmp = IconHelper.ExtractFolderIcon();
+                            }
+                            else if (File.Exists(itemPath))
+                            {
+                                string cached = IconHelper.GetOrExtractIcon(itemPath);
+                                if (!string.IsNullOrEmpty(cached) && File.Exists(cached))
+                                {
+                                    iconBmp = new System.Drawing.Bitmap(cached);
+                                }
+                                else
+                                {
+                                    using var sysIcon = System.Drawing.Icon.ExtractAssociatedIcon(itemPath);
+                                    if (sysIcon != null) iconBmp = sysIcon.ToBitmap();
+                                }
+                            }
+
+                            if (iconBmp != null)
+                            {
                                 if (group.MonochromeFolderIcon)
                                 {
                                     float[][] colorMatrixElements = { 
@@ -180,10 +212,11 @@ public class TaskbarService
                                 {
                                     g.DrawImage(iconBmp, new System.Drawing.Rectangle(x, y, iconSize, iconSize));
                                 }
+                                iconBmp.Dispose();
                             }
                         }
+                        catch { } // Ignore read errors for individual icons
                     }
-                    catch { } // Ignore read errors for individual icons
                 }
             }
             

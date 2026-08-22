@@ -124,6 +124,7 @@
                             <Flyout>
                                 <Flyout.FlyoutPresenterStyle>
                                     <Style TargetType="FlyoutPresenter">
+                                        <Setter Property="CornerRadius" Value="{ThemeResource OverlayCornerRadius}" />
                                         <Setter Property="MaxWidth" Value="800" />
                                         <Setter Property="MinWidth" Value="400" />
                                     </Style>
@@ -139,9 +140,11 @@
                                             <x:String>Dialog-ish</x:String>
                                         </ComboBox>
 
-                                        <ToggleSwitch x:Name="HideNameToggle" Header="Hide popup title" Toggled="SettingChanged"/>
-                                        <ToggleSwitch x:Name="HideAppLabelsToggle" Header="Hide app labels" Toggled="SettingChanged"/>
-                                        <ToggleSwitch x:Name="ShowCardLabelsToggle" Header="Show app labels (Not recommended)" Toggled="SettingChanged" Visibility="Collapsed" ToolTipService.ToolTip="Shows labels in the Dialog-ish layout"/>
+                                         <ToggleSwitch x:Name="HideNameToggle" Header="Hide popup title" Toggled="SettingChanged"/>
+                                         <ToggleSwitch x:Name="HideAppLabelsToggle" Header="Hide app labels" Toggled="SettingChanged"/>
+                                         <ToggleSwitch x:Name="MarqueeAppLabelsToggle" Header="Marquee long app labels (List)" Toggled="SettingChanged" ToolTipService.ToolTip="Continuously marquees long app names in List layout"/>
+                                         <ToggleSwitch x:Name="ScrollAppLabelsToggle" Header="Scroll long app labels (List)" Toggled="SettingChanged" ToolTipService.ToolTip="Allows horizontally scrolling long app names in List layout"/>
+                                         <ToggleSwitch x:Name="ShowCardLabelsToggle" Header="Show app labels (Not recommended)" Toggled="SettingChanged" Visibility="Collapsed" ToolTipService.ToolTip="Shows labels in the Dialog-ish layout"/>
                                         
                                         <StackPanel x:Name="LaunchAtCenterPanel" Spacing="0">
                                             <ToggleSwitch x:Name="OverrideLaunchSideToggle" Header="Override launch position" Toggled="SettingChanged"/>
@@ -182,9 +185,9 @@
                                         
                                         <ComboBox x:Name="PopupBackdropCombo" Header="Folder style (Popup backdrop)" SelectionChanged="SettingChanged" HorizontalAlignment="Stretch" PlaceholderText="Select backdrop">
                                             <x:String>Acrylic</x:String>
-                                            <x:String>Mica</x:String>
+                                            <x:String>Mica (Default)</x:String>
                                             <x:String>Mica Alt</x:String>
-                                            <x:String>None</x:String>
+                                            <x:String>None (Solid)</x:String>
                                         </ComboBox>
 
                                         <!-- Border color override hidden for now -->

@@ -13,13 +13,15 @@ public class AppGroup
     public bool HideName { get; set; } = false;
     public bool HideAppLabels { get; set; } = false;
     public bool ShowCardLabels { get; set; } = false;
+    public bool MarqueeAppLabels { get; set; } = false;
+    public bool ScrollAppLabels { get; set; } = false;
     public int FolderIconStyle { get; set; } = 0; // 0 = Normal, 1 = Transparent, 2 = UWP (Accent)
     public bool MonochromeFolderIcon { get; set; } = false;
     public string CustomIconPath { get; set; } = string.Empty;
     
     // Popup Layout Settings
     public int PopupStyle { get; set; } = 0; // 0 = Classic, 1 = Compact (Row), 2 = Modern, 3 = List
-    public int BackdropStyle { get; set; } = 0; // 0 = Acrylic, 1 = Mica, 2 = Transparent
+    public int BackdropStyle { get; set; } = 1; // 0 = Acrylic, 1 = Mica, 2 = Transparent / Mica Alt
     public int CompactAlignment { get; set; } = 0; // 0 = Top, 1 = Bottom
     public int TitleAlignment { get; set; } = -1; // -1 = Global, 0 = Left, 1 = Center, 2 = Right
     public bool LaunchAtCenter { get; set; } = false; // Kept for backwards compatibility if needed

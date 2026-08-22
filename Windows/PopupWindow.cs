@@ -23,25 +23,60 @@ namespace TaskTile.Popups;
 public class AppEntryViewModel : System.ComponentModel.INotifyPropertyChanged
 {
     private ImageSource? _iconImage;
-    public string        Name              { get; set; } = string.Empty;
-    public string        ExePath           { get; set; } = string.Empty;
-    public ImageSource?  IconImage
+    private string _name = string.Empty;
+    private string _exePath = string.Empty;
+    private Visibility _labelVisibility = Visibility.Visible;
+    private Visibility _normalVisibility = Visibility.Visible;
+    private Visibility _monotoneVisibility = Visibility.Collapsed;
+    private Brush _uwpBackground = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
+    private CornerRadius _tileCornerRadius = new CornerRadius(10);
+
+    public string Name
+    {
+        get => _name;
+        set { if (_name != value) { _name = value; PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(Name))); } }
+    }
+    public string ExePath
+    {
+        get => _exePath;
+        set { if (_exePath != value) { _exePath = value; PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(ExePath))); } }
+    }
+    public ImageSource? IconImage
     {
         get => _iconImage;
-        set
-        {
-            if (_iconImage != value)
-            {
-                _iconImage = value;
-                PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(IconImage)));
-            }
-        }
+        set { if (_iconImage != value) { _iconImage = value; PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(IconImage))); } }
     }
-    public Visibility    NormalVisibility  { get; set; } = Visibility.Visible;
-    public Visibility    MonotoneVisibility{ get; set; } = Visibility.Collapsed;
-    public Visibility    LabelVisibility   { get; set; } = Visibility.Visible;
-    public Brush         UwpBackground     { get; set; } = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
-    public CornerRadius  TileCornerRadius  { get; set; } = new CornerRadius(10);
+    public Visibility NormalVisibility
+    {
+        get => _normalVisibility;
+        set { if (_normalVisibility != value) { _normalVisibility = value; PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(NormalVisibility))); } }
+    }
+    public Visibility MonotoneVisibility
+    {
+        get => _monotoneVisibility;
+        set { if (_monotoneVisibility != value) { _monotoneVisibility = value; PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(MonotoneVisibility))); } }
+    }
+    public Visibility LabelVisibility
+    {
+        get => _labelVisibility;
+        set { if (_labelVisibility != value) { _labelVisibility = value; PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(LabelVisibility))); } }
+    }
+    public Brush UwpBackground
+    {
+        get => _uwpBackground;
+        set { if (_uwpBackground != value) { _uwpBackground = value; PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(UwpBackground))); } }
+    }
+    public CornerRadius TileCornerRadius
+    {
+        get => _tileCornerRadius;
+        set { if (_tileCornerRadius != value) { _tileCornerRadius = value; PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(TileCornerRadius))); } }
+    }
+    private TextTrimming _labelTrimming = TextTrimming.CharacterEllipsis;
+    public TextTrimming LabelTrimming
+    {
+        get => _labelTrimming;
+        set { if (_labelTrimming != value) { _labelTrimming = value; PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(LabelTrimming))); } }
+    }
     public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
 }
 
@@ -235,6 +270,8 @@ public sealed partial class PopupWindow : Window
     bool _disableFloat = false;
     bool _popupIsDark = false;
     bool _keepOpen = false;
+    private bool _marqueeAppLabels = false;
+    private bool _scrollAppLabels = false;
     private bool _isDesktopMode;
     private int _physW;
     private int _physH_original;
@@ -247,9 +284,10 @@ public sealed partial class PopupWindow : Window
     public PopupWindow(string groupId)
     {
         _groupId = groupId;
-        // Setting this to FALSE completely disables WinUI 3's custom title bar drawing,
-        // which physically removes the 1px black line at the top.
-        try { ExtendsContentIntoTitleBar = false; } catch { }
+        try { 
+            ExtendsContentIntoTitleBar = true; 
+            if (AppWindow.TitleBar != null) AppWindow.TitleBar.ExtendsContentIntoTitleBar = true;
+        } catch { }
         var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
         _subclassDelegate = new SubclassProc(WindowSubclass);
         SetWindowSubclass(hwnd, _subclassDelegate, 1, IntPtr.Zero);
@@ -356,7 +394,7 @@ public sealed partial class PopupWindow : Window
         int policy = _disableRoundedCorners ? 1 : DWMWCP_ROUND;
         DwmSetWindowAttribute(h, DWMWA_WINDOW_CORNER_PREFERENCE, ref policy, sizeof(int));
         
-        int customBorderColor = DWMWA_COLOR_NONE;
+        int customBorderColor = _popupIsDark ? 0x00363636 : 0x00D6D6D6;
         
         if (_overrideBorderColor && !string.IsNullOrEmpty(_customBorderColor) && _customBorderColor.Length >= 7)
         {
@@ -437,19 +475,54 @@ public sealed partial class PopupWindow : Window
         {
             if (!monotone && !onetone) return cachedPng;
         }
-        if (string.IsNullOrEmpty(exePath) || !File.Exists(exePath)) return null;
+
+        string? sourceFile = null;
+        if (!string.IsNullOrEmpty(cachedPng) && File.Exists(cachedPng))
+        {
+            sourceFile = cachedPng;
+        }
+        else if (!string.IsNullOrEmpty(exePath) && (File.Exists(exePath) || Directory.Exists(exePath)))
+        {
+            sourceFile = exePath;
+        }
+        else if (!string.IsNullOrEmpty(exePath))
+        {
+            var extractedFallback = TaskTile.Services.IconHelper.GetOrExtractIcon(exePath);
+            if (!string.IsNullOrEmpty(extractedFallback) && (File.Exists(extractedFallback) || Directory.Exists(extractedFallback)))
+                sourceFile = extractedFallback;
+        }
+
+        if (string.IsNullOrEmpty(sourceFile) || (!File.Exists(sourceFile) && !Directory.Exists(sourceFile))) return null;
+
         try
         {
             System.Drawing.Bitmap bmp;
-            if (string.IsNullOrEmpty(cachedPng) || !File.Exists(cachedPng))
+            if (Directory.Exists(sourceFile))
             {
-                var icon = System.Drawing.Icon.ExtractAssociatedIcon(exePath);
-                if (icon == null) return null;
-                bmp = icon.ToBitmap();
+                bmp = TaskTile.Services.IconHelper.ExtractFolderIcon() ?? new System.Drawing.Bitmap(32, 32);
+            }
+            else if (sourceFile.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ||
+                sourceFile.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ||
+                sourceFile.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase) ||
+                sourceFile.EndsWith(".ico", StringComparison.OrdinalIgnoreCase))
+            {
+                bmp = new System.Drawing.Bitmap(sourceFile);
             }
             else
             {
-                bmp = new System.Drawing.Bitmap(cachedPng);
+                var icon = System.Drawing.Icon.ExtractAssociatedIcon(sourceFile);
+                if (icon == null)
+                {
+                    string fallback = TaskTile.Services.IconHelper.GetOrExtractIcon(sourceFile);
+                    if (!string.IsNullOrEmpty(fallback) && File.Exists(fallback))
+                        bmp = new System.Drawing.Bitmap(fallback);
+                    else
+                        return null;
+                }
+                else
+                {
+                    bmp = icon.ToBitmap();
+                }
             }
 
             if (monotone || onetone)
@@ -484,8 +557,9 @@ public sealed partial class PopupWindow : Window
             ms.Seek(0, SeekOrigin.Begin);
             
             string suffix = onetone ? "_onetone" : (monotone ? "_mono" : "");
-            string tmp = Path.Combine(Path.GetTempPath(), $"ti_{Path.GetFileNameWithoutExtension(exePath)}{suffix}.png");
-            File.WriteAllBytes(tmp, ms.ToArray()); // Always write fresh - never reuse stale cache
+            string safeName = Path.GetFileNameWithoutExtension(string.IsNullOrEmpty(exePath) ? sourceFile : exePath);
+            string tmp = Path.Combine(Path.GetTempPath(), $"ti_{safeName}{suffix}.png");
+            File.WriteAllBytes(tmp, ms.ToArray());
             return tmp;
         }
         catch { return null; }
@@ -493,14 +567,26 @@ public sealed partial class PopupWindow : Window
 
     // ─── Event Handlers for XAML ─────────────────────────────────────────────
 
-    private void ClassicSV_PointerWheelChanged(object sender, PointerRoutedEventArgs pArgs)
+    private long _lastWheelTicks = 0;
+    public void ClassicSV_PointerWheelChanged(object sender, PointerRoutedEventArgs pArgs)
     {
+        pArgs.Handled = true;
+        if (_classicPages.Count <= 1) return;
+
+        long now = Environment.TickCount64;
+        if (now - _lastWheelTicks < 200) return;
+
         var delta = pArgs.GetCurrentPoint(null).Properties.MouseWheelDelta;
         if (delta < 0 && _classicPage < _classicPages.Count - 1)
+        {
+            _lastWheelTicks = now;
             GoToPage(_classicPage + 1, +1);
+        }
         else if (delta > 0 && _classicPage > 0)
+        {
+            _lastWheelTicks = now;
             GoToPage(_classicPage - 1, -1);
-        pArgs.Handled = true;
+        }
     }
 
     // ─── Start Menu hover effect ─────────────────────────────────────────────
@@ -528,18 +614,21 @@ public sealed partial class PopupWindow : Window
         _classicSV.ChangeView(null, 0, null, true); // true = disable animation
         UpdateClassicPagingVisuals();
 
+        int borderX = (AppWindow.Size.Width - AppWindow.ClientSize.Width) / 2;
+        int borderTop = (AppWindow.Size.Height - AppWindow.ClientSize.Height) / 2;
+
         var hwnd = WindowNative.GetWindowHandle(this);
-        SetWindowPos(hwnd, IntPtr.Zero, _animStartX, _animStartY, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+        SetWindowPos(hwnd, IntPtr.Zero, _animStartX - borderX, _animStartY - borderTop, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
         
         if (!_disableAnimation)
         {
             _popIn.Begin();
             
             int steps = 15;
-            int startX = _animStartX;
-            int startY = _animStartY;
-            int finalX = _targetX;
-            int finalY = _targetY;
+            int startX = _animStartX - borderX;
+            int startY = _animStartY - borderTop;
+            int finalX = _targetX - borderX;
+            int finalY = _targetY - borderTop;
             int currentStep = 0;
             int lastX = startX;
             int lastY = startY;
@@ -606,6 +695,12 @@ public sealed partial class PopupWindow : Window
                     if (g.TryGetProperty("HideName",          out var p)) hideName       = p.GetBoolean();
                     if (g.TryGetProperty("HideAppLabels",     out p))    hideAppLabels  = p.GetBoolean();
                     if (g.TryGetProperty("ShowCardLabels",    out p))    showCardLabels = p.GetBoolean();
+                    bool marqueeAppLabels = false;
+                    bool scrollAppLabels = false;
+                    if (g.TryGetProperty("MarqueeAppLabels",  out p))    marqueeAppLabels = p.GetBoolean();
+                    if (g.TryGetProperty("ScrollAppLabels",   out p))    scrollAppLabels  = p.GetBoolean();
+                    _marqueeAppLabels = marqueeAppLabels;
+                    _scrollAppLabels  = scrollAppLabels;
                     if (g.TryGetProperty("PopupStyle",         out p))    popupStyle      = p.GetInt32();
                     if (g.TryGetProperty("BackdropStyle",      out p))    _backdropStyle   = p.GetInt32();
                     if (g.TryGetProperty("CompactAlignment",   out p))    compactAlign    = p.GetInt32();
@@ -649,11 +744,17 @@ public sealed partial class PopupWindow : Window
                             if ((info.Attributes & System.IO.FileAttributes.Hidden) != 0 || (info.Attributes & System.IO.FileAttributes.System) != 0)
                                 continue;
                                 
+                            ImageSource? initialIcon = null;
+                            if (!monotone && !onetone && !string.IsNullOrEmpty(f) && File.Exists(f) && (f.EndsWith(".png", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".ico", StringComparison.OrdinalIgnoreCase)))
+                            {
+                                try { initialIcon = new BitmapImage(new Uri(f)); } catch { }
+                            }
+
                             var entry = new AppEntryViewModel
                             {
                                 Name               = System.IO.Path.GetFileName(f),
                                 ExePath            = f,
-                                IconImage          = null,
+                                IconImage          = initialIcon,
                                 NormalVisibility   = monotone ? Visibility.Collapsed : Visibility.Visible,
                                 MonotoneVisibility = monotone ? Visibility.Visible   : Visibility.Collapsed,
                                 LabelVisibility    = hideAppLabels ? Visibility.Collapsed : Visibility.Visible,
@@ -662,15 +763,18 @@ public sealed partial class PopupWindow : Window
                             };
                             apps.Add(entry);
 
-                            var dispatcher = this.DispatcherQueue;
-                            _ = System.Threading.Tasks.Task.Run(() =>
+                            if (initialIcon == null)
                             {
-                                var extracted = ExtractIconSync(f, "", monotone, onetone, accColor);
-                                if (extracted != null)
+                                var dispatcher = this.DispatcherQueue;
+                                _ = System.Threading.Tasks.Task.Run(() =>
                                 {
-                                    dispatcher.TryEnqueue(() => entry.IconImage = new BitmapImage(new Uri(extracted)));
-                                }
-                            });
+                                    var extracted = ExtractIconSync(f, "", monotone, onetone, accColor);
+                                    if (extracted != null)
+                                    {
+                                        dispatcher?.TryEnqueue(() => entry.IconImage = new BitmapImage(new Uri(extracted)));
+                                    }
+                                });
+                            }
                         }
                     }
                     else if (g.TryGetProperty("Apps", out var arr))
@@ -679,28 +783,43 @@ public sealed partial class PopupWindow : Window
                         {
                             var exe  = a.GetProperty("ExePath").GetString()!;
                             var icon = a.TryGetProperty("IconPath", out var ic) ? ic.GetString() : "";
+
+                            ImageSource? initialIcon = null;
+                            if (!monotone && !onetone && !string.IsNullOrEmpty(icon) && File.Exists(icon))
+                            {
+                                try { initialIcon = new BitmapImage(new Uri(icon)); } catch { }
+                            }
+                            else if (!monotone && !onetone && !string.IsNullOrEmpty(exe) && File.Exists(exe) && (exe.EndsWith(".png", StringComparison.OrdinalIgnoreCase) || exe.EndsWith(".ico", StringComparison.OrdinalIgnoreCase)))
+                            {
+                                try { initialIcon = new BitmapImage(new Uri(exe)); } catch { }
+                            }
+
                             var entry = new AppEntryViewModel
                             {
                                 Name               = a.GetProperty("Name").GetString()!,
                                 ExePath            = exe,
-                                IconImage          = null,
+                                IconImage          = initialIcon,
                                 NormalVisibility   = monotone ? Visibility.Collapsed : Visibility.Visible,
                                 MonotoneVisibility = monotone ? Visibility.Visible   : Visibility.Collapsed,
                                 LabelVisibility    = hideAppLabels ? Visibility.Collapsed : Visibility.Visible,
+                                LabelTrimming      = (marqueeAppLabels || scrollAppLabels) ? TextTrimming.None : TextTrimming.CharacterEllipsis,
                                 UwpBackground      = uwp ? accentBrush : new SolidColorBrush(Microsoft.UI.Colors.Transparent),
                                 TileCornerRadius   = uwp ? new CornerRadius(0) : new CornerRadius(10)
                             };
                             apps.Add(entry);
 
-                            var dispatcher = this.DispatcherQueue;
-                            _ = System.Threading.Tasks.Task.Run(() =>
+                            if (initialIcon == null)
                             {
-                                var extracted = ExtractIconSync(exe, icon, monotone, onetone, accColor);
-                                if (extracted != null)
+                                var dispatcher = this.DispatcherQueue;
+                                _ = System.Threading.Tasks.Task.Run(() =>
                                 {
-                                    dispatcher.TryEnqueue(() => entry.IconImage = new BitmapImage(new Uri(extracted)));
-                                }
-                            });
+                                    var extracted = ExtractIconSync(exe, icon, monotone, onetone, accColor);
+                                    if (extracted != null)
+                                    {
+                                        dispatcher?.TryEnqueue(() => entry.IconImage = new BitmapImage(new Uri(extracted)));
+                                    }
+                                });
+                            }
                         }
                     }
                     break;
@@ -753,24 +872,47 @@ public sealed partial class PopupWindow : Window
         }
         
         bool forceDark = _popupIsDark;
+        var hwnd = WindowNative.GetWindowHandle(this);
+
+        MARGINS margins = new MARGINS { cxLeftWidth = -1, cxRightWidth = -1, cyTopHeight = -1, cyBottomHeight = -1 };
+        DwmExtendFrameIntoClientArea(hwnd, ref margins);
+
         if (_backdropStyle == -1 || _backdropStyle == 3)
         {
             SystemBackdrop = null;
             _root.Background = new SolidColorBrush(forceDark ? Microsoft.UI.Colors.Black : Microsoft.UI.Colors.White); // OLED black background or solid white
-        }
-        else if (_backdropStyle == 1)
-        {
-            SystemBackdrop = new MicaBackdropAlways(forceDark);
-        }
-        else if (_backdropStyle == 2)
-        {
-            SystemBackdrop = new MicaBackdropAlways(forceDark, Microsoft.UI.Composition.SystemBackdrops.MicaKind.BaseAlt);
+            int dwmBackdrop = 1; // DWMSBT_NONE
+            DwmSetWindowAttribute(hwnd, 38, ref dwmBackdrop, sizeof(int));
         }
         else
         {
-            // Backdrop configuration
-            SystemBackdrop = new StartMenuAcrylicBackdrop(forceDark);
+            _root.Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
+            if (_backdropStyle == 1)
+            {
+                SystemBackdrop = new Microsoft.UI.Xaml.Media.MicaBackdrop { Kind = MicaKind.Base };
+                int dwmBackdrop = 2; // DWMSBT_MAINWINDOW (Mica)
+                DwmSetWindowAttribute(hwnd, 38, ref dwmBackdrop, sizeof(int));
+            }
+            else if (_backdropStyle == 2)
+            {
+                SystemBackdrop = new Microsoft.UI.Xaml.Media.MicaBackdrop { Kind = MicaKind.BaseAlt };
+                int dwmBackdrop = 4; // DWMSBT_TABBEDWINDOW (Mica Alt)
+                DwmSetWindowAttribute(hwnd, 38, ref dwmBackdrop, sizeof(int));
+            }
+            else
+            {
+                SystemBackdrop = new DesktopAcrylicBackdrop();
+                int dwmBackdrop = 3; // DWMSBT_TRANSIENTWINDOW (Acrylic)
+                DwmSetWindowAttribute(hwnd, 38, ref dwmBackdrop, sizeof(int));
+            }
         }
+
+        int winBorderColor = _overrideBorderColor && !string.IsNullOrEmpty(_customBorderColor) && _customBorderColor.Length >= 7
+            ? (byte.Parse(_customBorderColor.Substring(5, 2), System.Globalization.NumberStyles.HexNumber) << 16 |
+               byte.Parse(_customBorderColor.Substring(3, 2), System.Globalization.NumberStyles.HexNumber) << 8 |
+               byte.Parse(_customBorderColor.Substring(1, 2), System.Globalization.NumberStyles.HexNumber))
+            : (forceDark ? 0x00363636 : 0x00D6D6D6);
+        DwmSetWindowAttribute(hwnd, DWMWA_BORDER_COLOR, ref winBorderColor, sizeof(int));
 
         // Title
         bool noTitle = hideName || popupStyle == 1;
@@ -783,7 +925,9 @@ public sealed partial class PopupWindow : Window
         else if (alignPref == 2) titleAlign = HorizontalAlignment.Right;
 
         int n = apps.Count;
-        int logW = 0, logH = 0;
+        if (n == 0) return;
+
+        double logW = 0, logH = 0;
 
         if (popupStyle == 0) // Classic
         {
@@ -795,31 +939,33 @@ public sealed partial class PopupWindow : Window
             _cardContainer.Visibility = Visibility.Collapsed;
 
             int requestedCols = gridCols > 0 ? gridCols : 3;
-            int cols = requestedCols; // don't clamp to n yet — the window width drives wrapping
+            int cols = requestedCols;
             if (cols == 0) cols = 3;
             int rowMax  = gridRows > 0 ? gridRows : 3;
-            int pageSize = cols * rowMax;            // default 3×3 = 9
+            int pageSize = cols * rowMax;
 
             int cell = 84, sp = 0;
-            int gW = cols * cell + (cols - 1) * sp;
-            int gH = 0; // calculated later after n is known
+            
+            int visibleRows = (n <= pageSize) ? (int)Math.Ceiling((double)n / cols) : rowMax;
+            if (visibleRows == 0) visibleRows = 1;
+            int gH = visibleRows * cell + (visibleRows - 1) * sp;
 
-            // ── Pagination ──────────────────────────────────────────────────
             _classicPages.Clear();
             _classicPage = 0;
 
             if (n <= pageSize)
             {
-                // Single page — no dots needed
-                // Set an explicit Width so ItemsWrapGrid gets exactly (cols * 84)px and wraps at the right column
                 _classicR.Width = cols * cell + 16;
+                _classicR.Height = gH + 8;
                 _classicR.ItemsSource = apps;
                 _classicR.Visibility  = Visibility.Visible;
                 _pageDots.Visibility  = Visibility.Collapsed;
+                _classicPagesPanel.Children.Clear();
+                _classicPagesPanel.Children.Add(_classicR);
             }
             else
             {
-                // Split into groups of pageSize just for pagination logic
+                _classicR.Visibility = Visibility.Collapsed;
                 _classicPagesPanel.Children.Clear();
                 for (int i = 0; i < n; i += pageSize)
                 {
@@ -828,6 +974,7 @@ public sealed partial class PopupWindow : Window
                     var gv = new GridView {
                         ItemsSource = page,
                         Width = cols * cell + 16,
+                        Height = gH + 8,
                         Margin = new Thickness(0, 0, 0, 20),
                         Padding = new Thickness(8, 4, 8, 4),
                         ItemTemplate = _classicR.ItemTemplate,
@@ -849,34 +996,25 @@ public sealed partial class PopupWindow : Window
 
                 UpdateClassicPagingUI();
                 _pageDots.Visibility = Visibility.Visible;
-
-                // Size the window for one page of content
-                n = Math.Min(pageSize, _classicPages[0].Count);
             }
 
-            int rows = (int)Math.Ceiling((double)Math.Min(n, pageSize) / cols);
-            if (rows == 0) rows = 1;
-            gH = rows * cell + (rows - 1) * sp;
-
             _classicSV.Margin = new Thickness(0);
-            
-            // Add padding so hover borders aren't clipped by the container bounds (8px horizontal, 4px vertical)
             _classicR.Padding = new Thickness(8, 4, 8, 4); 
-            
-            _classicSV.Height = gH + 8; // restore +8 to prevent clipping the 4px top/bottom padding
+            _classicSV.Height = gH + 8;
             _classicSV.MaxHeight = double.PositiveInfinity;
 
-            // Use less padding on the bottom to pull it up tighter
             _content.Padding = new Thickness(12, 12, 12, 4);
-            
             _title.HorizontalAlignment = titleAlign;
-            _title.Margin = new Thickness(0);
+            _title.Margin = new Thickness(0, 0, 0, 16);
+            _holder.HorizontalAlignment = HorizontalAlignment.Center;
+            _holder.VerticalAlignment = VerticalAlignment.Center;
             
-            logW = 24 + (cols * cell + 16) + 24; // border padding(24) + gridview width(cols*84+16) + content padding(24)
-            logH = (noTitle ? 0 : 38) + (gH + 8) + 24 + 16; // title + grid(gH+8) + 12px border padding(24) + content padding top/bottom(16)
+            logW = 24 + (cols * cell + 16) + 24;
+            logH = (noTitle ? 0 : 38) + (gH + 8) + 24 + 16;
         }
         else if (popupStyle == 1) // Compact
         {
+            _pageDots.Visibility  = Visibility.Collapsed;
             _classicSV.Visibility = Visibility.Collapsed;
             _modernSV.Visibility  = Visibility.Collapsed;
             _listSV.Visibility    = Visibility.Collapsed;
@@ -888,38 +1026,37 @@ public sealed partial class PopupWindow : Window
             { 
                 _compactR.Visibility  = Visibility.Visible;
                 _compactR.ItemsSource = apps;
-                _compactR.Width = n * 42 + 8; // Explicitly size the GridView horizontally (n*42 + 8px padding)
-                logW = (n * 42 + 8) + 12 + 16; // GridView Width + 12px border padding + extra safety buffer
-                logH = 60;     // 46px internal + 14px padding/border
+                _compactR.Width = n * 42;
+                logW = n * 42 + 12;
+                logH = 30;
                 _compactR.HorizontalAlignment = HorizontalAlignment.Center;
                 _compactR.VerticalAlignment = VerticalAlignment.Center;
                 _holder.HorizontalAlignment   = HorizontalAlignment.Center;
                 _holder.VerticalAlignment     = VerticalAlignment.Center;
-                _compactR.Height = 48; // Explicitly size the GridView so the ScrollViewer viewport is taller than the 42px items!
-                _holder.ClearValue(FrameworkElement.WidthProperty);
-                _compactR.Padding = new Thickness(4, 2, 4, 2); // Viewport takes full space. Items are 42px centered, yielding clearance!
+                _compactR.Height = 26;
+                _compactR.Padding = new Thickness(0);
                 _compactR.Margin = new Thickness(0);
                 _compactR.BorderThickness = new Thickness(0);
+                _border.Padding = new Thickness(6, 2, 6, 2);
             }
             else                   
             { 
                 _compactRVertical.Visibility = Visibility.Visible;
                 _compactRVertical.ItemsSource = apps;
-                _compactRVertical.Height = n * 42 + 8; // Explicitly size the GridView vertically
-                logH = (n * 42 + 8) + 12 + 16;  
-                logW = 60;     
+                _compactRVertical.Height = n * 42;
+                logH = n * 42 + 12;  
+                logW = 30;     
                 _compactRVertical.HorizontalAlignment = HorizontalAlignment.Center;
                 _compactRVertical.VerticalAlignment = VerticalAlignment.Center;
                 _holder.HorizontalAlignment   = HorizontalAlignment.Center;
                 _holder.VerticalAlignment     = VerticalAlignment.Center;
-                _compactRVertical.Width = 48; // Explicitly size the GridView
-                _holder.ClearValue(FrameworkElement.HeightProperty);
-                _compactRVertical.Padding = new Thickness(2, 4, 2, 4);
+                _compactRVertical.Width = 26;
+                _compactRVertical.Padding = new Thickness(0);
                 _compactRVertical.Margin = new Thickness(0);
                 _compactRVertical.BorderThickness = new Thickness(0);
+                _border.Padding = new Thickness(2, 6, 2, 6);
             }
 
-            _border.Padding = new Thickness(6);
             _content.Padding = new Thickness(0);
             _title.Margin = new Thickness(0);
         }
@@ -939,30 +1076,26 @@ public sealed partial class PopupWindow : Window
             if (cols == 0) cols = 1;
             int allRows = (int)Math.Ceiling((double)n / cols);
             
-            // Set explicit exact size to force grid perfectly
-            // 24px is GridView padding (12+12).
             _modernR.Width = cols * 68 + 24;
             _modernR.Height = allRows * 68 + 24;
             _modernR.Margin = new Thickness(0);
             _modernR.HorizontalAlignment = HorizontalAlignment.Center;
             _modernR.VerticalAlignment = VerticalAlignment.Center;
+            _holder.HorizontalAlignment = HorizontalAlignment.Center;
+            _holder.VerticalAlignment = VerticalAlignment.Center;
 
             _title.HorizontalAlignment = titleAlign;
-            _title.Margin = titleAlign == HorizontalAlignment.Left ? new Thickness(4, 0, 0, 12) : 
-                            titleAlign == HorizontalAlignment.Right ? new Thickness(0, 0, 4, 12) : 
-                            new Thickness(0, 0, 0, 12);
+            _title.Margin = titleAlign == HorizontalAlignment.Left ? new Thickness(4, 8, 0, 14) : 
+                            titleAlign == HorizontalAlignment.Right ? new Thickness(0, 8, 4, 14) : 
+                            new Thickness(0, 8, 0, 14);
 
-            _content.Padding = new Thickness(16, 12, 16, 12); // tighter padding for window edges
+            _content.Padding = new Thickness(16, 16, 16, 12);
             
-            // Exact manual math!
-            // _border Padding is 0
-            // _content Padding is 16,12,16,12 (32 width, 24 height)
             logW = 32 + (int)_modernR.Width;
-            int titleH = noTitle ? 0 : (22 + 12); // 22 approx height + 12 bottom margin
-            int overhead = 24 + titleH; // 24 content padding (12 top + 12 bottom)
+            int titleH = noTitle ? 0 : (22 + 22);
+            int overhead = 28 + titleH;
             logH = overhead + (int)_modernR.Height;
             
-            // User requested NO scrollbar ever, just grow to exact icon height
             _modernSV.VerticalScrollBarVisibility = ScrollBarVisibility.Disabled;
         }
         else if (popupStyle == 3) // List
@@ -975,16 +1108,12 @@ public sealed partial class PopupWindow : Window
             
             _listSV.Visibility     = Visibility.Visible;
             _listR.ItemsSource     = apps;
+            _listR.Padding         = new Thickness(0);
+            _listR.Margin          = new Thickness(0);
             
-            // Title: aligned based on setting
-            _title.HorizontalAlignment = titleAlign;
-            _title.Margin = titleAlign == HorizontalAlignment.Left ? new Thickness(16, 0, 0, 12) : 
-                            titleAlign == HorizontalAlignment.Right ? new Thickness(0, 0, 16, 12) : 
-                            new Thickness(0, 0, 0, 12);
             _cardFooterName.Text = name;
             _cardFooterName.Margin = new Thickness(14, 0, 0, 0);
             
-            // Apply custom semi-transparent bar background
             var barBorder = _listR.Parent as Grid;
             if (barBorder != null) {
                 var barBorderChild = barBorder.Children.Count > 1 ? barBorder.Children[1] as Border : null;
@@ -993,32 +1122,21 @@ public sealed partial class PopupWindow : Window
                 }
             }
 
-            int itemH = 36; // List item height
             _holder.HorizontalAlignment = HorizontalAlignment.Stretch;
             _holder.VerticalAlignment   = VerticalAlignment.Top;
 
-            // Nuke all bottom paddings to completely eradicate the chin
-            _border.Padding  = new Thickness(12, 12, 12, 0); 
-            _content.Padding = new Thickness(0, noTitle ? 8 : 4, 0, 0); 
+            _border.Padding  = new Thickness(14, 12, 14, 6); 
+            _content.Padding = new Thickness(0, noTitle ? 2 : 0, 0, 0); 
             
             _title.HorizontalAlignment = titleAlign;
-            _title.Margin = titleAlign == HorizontalAlignment.Left ? new Thickness(16, 0, 0, 8) : 
-                            titleAlign == HorizontalAlignment.Right ? new Thickness(0, 0, 16, 8) : 
-                            new Thickness(0, 0, 0, 8);
-            
-            _listR.Margin = new Thickness(0); // 0 margin everywhere
+            _title.Margin = titleAlign == HorizontalAlignment.Left ? new Thickness(16, 4, 0, 10) : 
+                            titleAlign == HorizontalAlignment.Right ? new Thickness(0, 4, 16, 10) : 
+                            new Thickness(0, 4, 0, 10);
 
-            // Comfortable reading width so app names don't get truncated
-            logW = 240;
+            logW = 260;
 
-            // Overhead: 
-            // Top: border(12) + content top(4) + title(22) + title margin(8) + list top(0) = 46
-            // No Title Top: border(12) + content top(8) + list top(0) = 20
-            // Bottom: 0!
-            int overhead = noTitle ? 20 : 46;
-            
-            // Absolutely exact math with no buffers
-            logH = overhead + n * 36; 
+            int overhead = noTitle ? 8 : (24 + 14 + 14); // 52px total overhead gives title comfortable breathing room
+            logH = overhead + n * 36;
         }
 
         else // Dialog-ish
@@ -1032,13 +1150,29 @@ public sealed partial class PopupWindow : Window
 
             _cardContainer.Visibility = Visibility.Visible;
             _cardFooterName.Text      = name;
-            _cardFooterName.HorizontalAlignment = titleAlign;
-            _cardFooterName.Margin    = titleAlign == HorizontalAlignment.Left ? new Thickness(14, 0, 0, 0) : 
-                                        titleAlign == HorizontalAlignment.Right ? new Thickness(0, 0, 14, 0) : 
-                                        new Thickness(0);
+            _cardFooterName.HorizontalAlignment = HorizontalAlignment.Center;
+            _cardFooterName.Margin    = new Thickness(0);
 
-            // Nuke the border's bottom padding so the footer's internal padding is perfectly balanced
-            _border.Padding = new Thickness(12, 12, 12, 0);
+            // Edge-to-edge flush border, no nested side gaps
+            _border.Padding = new Thickness(0);
+            _content.Padding = new Thickness(0);
+            _content.Margin = new Thickness(0);
+            _holder.Margin = new Thickness(0);
+            _holder.HorizontalAlignment = HorizontalAlignment.Stretch;
+            _holder.VerticalAlignment   = VerticalAlignment.Stretch;
+
+            // Set bottom bar background and border colors
+            _cardFooterBorder.VerticalAlignment = VerticalAlignment.Stretch;
+            _cardFooterBorder.HorizontalAlignment = HorizontalAlignment.Stretch;
+            _cardFooterBorder.MinHeight = 40;
+            _cardFooterBorder.Padding = new Thickness(8, 8, 8, 8);
+            _cardFooterBorder.BorderThickness = new Thickness(0, 1, 0, 0);
+            _cardFooterBorder.BorderBrush = new SolidColorBrush(forceDark 
+                ? Windows.UI.Color.FromArgb(0x20, 0xFF, 0xFF, 0xFF) 
+                : Windows.UI.Color.FromArgb(0x18, 0x00, 0x00, 0x00));
+            _cardFooterBorder.Background = new SolidColorBrush(forceDark 
+                ? Windows.UI.Color.FromArgb(0x25, 0x00, 0x00, 0x00) 
+                : Windows.UI.Color.FromArgb(0x35, 0x00, 0x00, 0x00));
 
             // Always icon-only — no labels in Dialog-ish
             foreach (var app in apps)
@@ -1051,28 +1185,17 @@ public sealed partial class PopupWindow : Window
             if (cols == 0) cols = 3;
             int allRows = (int)Math.Ceiling((double)n / cols);
 
-            // Stretch horizontally and center content
-            _holder.HorizontalAlignment = HorizontalAlignment.Center;
-            _holder.VerticalAlignment   = VerticalAlignment.Top;
-            _holder.Margin = new Thickness(0);
-
-            // 56px cells — matches XAML ItemsWrapGrid ItemWidth="56"
-            // 8px for GridView internal padding (4 left + 4 right)
-            int gridW = cols * 56 + 8;
+            int cell = 52;
+            int gridW = cols * cell + 16;
+            int gridH = allRows * cell + 8;
             
             _cardR.Width = gridW;
+            _cardR.Height = gridH;
+            _cardR.Padding = new Thickness(8, 4, 8, 4);
             _cardR.HorizontalAlignment = HorizontalAlignment.Center;
             
-            // Set window width exactly to grid width plus the 24px of horizontal border padding!
-            logW = gridW + 24;
-        }
-
-        // --- UNIVERSAL CHIN ERADICATOR ---
-        // Ask WinUI for the EXACT pixel height needed!
-        if (popupStyle == 1 || popupStyle == 4) 
-        {
-            _border.Measure(new Windows.Foundation.Size(logW, double.PositiveInfinity));
-            logH = (int)Math.Ceiling(_border.DesiredSize.Height);
+            logW = gridW;
+            logH = gridH + 44; // A tiny bit taller with comfortable chin and grid!
         }
 
 
@@ -1083,7 +1206,7 @@ public sealed partial class PopupWindow : Window
 
         // Position
         GetCursorPos(out var pt);
-        var hwnd  = WindowNative.GetWindowHandle(this);
+        hwnd  = WindowNative.GetWindowHandle(this);
         var winId = Win32Interop.GetWindowIdFromWindow(hwnd);
         var da    = DisplayArea.GetFromWindowId(winId, DisplayAreaFallback.Primary);
 
@@ -1182,6 +1305,10 @@ public sealed partial class PopupWindow : Window
             }
         }
 
+        // Calculate invisible borders to offset the Move, ensuring the visible content is perfectly positioned
+        int borderX = (AppWindow.Size.Width - AppWindow.ClientSize.Width) / 2;
+        int borderTop = (AppWindow.Size.Height - AppWindow.ClientSize.Height) / 2; // Assuming symmetric vertical invisible borders
+
         // Set up animation positions and move to start immediately
         _targetX = x;
         _targetY = y;
@@ -1192,31 +1319,15 @@ public sealed partial class PopupWindow : Window
         {
             if (isTop) _animStartY -= animDistance;
             else if (isLeft) _animStartX -= animDistance;
-        else if (isRight) _animStartX += animDistance;
+            else if (isRight) _animStartX += animDistance;
             else _animStartY += animDistance; // bottom default
         }
         
-        // Let it break the acrylic effect to eliminate the chin if under 12 apps
-        if (n < 12 && (popupStyle == 1 || popupStyle == 4))
-        {
-            if (AppWindow.Presenter is Microsoft.UI.Windowing.OverlappedPresenter op)
-            {
-                op.IsResizable = false;
-                op.SetBorderAndTitleBar(false, false);
-            }
-        }
-        
+        // Clamp _animStartY to prevent the window from being positioned at Y < 0, which breaks DWM Acrylic
+        if (_animStartY - borderTop < 0) _animStartY = borderTop;
+
         // Use ResizeClient to guarantee exact client area, preventing right-edge clipping.
         AppWindow.ResizeClient(new Windows.Graphics.SizeInt32(physW, physH));
-        
-        try {
-            System.IO.File.WriteAllText(System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.Desktop), "TaskTile_Debug.txt"), 
-            "logH: " + logH.ToString() + "\ndesired: " + _border.DesiredSize.Height.ToString());
-        } catch { }
-        
-        // Calculate invisible borders to offset the Move, ensuring the visible content is perfectly positioned
-        int borderX = (AppWindow.Size.Width - AppWindow.ClientSize.Width) / 2;
-        int borderTop = (AppWindow.Size.Height - AppWindow.ClientSize.Height) / 2; // Assuming symmetric vertical invisible borders
         
         AppWindow.Move(new Windows.Graphics.PointInt32(_animStartX - borderX, _animStartY - borderTop));
 
@@ -1323,13 +1434,16 @@ public sealed partial class PopupWindow : Window
         {
             var hwnd = WindowNative.GetWindowHandle(this);
             GetWindowRect(hwnd, out var currentRect);
+            
+            int borderX = (AppWindow.Size.Width - AppWindow.ClientSize.Width) / 2;
+            int borderTop = (AppWindow.Size.Height - AppWindow.ClientSize.Height) / 2;
 
             var sw = System.Diagnostics.Stopwatch.StartNew();
             int startX = currentRect.Left;
             int startY = currentRect.Top;
             int steps = 10;
-            int finalX = _animStartX;
-            int finalY = _animStartY;
+            int finalX = _animStartX - borderX;
+            int finalY = _animStartY - borderTop;
             int currentStep = 0;
             int lastX = startX;
             int lastY = startY;
@@ -1377,6 +1491,109 @@ public sealed partial class PopupWindow : Window
 
     // ─── Events ──────────────────────────────────────────────────────────────
     void OnActivated(object s, WindowActivatedEventArgs e) { if (e.WindowActivationState != WindowActivationState.Deactivated) _activated = true; else if (_activated && !_keepOpen) _ = CloseWithFadeAsync(); }
+
+    private void AppLabel_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is not TextBlock tb) return;
+        if (!_marqueeAppLabels) return;
+
+        tb.Measure(new Windows.Foundation.Size(double.PositiveInfinity, 36));
+        double desiredW = tb.DesiredSize.Width;
+        double diff = desiredW - 170;
+        if (diff > 4)
+        {
+            if (tb.RenderTransform is not TranslateTransform tt)
+            {
+                tt = new TranslateTransform();
+                tb.RenderTransform = tt;
+            }
+
+            var sb = new Storyboard();
+            var anim = new DoubleAnimation
+            {
+                From = 0,
+                To = -(diff + 12),
+                Duration = new Duration(TimeSpan.FromSeconds(Math.Max(2.5, diff / 20.0))),
+                AutoReverse = true,
+                RepeatBehavior = RepeatBehavior.Forever,
+                BeginTime = TimeSpan.FromSeconds(0.8)
+            };
+            Storyboard.SetTarget(anim, tb);
+            Storyboard.SetTargetProperty(anim, "(UIElement.RenderTransform).(TranslateTransform.X)");
+            sb.Children.Add(anim);
+            sb.Begin();
+            tb.Tag = sb;
+        }
+    }
+
+    private void ListRow_PointerEntered(object sender, PointerRoutedEventArgs e)
+    {
+        if (!_scrollAppLabels || _marqueeAppLabels) return;
+        if (sender is not FrameworkElement el) return;
+        var tb = FindVisualChild<TextBlock>(el);
+        if (tb == null) return;
+
+        tb.Measure(new Windows.Foundation.Size(double.PositiveInfinity, 36));
+        double desiredW = tb.DesiredSize.Width;
+        double diff = desiredW - 170;
+        if (diff > 4)
+        {
+            if (tb.RenderTransform is not TranslateTransform tt)
+            {
+                tt = new TranslateTransform();
+                tb.RenderTransform = tt;
+            }
+
+            var sb = new Storyboard();
+            var anim = new DoubleAnimation
+            {
+                To = -(diff + 8),
+                Duration = new Duration(TimeSpan.FromSeconds(Math.Max(1.2, diff / 35.0))),
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+            Storyboard.SetTarget(anim, tb);
+            Storyboard.SetTargetProperty(anim, "(UIElement.RenderTransform).(TranslateTransform.X)");
+            sb.Children.Add(anim);
+            sb.Begin();
+            el.Tag = sb;
+        }
+    }
+
+    private void ListRow_PointerExited(object sender, PointerRoutedEventArgs e)
+    {
+        if (!_scrollAppLabels || _marqueeAppLabels) return;
+        if (sender is not FrameworkElement el) return;
+        if (el.Tag is Storyboard oldSb) oldSb.Stop();
+        var tb = FindVisualChild<TextBlock>(el);
+        if (tb == null) return;
+        if (tb.RenderTransform is not TranslateTransform tt) return;
+
+        var sb = new Storyboard();
+        var anim = new DoubleAnimation
+        {
+            To = 0,
+            Duration = new Duration(TimeSpan.FromSeconds(0.35)),
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        };
+        Storyboard.SetTarget(anim, tb);
+        Storyboard.SetTargetProperty(anim, "(UIElement.RenderTransform).(TranslateTransform.X)");
+        sb.Children.Add(anim);
+        sb.Begin();
+    }
+
+    private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+    {
+        if (parent == null) return null;
+        int count = VisualTreeHelper.GetChildrenCount(parent);
+        for (int i = 0; i < count; i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T typedChild) return typedChild;
+            var result = FindVisualChild<T>(child);
+            if (result != null) return result;
+        }
+        return null;
+    }
 
     private void Icon_PointerEntered(object sender, PointerRoutedEventArgs e)
     {
@@ -1643,13 +1860,13 @@ public sealed partial class PopupWindow : Window
         _pageDots.Visibility = Visibility.Visible;
     }
 
-    private void PageDots_PointerEntered(object sender, PointerRoutedEventArgs e)
+    public void PageDots_PointerEntered(object sender, PointerRoutedEventArgs e)
     {
         _isAreaHovered = true;
         UpdateClassicPagingVisuals();
     }
 
-    private void PageDots_PointerExited(object sender, PointerRoutedEventArgs e)
+    public void PageDots_PointerExited(object sender, PointerRoutedEventArgs e)
     {
         _isAreaHovered = false;
         UpdateClassicPagingVisuals();

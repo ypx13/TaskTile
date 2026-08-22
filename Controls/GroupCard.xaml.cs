@@ -26,18 +26,6 @@ public sealed partial class GroupCard : UserControl
         set => SetValue(GroupDataProperty, value);
     }
 
-    protected override Windows.Foundation.Size MeasureOverride(Windows.Foundation.Size availableSize)
-    {
-        var size = base.MeasureOverride(availableSize);
-        if (_group != null)
-        {
-            int sizeBucket = Math.Abs(_group.Id.GetHashCode()) % 3;
-            double desiredWidth = 240 + (sizeBucket * 100);
-            size.Width = Math.Max(size.Width, desiredWidth);
-        }
-        return size;
-    }
-
     public GroupCard()
     {
         this.InitializeComponent();
@@ -57,21 +45,54 @@ public sealed partial class GroupCard : UserControl
         _isUpdatingUI = true;
 
         GroupNameText.Text = string.IsNullOrEmpty(group.Name) ? "Group" : group.Name;
-        AppCountText.Text = $"{group.Apps.Count} apps";
-
-        if (string.IsNullOrEmpty(group.CustomIconPath))
+        
+        if (group.GroupType == GroupType.Files)
         {
-            ClearCustomIconButton.Visibility = Visibility.Collapsed;
-            GroupIconImage.Source = null;
-            GroupIconImage.Visibility = Visibility.Visible;
-            PlaceholderIcon.Visibility = Visibility.Collapsed;
+            AppCountText.Text = group.IsDynamicFolder ? "Dynamic folder" : (group.Apps.Count == 1 ? "1 file" : $"{group.Apps.Count} files");
+            PlaceholderIcon.Glyph = group.IsDynamicFolder ? "\uE8B7" : "\uE8A5";
         }
         else
+        {
+            AppCountText.Text = group.Apps.Count == 1 ? "1 app" : $"{group.Apps.Count} apps";
+            PlaceholderIcon.Glyph = "\uF168";
+        }
+
+        if (!string.IsNullOrEmpty(group.CustomIconPath) && System.IO.File.Exists(group.CustomIconPath))
         {
             try { GroupIconImage.Source = new BitmapImage(new Uri(group.CustomIconPath)); } catch {}
             GroupIconImage.Visibility = Visibility.Visible;
             PlaceholderIcon.Visibility = Visibility.Collapsed;
             ClearCustomIconButton.Visibility = Visibility.Visible;
+        }
+        else if (group.Apps.Count > 0 || (group.IsDynamicFolder && !string.IsNullOrEmpty(group.DynamicFolderPath) && System.IO.Directory.Exists(group.DynamicFolderPath)))
+        {
+            ClearCustomIconButton.Visibility = Visibility.Collapsed;
+            var dispatcher = this.DispatcherQueue;
+            _ = System.Threading.Tasks.Task.Run(() =>
+            {
+                var iconPath = TaskbarService.GenerateGroupIcon(group, out string? pngPath);
+                string? previewPath = !string.IsNullOrEmpty(pngPath) && System.IO.File.Exists(pngPath) ? pngPath : iconPath;
+                if (!string.IsNullOrEmpty(previewPath) && System.IO.File.Exists(previewPath))
+                {
+                    dispatcher?.TryEnqueue(() =>
+                    {
+                        try
+                        {
+                            GroupIconImage.Source = new BitmapImage(new Uri(previewPath));
+                            GroupIconImage.Visibility = Visibility.Visible;
+                            PlaceholderIcon.Visibility = Visibility.Collapsed;
+                        }
+                        catch { }
+                    });
+                }
+            });
+        }
+        else
+        {
+            ClearCustomIconButton.Visibility = Visibility.Collapsed;
+            GroupIconImage.Source = null;
+            GroupIconImage.Visibility = Visibility.Collapsed;
+            PlaceholderIcon.Visibility = Visibility.Visible;
         }
 
         UpdatePinState(group.IsPinned);
@@ -80,6 +101,8 @@ public sealed partial class GroupCard : UserControl
         PopupStyleCombo.SelectedIndex = group.PopupStyle;
         HideNameToggle.IsOn = group.HideName;
         HideAppLabelsToggle.IsOn = group.HideAppLabels;
+        MarqueeAppLabelsToggle.IsOn = group.MarqueeAppLabels;
+        ScrollAppLabelsToggle.IsOn = group.ScrollAppLabels;
         ShowCardLabelsToggle.IsOn = group.ShowCardLabels;
         OverrideLaunchSideToggle.IsOn = group.OverrideLaunchSide;
         LaunchPositionCombo.SelectedIndex = group.GroupLaunchSide;
@@ -190,6 +213,8 @@ public sealed partial class GroupCard : UserControl
         _group.PopupStyle = PopupStyleCombo.SelectedIndex;
         _group.HideName = HideNameToggle.IsOn;
         _group.HideAppLabels = HideAppLabelsToggle.IsOn;
+        _group.MarqueeAppLabels = MarqueeAppLabelsToggle.IsOn;
+        _group.ScrollAppLabels = ScrollAppLabelsToggle.IsOn;
         _group.ShowCardLabels = ShowCardLabelsToggle.IsOn;
         _group.OverrideLaunchSide = OverrideLaunchSideToggle.IsOn;
         _group.OverrideBorderColor = OverrideBorderColorToggle.IsOn;

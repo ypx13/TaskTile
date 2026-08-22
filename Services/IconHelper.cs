@@ -22,12 +22,56 @@ namespace TaskTile.Services
         [DllImport("user32.dll")]
         public static extern bool DestroyIcon(IntPtr hIcon);
 
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+        public struct SHFILEINFO
+        {
+            public IntPtr hIcon;
+            public int iIcon;
+            public uint dwAttributes;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
+            public string szDisplayName;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 80)]
+            public string szTypeName;
+        }
+
+        [DllImport("shell32.dll", CharSet = CharSet.Auto)]
+        public static extern IntPtr SHGetFileInfo(string pszPath, uint dwFileAttributes, out SHFILEINFO psfi, uint cbFileInfo, uint uFlags);
+
+        public const uint SHGFI_ICON = 0x000000100;
+        public const uint SHGFI_LARGEICON = 0x000000000;
+        public const uint FILE_ATTRIBUTE_DIRECTORY = 0x00000010;
+        public const uint FILE_ATTRIBUTE_NORMAL = 0x00000080;
+        public const uint SHGFI_USEFILEATTRIBUTES = 0x000000010;
+
+        public static Bitmap? ExtractFolderIcon()
+        {
+            try
+            {
+                SHFILEINFO shinfo = new SHFILEINFO();
+                IntPtr hImg = SHGetFileInfo("folder", FILE_ATTRIBUTE_DIRECTORY, out shinfo, (uint)Marshal.SizeOf(shinfo), SHGFI_ICON | SHGFI_LARGEICON | SHGFI_USEFILEATTRIBUTES);
+                if (shinfo.hIcon != IntPtr.Zero)
+                {
+                    using var icon = Icon.FromHandle(shinfo.hIcon);
+                    var bmp = new Bitmap(icon.ToBitmap());
+                    DestroyIcon(shinfo.hIcon);
+                    return bmp;
+                }
+            }
+            catch { }
+            return null;
+        }
+
         public static string GetOrExtractIcon(string filePath)
         {
-            if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath)) return "";
+            if (string.IsNullOrEmpty(filePath)) return "";
+
+            bool isDir = Directory.Exists(filePath);
+            if (!isDir && !File.Exists(filePath)) return "";
 
             string hash = ComputeHash(filePath);
-            string cachedPath = Path.Combine(CacheDir, $"{Path.GetFileNameWithoutExtension(filePath)}_{hash}.png");
+            string name = isDir ? Path.GetFileName(filePath.TrimEnd('\\', '/')) : Path.GetFileNameWithoutExtension(filePath);
+            if (string.IsNullOrEmpty(name)) name = "folder";
+            string cachedPath = Path.Combine(CacheDir, $"{name}_{hash}.png");
 
             if (File.Exists(cachedPath))
             {
@@ -39,7 +83,11 @@ namespace TaskTile.Services
                 Directory.CreateDirectory(CacheDir);
                 Bitmap? iconBitmap = null;
 
-                if (Path.GetExtension(filePath).Equals(".lnk", StringComparison.OrdinalIgnoreCase))
+                if (isDir)
+                {
+                    iconBitmap = ExtractFolderIcon();
+                }
+                else if (Path.GetExtension(filePath).Equals(".lnk", StringComparison.OrdinalIgnoreCase))
                 {
                     iconBitmap = ExtractWindowsAppIcon(filePath);
                     if (iconBitmap == null)

@@ -4,10 +4,10 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:local="using:TaskTile.Popups"
+    xmlns:local="using:TaskTile.Popups" xmlns:popups="using:TaskTile.Popups"
     mc:Ignorable="d">
 
-    <Grid x:Name="_root" Background="Transparent" Opacity="0" VerticalAlignment="Stretch">
+    <Grid x:Name="_root" Background="Transparent" Opacity="0" VerticalAlignment="Stretch" PointerWheelChanged="ClassicSV_PointerWheelChanged">
         <Grid.RenderTransform>
             <TransformGroup>
                 <TranslateTransform x:Name="_rootTranslate" Y="0" />
@@ -17,10 +17,10 @@
 
         <Grid.ContextFlyout>
             <MenuFlyout>
-                <MenuFlyoutItem Text="Edit App Group"                        >
+                <MenuFlyoutItem Text="Edit App Group" Click="EditGroup_Click">
                     <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE70F;" /></MenuFlyoutItem.Icon>
                 </MenuFlyoutItem>
-                <MenuFlyoutItem Text="Rename App Group"                          >
+                <MenuFlyoutItem Text="Rename App Group" Click="RenameGroup_Click">
                     <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8AC;" /></MenuFlyoutItem.Icon>
                 </MenuFlyoutItem>
             </MenuFlyout>
@@ -53,11 +53,11 @@
 
                 <TextBlock x:Name="_title" Grid.Row="0" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorPrimaryBrush}" Margin="0,0,0,16" TextTrimming="CharacterEllipsis" />
 
-                <StackPanel x:Name="_holder" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Grid x:Name="_holder" Grid.Row="1">
                     <!-- Classic -->
-                    <ScrollViewer x:Name="_classicSV" VerticalScrollBarVisibility="Hidden" VerticalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled"                                                    >
+                    <ScrollViewer x:Name="_classicSV" VerticalScrollBarVisibility="Hidden" VerticalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled">
                         <StackPanel x:Name="_classicPagesPanel" Orientation="Vertical">
-                        <GridView x:Name="_classicR" Margin="0" HorizontalAlignment="Center" SelectionMode="None" IsItemClickEnabled="True"                           Visibility="Collapsed">
+                        <GridView x:Name="_classicR" ItemClick="App_ItemClick" Margin="0" HorizontalAlignment="Center" SelectionMode="None" IsItemClickEnabled="True" Visibility="Collapsed">
                             <GridView.ItemContainerStyle>
                                 <Style TargetType="GridViewItem">
                                     <Setter Property="Margin" Value="0"/>
@@ -112,31 +112,31 @@
                                 </TransitionCollection>
                             </GridView.ItemContainerTransitions>
                             <GridView.ItemTemplate>
-                                <DataTemplate                                     >
-                                    <Grid Width="84" Height="84" CornerRadius="4"                                        ToolTipService.Placement="Bottom" Background="Transparent">
+                                <DataTemplate x:DataType="popups:AppEntryViewModel">
+                                    <Grid Width="84" Height="84" CornerRadius="4"                                        ToolTipService.Placement="Bottom" ToolTipService.ToolTip="{x:Bind Name}" Background="Transparent">
                                         <Grid.ContextFlyout>
                                             <MenuFlyout>
-                                                <MenuFlyoutItem Text="Open"                                          >
+                                                <MenuFlyoutItem Text="Open" Click="Open_Click" Tag="{x:Bind ExePath}">
                                                     <MenuFlyoutItem.Icon>
                                                         <FontIcon Glyph="&#xE8E5;" />
                                                     </MenuFlyoutItem.Icon>
                                                 </MenuFlyoutItem>
-                                                <MenuFlyoutItem Text="Run as Administrator"                                              >
+                                                <MenuFlyoutItem Text="Run as Administrator" Click="RunAdmin_Click" Tag="{x:Bind ExePath}">
                                                     <MenuFlyoutItem.Icon>
                                                         <FontIcon Glyph="&#xE7EF;" />
                                                     </MenuFlyoutItem.Icon>
                                                 </MenuFlyoutItem>
                                                 <MenuFlyoutSeparator />
-                                                <MenuFlyoutItem Text="Open file location"                                             >
+                                                <MenuFlyoutItem Text="Open file location" Click="OpenLoc_Click" Tag="{x:Bind ExePath}">
                                                     <MenuFlyoutItem.Icon>
                                                         <FontIcon Glyph="&#xE8DA;" />
                                                     </MenuFlyoutItem.Icon>
                                                 </MenuFlyoutItem>
                                                 <MenuFlyoutSeparator />
-                                                <MenuFlyoutItem Text="Edit this Group"                        >
+                                                <MenuFlyoutItem Text="Edit this Group" Click="EditGroup_Click">
                                                     <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE70F;" /></MenuFlyoutItem.Icon>
                                                 </MenuFlyoutItem>
-                                                <MenuFlyoutItem Text="Launch All"                        >
+                                                <MenuFlyoutItem Text="Launch All" Click="LaunchAll_Click">
                                                     <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE768;" /></MenuFlyoutItem.Icon>
                                                 </MenuFlyoutItem>
                                             </MenuFlyout>
@@ -144,9 +144,9 @@
                                         <StackPanel Spacing="6" HorizontalAlignment="Center" VerticalAlignment="Center">
                                             <Grid Width="32" Height="32">
                                                 <Border                                     CornerRadius="0" Width="32" Height="32" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                                <Image Width="32" Height="32" Stretch="Uniform"                                          />
+                                                <Image Width="32" Height="32" Stretch="Uniform" Source="{x:Bind IconImage, Mode=OneWay}" />
                                             </Grid>
-                                            <TextBlock FontSize="10.5" TextAlignment="Center" TextWrapping="Wrap" MaxLines="2" LineHeight="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}"                                                            />
+                                            <TextBlock FontSize="10.5" TextAlignment="Center" TextWrapping="Wrap" MaxLines="2" LineHeight="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind Name}" />
                                         </StackPanel>
                                     </Grid>
                                 </DataTemplate>
@@ -156,7 +156,7 @@
                     </ScrollViewer>
 
                     <!-- Compact Horizontal -->
-                    <GridView x:Name="_compactR" Margin="4" Visibility="Collapsed" SelectionMode="None" IsItemClickEnabled="True"                           ScrollViewer.HorizontalScrollBarVisibility="Hidden" ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                    <GridView x:Name="_compactR" ItemClick="App_ItemClick" Margin="0" Visibility="Collapsed" SelectionMode="None" IsItemClickEnabled="True" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled">
                         <GridView.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <ItemsStackPanel Orientation="Horizontal" />
@@ -171,14 +171,17 @@
                             <Style TargetType="GridViewItem">
                                 <Setter Property="Margin" Value="0"/>
                                 <Setter Property="Padding" Value="0"/>
-                                <Setter Property="MinHeight" Value="42"/>
+                                <Setter Property="MinHeight" Value="26"/>
                                 <Setter Property="MinWidth" Value="42"/>
+                                <Setter Property="Width" Value="42"/>
+                                <Setter Property="Height" Value="26"/>
                                 <Setter Property="VerticalAlignment" Value="Center"/>
+                                <Setter Property="HorizontalAlignment" Value="Center"/>
                                 <Setter Property="Background" Value="Transparent"/>
                                 <Setter Property="Template">
                                     <Setter.Value>
                                         <ControlTemplate TargetType="GridViewItem">
-                                            <Grid x:Name="RootGrid" Background="Transparent">
+                                            <Grid x:Name="RootGrid" Background="Transparent" Width="42" Height="26">
                                                 <VisualStateManager.VisualStateGroups>
                                                     <VisualStateGroup x:Name="CommonStates">
                                                         <VisualState x:Name="Normal">
@@ -201,10 +204,7 @@
                                                         </VisualState>
                                                     </VisualStateGroup>
                                                 </VisualStateManager.VisualStateGroups>
-
-                                                <!-- Razor thin ThemeResource hover -->
-                                                <!-- Margin="1" ensures the 1px border is drawn strictly inside the layout bounds, preventing adjacent items from overlapping it! -->
-                                                <Border x:Name="HoverBg" Opacity="0" CornerRadius="4" BorderThickness="1" Background="{ThemeResource SubtleFillColorSecondaryBrush}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="1" />
+                                                <Border x:Name="HoverBg" Opacity="0" CornerRadius="4" BorderThickness="1" Background="{ThemeResource SubtleFillColorSecondaryBrush}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="2,0,2,0" />
                                                 <ContentPresenter x:Name="ContentPresenter" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0" Padding="0" />
                                             </Grid>
                                         </ControlTemplate>
@@ -213,43 +213,43 @@
                             </Style>
                         </GridView.ItemContainerStyle>
                         <GridView.ItemTemplate>
-                            <DataTemplate                                     >
-                                <Grid Width="38" Height="38" Margin="2"                                                                                                                     ToolTipService.Placement="Bottom"                                                                        >
+                            <DataTemplate x:DataType="popups:AppEntryViewModel">
+                                <Grid Width="42" Height="26" Margin="0" ToolTipService.Placement="Bottom" ToolTipService.ToolTip="{x:Bind Name}">
                                     <Grid.ContextFlyout>
                                         <MenuFlyout>
-                                            <MenuFlyoutItem Text="Open"                                          >
+                                            <MenuFlyoutItem Text="Open" Click="Open_Click" Tag="{x:Bind ExePath}">
                                                 <MenuFlyoutItem.Icon>
                                                     <FontIcon Glyph="&#xE8E5;" />
                                                 </MenuFlyoutItem.Icon>
                                             </MenuFlyoutItem>
-                                            <MenuFlyoutItem Text="Run as Administrator"                                              >
+                                            <MenuFlyoutItem Text="Run as Administrator" Click="RunAdmin_Click" Tag="{x:Bind ExePath}">
                                                 <MenuFlyoutItem.Icon>
                                                     <FontIcon Glyph="&#xE7EF;" />
                                                 </MenuFlyoutItem.Icon>
                                             </MenuFlyoutItem>
                                             <MenuFlyoutSeparator />
-                                            <MenuFlyoutItem Text="Open file location"                                             >
+                                            <MenuFlyoutItem Text="Open file location" Click="OpenLoc_Click" Tag="{x:Bind ExePath}">
                                                 <MenuFlyoutItem.Icon>
                                                     <FontIcon Glyph="&#xE8DA;" />
                                                 </MenuFlyoutItem.Icon>
                                             </MenuFlyoutItem>
                                             <MenuFlyoutSeparator />
-                                            <MenuFlyoutItem Text="Edit this Group"                        >
+                                            <MenuFlyoutItem Text="Edit this Group" Click="EditGroup_Click">
                                                 <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE70F;" /></MenuFlyoutItem.Icon>
                                             </MenuFlyoutItem>
-                                            <MenuFlyoutItem Text="Launch All"                        >
+                                            <MenuFlyoutItem Text="Launch All" Click="LaunchAll_Click">
                                                 <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE768;" /></MenuFlyoutItem.Icon>
                                             </MenuFlyoutItem>
                                         </MenuFlyout>
                                     </Grid.ContextFlyout>
-                                    <Image Width="24" Height="24" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"                                          />
+                                    <Image Width="22" Height="22" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" Source="{x:Bind IconImage, Mode=OneWay}" />
                                 </Grid>
                             </DataTemplate>
                         </GridView.ItemTemplate>
                     </GridView>
 
                     <!-- Compact Vertical -->
-                    <GridView x:Name="_compactRVertical" Margin="4" Visibility="Collapsed" SelectionMode="None" IsItemClickEnabled="True"                           ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Hidden">
+                    <GridView x:Name="_compactRVertical" ItemClick="App_ItemClick" Margin="0" Visibility="Collapsed" SelectionMode="None" IsItemClickEnabled="True" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled">
                         <GridView.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <ItemsStackPanel Orientation="Vertical" />
@@ -265,13 +265,16 @@
                                 <Setter Property="Margin" Value="0"/>
                                 <Setter Property="Padding" Value="0"/>
                                 <Setter Property="MinHeight" Value="42"/>
-                                <Setter Property="MinWidth" Value="42"/>
+                                <Setter Property="MinWidth" Value="26"/>
+                                <Setter Property="Width" Value="26"/>
+                                <Setter Property="Height" Value="42"/>
                                 <Setter Property="HorizontalAlignment" Value="Center"/>
+                                <Setter Property="VerticalAlignment" Value="Center"/>
                                 <Setter Property="Background" Value="Transparent"/>
                                 <Setter Property="Template">
                                     <Setter.Value>
                                         <ControlTemplate TargetType="GridViewItem">
-                                            <Grid x:Name="RootGrid" Background="Transparent">
+                                            <Grid x:Name="RootGrid" Background="Transparent" Width="26" Height="42">
                                                 <VisualStateManager.VisualStateGroups>
                                                     <VisualStateGroup x:Name="CommonStates">
                                                         <VisualState x:Name="Normal">
@@ -294,9 +297,7 @@
                                                         </VisualState>
                                                     </VisualStateGroup>
                                                 </VisualStateManager.VisualStateGroups>
-
-                                                <!-- Razor thin ThemeResource hover -->
-                                                <Border x:Name="HoverBg" Opacity="0" CornerRadius="4" BorderThickness="1" Background="{ThemeResource SubtleFillColorSecondaryBrush}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="1" />
+                                                <Border x:Name="HoverBg" Opacity="0" CornerRadius="4" BorderThickness="1" Background="{ThemeResource SubtleFillColorSecondaryBrush}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="0,2,0,2" />
                                                 <ContentPresenter x:Name="ContentPresenter" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0" Padding="0" />
                                             </Grid>
                                         </ControlTemplate>
@@ -305,30 +306,30 @@
                             </Style>
                         </GridView.ItemContainerStyle>
                         <GridView.ItemTemplate>
-                            <DataTemplate                                     >
-                                <Grid Width="38" Height="38" Margin="2"                                                                                                                     ToolTipService.Placement="Right"                                                                        >
+                            <DataTemplate x:DataType="popups:AppEntryViewModel">
+                                <Grid Width="26" Height="42" Margin="0" ToolTipService.Placement="Right" ToolTipService.ToolTip="{x:Bind Name}">
                                     <Grid.ContextFlyout>
                                         <MenuFlyout>
-                                            <MenuFlyoutItem Text="Open"                                          >
+                                            <MenuFlyoutItem Text="Open" Click="Open_Click" Tag="{x:Bind ExePath}">
                                                 <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8E5;" /></MenuFlyoutItem.Icon>
                                             </MenuFlyoutItem>
-                                            <MenuFlyoutItem Text="Run as Administrator"                                              >
+                                            <MenuFlyoutItem Text="Run as Administrator" Click="RunAdmin_Click" Tag="{x:Bind ExePath}">
                                                 <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE7EF;" /></MenuFlyoutItem.Icon>
                                             </MenuFlyoutItem>
                                             <MenuFlyoutSeparator />
-                                            <MenuFlyoutItem Text="Open file location"                                             >
+                                            <MenuFlyoutItem Text="Open file location" Click="OpenLoc_Click" Tag="{x:Bind ExePath}">
                                                 <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8DA;" /></MenuFlyoutItem.Icon>
                                             </MenuFlyoutItem>
                                             <MenuFlyoutSeparator />
-                                            <MenuFlyoutItem Text="Edit this Group"                        >
+                                            <MenuFlyoutItem Text="Edit this Group" Click="EditGroup_Click">
                                                 <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE70F;" /></MenuFlyoutItem.Icon>
                                             </MenuFlyoutItem>
-                                            <MenuFlyoutItem Text="Launch All"                        >
+                                            <MenuFlyoutItem Text="Launch All" Click="LaunchAll_Click">
                                                 <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE768;" /></MenuFlyoutItem.Icon>
                                             </MenuFlyoutItem>
                                         </MenuFlyout>
                                     </Grid.ContextFlyout>
-                                    <Image Width="24" Height="24" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"                                          />
+                                    <Image Width="22" Height="22" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" Source="{x:Bind IconImage, Mode=OneWay}" />
                                 </Grid>
                             </DataTemplate>
                         </GridView.ItemTemplate>
@@ -336,7 +337,7 @@
 
                     <!-- Modern -->
                     <ScrollViewer x:Name="_modernSV" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
-                        <GridView x:Name="_modernR" Padding="12" Margin="0" SelectionMode="None" IsItemClickEnabled="True"                           ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled" HorizontalAlignment="Center" HorizontalContentAlignment="Center">
+                        <GridView x:Name="_modernR" ItemClick="App_ItemClick" Padding="12" Margin="0" SelectionMode="None" IsItemClickEnabled="True"                           ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled" HorizontalAlignment="Center" HorizontalContentAlignment="Center">
                             <GridView.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <ItemsWrapGrid ItemWidth="68" ItemHeight="68" Orientation="Horizontal" HorizontalAlignment="Center" />
@@ -393,30 +394,30 @@
                                 </Style>
                             </GridView.ItemContainerStyle>
                             <GridView.ItemTemplate>
-                                <DataTemplate                                     >
-                                    <Grid Width="60" Height="60"                                     CornerRadius="8"                                        ToolTipService.Placement="Bottom">
+                                <DataTemplate x:DataType="popups:AppEntryViewModel">
+                                    <Grid Width="60" Height="60"                                     CornerRadius="8"                                        ToolTipService.Placement="Bottom" ToolTipService.ToolTip="{x:Bind Name}">
                                         <Grid.ContextFlyout>
                                             <MenuFlyout>
-                                                <MenuFlyoutItem Text="Open"                                          >
+                                                <MenuFlyoutItem Text="Open" Click="Open_Click" Tag="{x:Bind ExePath}">
                                                     <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8E5;" /></MenuFlyoutItem.Icon>
                                                 </MenuFlyoutItem>
-                                                <MenuFlyoutItem Text="Run as Administrator"                                              >
+                                                <MenuFlyoutItem Text="Run as Administrator" Click="RunAdmin_Click" Tag="{x:Bind ExePath}">
                                                     <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE7EF;" /></MenuFlyoutItem.Icon>
                                                 </MenuFlyoutItem>
                                                 <MenuFlyoutSeparator />
-                                                <MenuFlyoutItem Text="Open file location"                                             >
+                                                <MenuFlyoutItem Text="Open file location" Click="OpenLoc_Click" Tag="{x:Bind ExePath}">
                                                     <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8DA;" /></MenuFlyoutItem.Icon>
                                                 </MenuFlyoutItem>
                                                 <MenuFlyoutSeparator />
-                                                <MenuFlyoutItem Text="Edit this Group"                        >
+                                                <MenuFlyoutItem Text="Edit this Group" Click="EditGroup_Click">
                                                     <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE70F;" /></MenuFlyoutItem.Icon>
                                                 </MenuFlyoutItem>
-                                                <MenuFlyoutItem Text="Launch All"                        >
+                                                <MenuFlyoutItem Text="Launch All" Click="LaunchAll_Click">
                                                     <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE768;" /></MenuFlyoutItem.Icon>
                                                 </MenuFlyoutItem>
                                             </MenuFlyout>
                                         </Grid.ContextFlyout>
-                                        <Image Width="28" Height="28" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"                                          />
+                                        <Image Width="28" Height="28" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" Source="{x:Bind IconImage, Mode=OneWay}" />
                                     </Grid>
                                 </DataTemplate>
                             </GridView.ItemTemplate>
@@ -425,7 +426,7 @@
 
                     <!-- List -->
                     <ScrollViewer x:Name="_listSV" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
-                        <ListView x:Name="_listR" Margin="0,4,0,4" SelectionMode="None" IsItemClickEnabled="True"                          >
+                        <ListView x:Name="_listR" ItemClick="App_ItemClick" Margin="0" Padding="0" SelectionMode="None" IsItemClickEnabled="True">
                             <ListView.ItemContainerTransitions>
                                 <TransitionCollection>
                                     <EntranceThemeTransition IsStaggeringEnabled="True"/>
@@ -475,149 +476,161 @@
                                 </Style>
                             </ListView.ItemContainerStyle>
                             <ListView.ItemTemplate>
-                                <DataTemplate                                     >
-                                    <Grid HorizontalAlignment="Stretch" Height="36" Padding="8,0,8,0" Background="Transparent" CornerRadius="6">
+                                <DataTemplate x:DataType="popups:AppEntryViewModel">
+                                    <Grid HorizontalAlignment="Stretch" Height="36" Padding="8,0,8,0" Background="Transparent" CornerRadius="6"
+                                          PointerEntered="ListRow_PointerEntered" PointerExited="ListRow_PointerExited">
                                         <Grid.ContextFlyout>
                                             <MenuFlyout>
-                                                <MenuFlyoutItem Text="Open"                                          >
+                                                <MenuFlyoutItem Text="Open" Click="Open_Click" Tag="{x:Bind ExePath}">
                                                     <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8E5;" /></MenuFlyoutItem.Icon>
                                                 </MenuFlyoutItem>
-                                                <MenuFlyoutItem Text="Run as Administrator"                                              >
+                                                <MenuFlyoutItem Text="Run as Administrator" Click="RunAdmin_Click" Tag="{x:Bind ExePath}">
                                                     <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE7EF;" /></MenuFlyoutItem.Icon>
                                                 </MenuFlyoutItem>
                                                 <MenuFlyoutSeparator />
-                                                <MenuFlyoutItem Text="Open file location"                                             >
+                                                <MenuFlyoutItem Text="Open file location" Click="OpenLoc_Click" Tag="{x:Bind ExePath}">
                                                     <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8DA;" /></MenuFlyoutItem.Icon>
                                                 </MenuFlyoutItem>
                                                 <MenuFlyoutSeparator />
-                                                <MenuFlyoutItem Text="Edit this Group"                        >
+                                                <MenuFlyoutItem Text="Edit this Group" Click="EditGroup_Click">
                                                     <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE70F;" /></MenuFlyoutItem.Icon>
                                                 </MenuFlyoutItem>
-                                                <MenuFlyoutItem Text="Launch All"                        >
+                                                <MenuFlyoutItem Text="Launch All" Click="LaunchAll_Click">
                                                     <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE768;" /></MenuFlyoutItem.Icon>
                                                 </MenuFlyoutItem>
                                             </MenuFlyout>
                                         </Grid.ContextFlyout>
-                                        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                                            <Grid Width="36" Height="36" VerticalAlignment="Center" CornerRadius="0"                                    >
-                                                <Image Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Center"                                          />
-                                            </Grid>
-                                            <TextBlock FontSize="13" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorPrimaryBrush}" TextTrimming="CharacterEllipsis"                                                            />
-                                        </StackPanel>
-                                    </Grid>
-                                </DataTemplate>
-                            </ListView.ItemTemplate>
-                        </ListView>
-                    </ScrollViewer>
-                    <!-- Dialog-ish -->
-                    <!-- Dialog-ish -->
-                    <Grid x:Name="_cardContainer" Visibility="Collapsed">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="*" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <Border Grid.Row="0" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}" CornerRadius="8,8,0,0">
-                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                                <GridView x:Name="_cardR" Padding="4" Margin="0" SelectionMode="None" IsItemClickEnabled="True"                           ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                                <GridView.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <ItemsWrapGrid ItemWidth="56" ItemHeight="56" Orientation="Horizontal" HorizontalAlignment="Center" />
-                                    </ItemsPanelTemplate>
-                                </GridView.ItemsPanel>
-                                <GridView.ItemContainerTransitions>
-                                    <TransitionCollection>
-                                        <EntranceThemeTransition IsStaggeringEnabled="True"/>
-                                    </TransitionCollection>
-                                </GridView.ItemContainerTransitions>
-                                <GridView.ItemContainerStyle>
-                                    <Style TargetType="GridViewItem">
-                                        <Setter Property="Margin" Value="0"/>
-                                        <Setter Property="Padding" Value="0"/>
-                                        <Setter Property="Width" Value="56"/>
-                                        <Setter Property="Height" Value="56"/>
-                                        <Setter Property="HorizontalAlignment" Value="Center"/>
-                                        <Setter Property="VerticalAlignment" Value="Center"/>
-                                        <Setter Property="Background" Value="Transparent"/>
-                                        <Setter Property="Template">
-                                            <Setter.Value>
-                                                <ControlTemplate TargetType="GridViewItem">
-                                                    <Grid x:Name="RootGrid" Background="Transparent" Width="56" Height="56">
-                                                        <VisualStateManager.VisualStateGroups>
-                                                            <VisualStateGroup x:Name="CommonStates">
-                                                                <VisualState x:Name="Normal">
-                                                                    <Storyboard>
-                                                                        <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.250" />
-                                                                    </Storyboard>
-                                                                </VisualState>
-                                                                <VisualState x:Name="PointerOver">
-                                                                    <VisualState.Setters>
-                                                                        <Setter Target="HoverBg.BorderBrush" Value="{ThemeResource ControlElevationBorderBrush}" />
-                                                                    </VisualState.Setters>
-                                                                    <Storyboard>
-                                                                        <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.150" />
-                                                                    </Storyboard>
-                                                                </VisualState>
-                                                                <VisualState x:Name="Pressed">
-                                                                    <Storyboard>
-                                                                        <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="0.5" Duration="0:0:0.083" />
-                                                                    </Storyboard>
-                                                                </VisualState>
-                                                            </VisualStateGroup>
-                                                        </VisualStateManager.VisualStateGroups>
-                                                        <Border x:Name="HoverBg" Opacity="0" CornerRadius="6" BorderThickness="1" Background="{ThemeResource SubtleFillColorSecondaryBrush}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="2" />
-                                                        <ContentPresenter x:Name="ContentPresenter" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0" Padding="0" />
-                                                    </Grid>
-                                                </ControlTemplate>
-                                            </Setter.Value>
-                                        </Setter>
-                                    </Style>
-                                </GridView.ItemContainerStyle>
-                                <GridView.ItemTemplate>
-                                    <DataTemplate                                     >
-                                        <Grid Width="48" Height="48"                                     CornerRadius="0"                                        ToolTipService.Placement="Bottom">
-                                            <Grid.ContextFlyout>
-                                                <MenuFlyout>
-                                                    <MenuFlyoutItem Text="Open"                                          >
-                                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8E5;" /></MenuFlyoutItem.Icon>
-                                                    </MenuFlyoutItem>
-                                                    <MenuFlyoutItem Text="Run as Administrator"                                              >
-                                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE7EF;" /></MenuFlyoutItem.Icon>
-                                                    </MenuFlyoutItem>
-                                                    <MenuFlyoutSeparator />
-                                                    <MenuFlyoutItem Text="Open file location"                                             >
-                                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8DA;" /></MenuFlyoutItem.Icon>
-                                                    </MenuFlyoutItem>
-                                                    <MenuFlyoutSeparator />
-                                                    <MenuFlyoutItem Text="Edit this Group"                        >
-                                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE70F;" /></MenuFlyoutItem.Icon>
-                                                    </MenuFlyoutItem>
-                                                    <MenuFlyoutItem Text="Launch All"                        >
-                                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE768;" /></MenuFlyoutItem.Icon>
-                                                    </MenuFlyoutItem>
-                                                </MenuFlyout>
-                                            </Grid.ContextFlyout>
-                                            <Image Width="24" Height="24" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"                                          />
-                                        </Grid>
-                                    </DataTemplate>
-                                </GridView.ItemTemplate>
-                            </GridView>
-                            </ScrollViewer>
-                        </Border>
+                                         <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                             <Grid Width="36" Height="36" VerticalAlignment="Center" CornerRadius="0">
+                                                 <Image Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Center" Source="{x:Bind IconImage, Mode=OneWay}" />
+                                             </Grid>
+                                             <Grid Width="170" Height="36">
+                                                 <Grid.Clip>
+                                                     <RectangleGeometry Rect="0,0,170,36"/>
+                                                 </Grid.Clip>
+                                                 <TextBlock x:Name="AppLabelText" FontSize="13" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorPrimaryBrush}" TextTrimming="{x:Bind LabelTrimming, Mode=OneWay}" TextWrapping="NoWrap" Text="{x:Bind Name}" Loaded="AppLabel_Loaded">
+                                                     <TextBlock.RenderTransform>
+                                                         <TranslateTransform x:Name="LabelTranslate" X="0" />
+                                                     </TextBlock.RenderTransform>
+                                                 </TextBlock>
+                                             </Grid>
+                                         </StackPanel>
+                                     </Grid>
+                                 </DataTemplate>
+                             </ListView.ItemTemplate>
+                         </ListView>
+                     </ScrollViewer>
+                     <!-- Dialog-ish -->
+                     <Grid x:Name="_cardContainer" Visibility="Collapsed" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+                         <Grid.RowDefinitions>
+                             <RowDefinition Height="Auto" />
+                             <RowDefinition Height="*" />
+                         </Grid.RowDefinitions>
+                         <Border Grid.Row="0" Background="Transparent" CornerRadius="0">
+                             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                 <GridView x:Name="_cardR" ItemClick="App_ItemClick" Padding="8,4,8,4" Margin="0" SelectionMode="None" IsItemClickEnabled="True" ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                 <GridView.ItemsPanel>
+                                     <ItemsPanelTemplate>
+                                         <ItemsWrapGrid ItemWidth="52" ItemHeight="52" Orientation="Horizontal" HorizontalAlignment="Center" />
+                                     </ItemsPanelTemplate>
+                                 </GridView.ItemsPanel>
+                                 <GridView.ItemContainerTransitions>
+                                     <TransitionCollection>
+                                         <EntranceThemeTransition IsStaggeringEnabled="True"/>
+                                     </TransitionCollection>
+                                 </GridView.ItemContainerTransitions>
+                                 <GridView.ItemContainerStyle>
+                                     <Style TargetType="GridViewItem">
+                                         <Setter Property="Margin" Value="0"/>
+                                         <Setter Property="Padding" Value="0"/>
+                                         <Setter Property="Width" Value="52"/>
+                                         <Setter Property="Height" Value="52"/>
+                                         <Setter Property="MinWidth" Value="52"/>
+                                         <Setter Property="MinHeight" Value="52"/>
+                                         <Setter Property="HorizontalAlignment" Value="Center"/>
+                                         <Setter Property="VerticalAlignment" Value="Center"/>
+                                         <Setter Property="Background" Value="Transparent"/>
+                                         <Setter Property="Template">
+                                             <Setter.Value>
+                                                 <ControlTemplate TargetType="GridViewItem">
+                                                     <Grid x:Name="RootGrid" Background="Transparent" Width="52" Height="52">
+                                                         <VisualStateManager.VisualStateGroups>
+                                                             <VisualStateGroup x:Name="CommonStates">
+                                                                 <VisualState x:Name="Normal">
+                                                                     <Storyboard>
+                                                                         <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.250" />
+                                                                     </Storyboard>
+                                                                 </VisualState>
+                                                                 <VisualState x:Name="PointerOver">
+                                                                     <VisualState.Setters>
+                                                                         <Setter Target="HoverBg.BorderBrush" Value="{ThemeResource ControlElevationBorderBrush}" />
+                                                                     </VisualState.Setters>
+                                                                     <Storyboard>
+                                                                         <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.150" />
+                                                                     </Storyboard>
+                                                                 </VisualState>
+                                                                 <VisualState x:Name="Pressed">
+                                                                     <Storyboard>
+                                                                         <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="0.5" Duration="0:0:0.083" />
+                                                                     </Storyboard>
+                                                                 </VisualState>
+                                                             </VisualStateGroup>
+                                                         </VisualStateManager.VisualStateGroups>
+                                                         <Border x:Name="HoverBg" Opacity="0" CornerRadius="4" BorderThickness="1" Background="{ThemeResource SubtleFillColorSecondaryBrush}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="2" />
+                                                         <ContentPresenter x:Name="ContentPresenter" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0" Padding="0" />
+                                                     </Grid>
+                                                 </ControlTemplate>
+                                             </Setter.Value>
+                                         </Setter>
+                                     </Style>
+                                 </GridView.ItemContainerStyle>
+                                 <GridView.ItemTemplate>
+                                     <DataTemplate x:DataType="popups:AppEntryViewModel">
+                                         <Grid Width="52" Height="52" CornerRadius="0" ToolTipService.Placement="Bottom" ToolTipService.ToolTip="{x:Bind Name}">
+                                             <Grid.ContextFlyout>
+                                                 <MenuFlyout>
+                                                     <MenuFlyoutItem Text="Open" Click="Open_Click" Tag="{x:Bind ExePath}">
+                                                         <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8E5;" /></MenuFlyoutItem.Icon>
+                                                     </MenuFlyoutItem>
+                                                     <MenuFlyoutItem Text="Run as Administrator" Click="RunAdmin_Click" Tag="{x:Bind ExePath}">
+                                                         <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE7EF;" /></MenuFlyoutItem.Icon>
+                                                     </MenuFlyoutItem>
+                                                     <MenuFlyoutSeparator />
+                                                     <MenuFlyoutItem Text="Open file location" Click="OpenLoc_Click" Tag="{x:Bind ExePath}">
+                                                         <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8DA;" /></MenuFlyoutItem.Icon>
+                                                     </MenuFlyoutItem>
+                                                     <MenuFlyoutSeparator />
+                                                     <MenuFlyoutItem Text="Edit this Group" Click="EditGroup_Click">
+                                                         <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE70F;" /></MenuFlyoutItem.Icon>
+                                                     </MenuFlyoutItem>
+                                                     <MenuFlyoutItem Text="Launch All" Click="LaunchAll_Click">
+                                                         <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE768;" /></MenuFlyoutItem.Icon>
+                                                     </MenuFlyoutItem>
+                                                 </MenuFlyout>
+                                             </Grid.ContextFlyout>
+                                             <Image Width="24" Height="24" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" Source="{x:Bind IconImage, Mode=OneWay}" />
+                                         </Grid>
+                                     </DataTemplate>
+                                 </GridView.ItemTemplate>
+                             </GridView>
+                             </ScrollViewer>
+                         </Border>
 
-                        <!-- Bottom bar: transparent acrylic background -->
-                        <Border Grid.Row="1" Background="Transparent" Padding="12,14,12,18" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,1,0,0">
-                            <TextBlock x:Name="_cardFooterName" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" TextTrimming="CharacterEllipsis" />
-                        </Border>
-                    </Grid>
-                </StackPanel>
+                         <!-- Bottom bar: subtle tinted chin stretching to the bottom edge with centered title -->
+                         <Border x:Name="_cardFooterBorder" Grid.Row="1" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Padding="8,8,8,8" BorderThickness="0,1,0,0">
+                             <TextBlock x:Name="_cardFooterName" VerticalAlignment="Center" HorizontalAlignment="Center" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" TextTrimming="CharacterEllipsis" />
+                         </Border>
+                     </Grid>
+                </Grid>
             </Grid>
         </Border>
 
-        <!-- Overlay Border: draws on top, doesn't clip, low opacity -->
-        <Border x:Name="_borderOverlay" BorderThickness="1" CornerRadius="4" BorderBrush="{ThemeResource ControlElevationBorderBrush}" Opacity="0.5" IsHitTestVisible="False" />
-        <StackPanel x:Name="_pageDots" Orientation="Vertical" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="2" Margin="0,0,2,0" Visibility="Collapsed" Background="Transparent" Padding="4"                                                                                 />
+        <StackPanel x:Name="_pageDots" Orientation="Vertical" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="2" Margin="0,0,2,0" Visibility="Collapsed" Background="Transparent" Padding="4" PointerEntered="PageDots_PointerEntered" PointerExited="PageDots_PointerExited" />
     </Grid>
 </Window>
+
+
+
 
 
 
