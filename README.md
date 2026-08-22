@@ -7,9 +7,9 @@
 [![Platform](https://img.shields.io/badge/Platform-Windows%2011-0078D4?style=flat&logo=windows11&logoColor=white)](https://github.com/ypx13/TaskTile)
 [![Framework](https://img.shields.io/badge/Framework-.NET%208%20%7C%20WinAppSDK%201.6-512BD4?style=flat&logo=dotnet&logoColor=white)](https://github.com/ypx13/TaskTile)
 [![UI](https://img.shields.io/badge/UI-WinUI%203-005FB8?style=flat&logo=fluentui&logoColor=white)](https://github.com/ypx13/TaskTile)
-[![License](https://img.shields.io/badge/License-MIT-green.svg?style=flat)](LICENSE)
+[![License](https://img.shields.io/badge/License-Non--Commercial%20Community-orange.svg?style=flat)](LICENSE)
 
-[📦 Download Latest Release](https://github.com/ypx13/TaskTile/releases) • [✨ Features](#-features) • [🚀 Quick Start](#-quick-start) • [🛠️ Build From Source](#%EF%B8%8F-building-from-source)
+[📦 Download Latest Release](https://github.com/ypx13/TaskTile/releases) • [✨ Features](#-features) • [🚀 Quick Start](#-quick-start) • [🛠️ Build From Source](#%EF%B8%8F-building-from-source) • [📄 License](#-license)
 
 </div>
 
@@ -79,9 +79,14 @@ dotnet publish -c Release -r win-x64 --self-contained true
 
 ---
 
-## 📄 License
+## 📄 License & Community Terms
 
-This project is licensed under the [MIT License](LICENSE).
+TaskTile is licensed under the **TaskTile Non-Commercial Community License** (see [LICENSE](LICENSE)).
+
+- ✅ **Free & Open for Personal Use**: Free to run, inspect, study, and use.
+- ✅ **Community Forks & Enhancements**: You are welcome to fork the project, add features, and build enhanced community editions (e.g. *TaskTile+*).
+- 🏷️ **Attribution Required**: You must prominently credit **ypx13** as the original author and link to the original project. You may not claim original ownership or remove author credits.
+- 🚫 **Strictly Non-Commercial**: The software and any forks/derivatives **may NOT be sold, paywalled, or commercialized**. It must remain 100% free for everyone.
 
 <p align="center">
   <sub>Built with 💖 using WinUI 3 & .NET 8 • TaskTile by ypx13</sub>
