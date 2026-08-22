@@ -5,12 +5,21 @@ Copyright (c) 2026 ypx13. All rights reserved.
 ==============================================================================
 SECTION 1: CURRENT STATUS (PRE-VERSION 1.0 — STUDY & PREVIEW ONLY)
 ==============================================================================
-All pre-v1.0 source code, development builds, and beta releases are PROPRIETARY.
+All pre-v1.0 source code, development builds, and beta releases are PROPRIETARY
+and in active development.
+
+[IMPORTANT NOTICE: PRE-RELEASE CODE MAY BE UNSTABLE]
+The pre-v1.0 codebase is experimental and undergoing rapid iteration. Do not
+rely entirely on beta builds for mission-critical workflows.
 
 During this pre-release phase:
-- PERMITTED: You are welcome to view, read, inspect, and study the source code for educational purposes.
-- RESTRICTED: You may NOT fork, copy, modify, distribute, publish, or sublicense the source code.
-- RESTRICTED: You may NOT create derived works, clones, or community builds until the official Version 1.0 Stable release.
+- PERMITTED: You are welcome to view, read, inspect, and study the source code
+  for educational and learning purposes.
+- STRICTLY RESTRICTED: You may NOT fork, copy, modify, distribute, publish,
+  sublicense, or redistribute the source code.
+- STRICTLY RESTRICTED: You may NOT create derived works, clones, or community
+  builds until the official Version 1.0 Stable release.
+- STRICTLY RESTRICTED: You may NOT claim authorship or ownership of the Software.
 
 ==============================================================================
 SECTION 2: VERSION 1.0 STABLE & BEYOND (NON-COMMERCIAL COMMUNITY LICENSE)
