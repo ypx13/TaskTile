@@ -51,7 +51,7 @@
 
 ---
 
-## 🚀 Quick Start (Portable — No Installation Needed)
+## 🚀 Quick Start (Portable — No Installation Needed, for now)
 
 1. **Download**: Grab `TaskTile.zip` from the [Releases](https://github.com/ypx13/TaskTile/releases) page.
 2. **Extract**: Unzip the folder anywhere on your PC (**100% portable**, no installer or setup required).
