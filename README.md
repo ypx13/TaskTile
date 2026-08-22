@@ -65,7 +65,7 @@
 See [LICENSE](LICENSE) for full details.
 
 * **Current Status (Pre-v1.0)**: **Proprietary & All Rights Reserved**. Source code is provided for preview/evaluation only. Copying, redistributing, or forking is prohibited during this phase.
-* **Starting from Version 1.0 Stable**: Will open to the community for free personal use and forks/enhancements (e.g. *TaskTile+*), under strict **Attribution (Credit to ypx13)** and **Non-Commercial** terms.
+* **Starting from Version 1.0 Stable**: Will open to the community for free personal use and forks/enhancements, under strict **Attribution (Credit to ypx13)** and **Non-Commercial** terms.
 
 <p align="center">
   <sub>Built with 💖 using WinUI 3 & .NET 8 • TaskTile by ypx13</sub>
