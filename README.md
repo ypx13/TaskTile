@@ -35,7 +35,7 @@ TaskTile is the **first 100% native C# and WinUI 3 app group launcher for Window
 </div>
 
 <details>
-  <summary>🖼️ The pictures if the slideshow isn't working for you</summary>
+  <summary>the pictures in PNGs</summary>
   <br/>
   <div align="center">
     <img src="pictures/tasktile1.png" alt="Overview" width="24%" />
