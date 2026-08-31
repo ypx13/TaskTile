@@ -30,6 +30,14 @@ Meet **TaskTile** — yes, the name is a deliberate pun on **tactile**, because 
 
 TaskTile might be the **first 100% native C# and WinUI 3 app group launcher/taskbar utility for Windows 11**. No Webview2, no PWA, none, i personally hate web apps, which is why i made TaskTile just pure WinUI 3, Windows App SDK, and low-level DWM compositing. It might be a little *over-engineered*, but that's for you to judge, and honestly? It might be why it feels.. built-in!
 
+<div align="center">
+  <img src="pictures/tasktile1.png" alt="TaskTile Overview" width="48%" />
+  <img src="pictures/2final.png" alt="TaskTile Presentation" width="48%" />
+  <br/><br/>
+  <img src="pictures/tasktile3.png" alt="TaskTile Layouts" width="48%" />
+  <img src="pictures/tasktile4.png" alt="TaskTile Customization" width="48%" />
+</div>
+
 ---
 
 ## features i think you might like 🫣
