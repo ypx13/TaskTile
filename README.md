@@ -39,7 +39,7 @@ TaskTile might be the **first 100% native C# and WinUI 3 app group launcher/task
 - **file groups**: pin sets of documents, design assets, or portable tools together that launch with their default apps.
 - **📁 dynamic folders (live sync)**: point to any local directory—TaskTile will automatically reads its contents and extracts native Windows icons in real-time. Drop a file in the folder, and it's immediately in your popup launching with it's default app!
 
-### 5 layout Styles, more to come 👀
+### 5 layout styles, more to come 👀
 1. **classic Grid**: the classic and original style here since the first version, it's styled to look Windows 11 Start Menu experience, but smol. Supports multi-page paging, pagination indicator dots, and smooth mouse wheel page switching.
 2. **compact (Row / Column)**: ultra-slim 30px dock that can sit horizontally or vertically. Perfect for minimalist desktop setups.
 3. **modern Grid**: floating card layout with customizable column counts (1 to 10 columns) and responsive spacing, it has no labels and more rounded hover styles to really push the clean aesthetic. 
