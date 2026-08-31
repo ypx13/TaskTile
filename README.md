@@ -32,12 +32,18 @@ TaskTile is the **first 100% native C# and WinUI 3 app group launcher for Window
 
 <div align="center">
   <img src="pictures/slideshow.webp" alt="TaskTile Auto-Scrolling Slideshow" width="100%" />
-  <br/><br/>
-  <img src="pictures/tasktile1.png" alt="Overview" width="24%" />
-  <img src="pictures/2final.png" alt="Features" width="24%" />
-  <img src="pictures/tasktile3.png" alt="Layouts" width="24%" />
-  <img src="pictures/tasktile4.png" alt="Customization" width="24%" />
 </div>
+
+<details>
+  <summary>🖼️ The pictures if the slideshow isn't working for you</summary>
+  <br/>
+  <div align="center">
+    <img src="pictures/tasktile1.png" alt="Overview" width="24%" />
+    <img src="pictures/2final.png" alt="Features" width="24%" />
+    <img src="pictures/tasktile3.png" alt="Layouts" width="24%" />
+    <img src="pictures/tasktile4.png" alt="Customization" width="24%" />
+  </div>
+</details>
 
 ---
 
