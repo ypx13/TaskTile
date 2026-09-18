@@ -213,6 +213,7 @@ public sealed partial class PopupWindow : Window
     const uint   SWP_NOSIZE      = 0x0001;
     const uint   SWP_NOZORDER    = 0x0004;
     const uint   SWP_NOACTIVATE  = 0x0010;
+    const uint   SWP_SHOWWINDOW  = 0x0040;
 
     const int    SM_XVIRTUALSCREEN  = 76;
     const int    SM_YVIRTUALSCREEN  = 77;
@@ -334,56 +335,24 @@ public sealed partial class PopupWindow : Window
         int customBorderColor = DWMWA_COLOR_NONE;
         DwmSetWindowAttribute(hw, DWMWA_BORDER_COLOR, ref customBorderColor, sizeof(int));
 
-        // Wait 100ms for the SystemBackdrop (Acrylic/Mica) to paint over the black frame
-        _ = System.Threading.Tasks.Task.Delay(100).ContinueWith(_ =>
+        // Wait 80ms for the SystemBackdrop (Acrylic/Mica) to paint over the black frame
+        _ = System.Threading.Tasks.Task.Delay(80).ContinueWith(_ =>
         {
             DispatcherQueue.TryEnqueue(() =>
             {
                 if (!_disableAnimation)
                 {
+                    _root.Opacity = 0;
                     _popIn.Begin();
-                    
-                    int steps = 15;
-                    int startX = _animStartX;
-                    int startY = _animStartY;
-                    int finalX = _targetX;
-                    int finalY = _targetY;
-                    int currentStep = 0;
-                    int lastX = startX;
-                    int lastY = startY;
-
-                    _ = System.Threading.Tasks.Task.Run(() => {
-                        System.Threading.Thread.CurrentThread.Priority = System.Threading.ThreadPriority.Highest;
-
-                        while (true) {
-                            currentStep++;
-                            double t = (double)currentStep / steps;
-                            double ease = currentStep >= steps ? 1.0 : 1 - Math.Pow(2, -10 * t); // easeOutExpo
-
-                            int currentX = (int)Math.Round(startX + (finalX - startX) * ease);
-                            int currentY = (int)Math.Round(startY + (finalY - startY) * ease);
-
-                            if (currentStep >= steps) {
-                                currentX = finalX;
-                                currentY = finalY;
-                            }
-
-                            if (currentX != lastX || currentY != lastY) {
-                                SetWindowPos(hw, IntPtr.Zero, currentX, currentY, 0, 0,
-                                    SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
-                                DwmFlush();
-                                lastX = currentX;
-                                lastY = currentY;
-                            }
-                            else {
-                                DwmFlush();
-                            }
-
-                            if (currentStep >= steps) break;
-                        }
-                    });
                 }
-                else { _root.Opacity = 1; _rootScale.ScaleY = 1; _rootTranslate.Y = 0; }
+                else
+                {
+                    _root.Opacity = 1;
+                    _rootScale.ScaleX = 1;
+                    _rootScale.ScaleY = 1;
+                    _rootTranslate.X = 0;
+                    _rootTranslate.Y = 0;
+                }
             });
         });
     }
@@ -618,51 +587,20 @@ public sealed partial class PopupWindow : Window
         int borderTop = (AppWindow.Size.Height - AppWindow.ClientSize.Height) / 2;
 
         var hwnd = WindowNative.GetWindowHandle(this);
-        SetWindowPos(hwnd, IntPtr.Zero, _animStartX - borderX, _animStartY - borderTop, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+        SetWindowPos(hwnd, IntPtr.Zero, _targetX - borderX, _targetY - borderTop, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_SHOWWINDOW);
         
         if (!_disableAnimation)
         {
+            _root.Opacity = 0;
             _popIn.Begin();
-            
-            int steps = 15;
-            int startX = _animStartX - borderX;
-            int startY = _animStartY - borderTop;
-            int finalX = _targetX - borderX;
-            int finalY = _targetY - borderTop;
-            int currentStep = 0;
-            int lastX = startX;
-            int lastY = startY;
-
-            System.Threading.Tasks.Task.Run(() => {
-                System.Threading.Thread.CurrentThread.Priority = System.Threading.ThreadPriority.Highest;
-
-                while (true) {
-                    currentStep++;
-                    double t = (double)currentStep / steps;
-                    double ease = 1 - Math.Pow(1 - t, 3); // easeOutCubic
-
-                    int currentX = (int)Math.Round(startX + (finalX - startX) * ease);
-                    int currentY = (int)Math.Round(startY + (finalY - startY) * ease);
-
-                    if (currentStep >= steps) {
-                        currentX = finalX;
-                        currentY = finalY;
-                    }
-
-                    if (currentX != lastX || currentY != lastY) {
-                        SetWindowPos(hwnd, IntPtr.Zero, currentX, currentY, 0, 0,
-                            SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
-                        TaskTile.NativeMethods.DwmFlush();
-                        lastX = currentX;
-                        lastY = currentY;
-                    }
-                    else {
-                        TaskTile.NativeMethods.DwmFlush();
-                    }
-
-                    if (currentStep >= steps) break;
-                }
-            });
+        }
+        else
+        {
+            _root.Opacity = 1;
+            _rootScale.ScaleX = 1;
+            _rootScale.ScaleY = 1;
+            _rootTranslate.X = 0;
+            _rootTranslate.Y = 0;
         }
     }
 
@@ -673,6 +611,7 @@ public sealed partial class PopupWindow : Window
         bool launchAtCenter=false, makeMainFocus=false, overrideLaunchSide=false; int groupLaunchSide=0;
         bool disableAnimation = false, disableAutoHide = false, disableFloat = false, disableRoundedCorners = false, keepOpen = false;
         int groupTitleAlign = -1;
+        int taskbarOffset = 12;
 
         Brush accentBrush = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
         Windows.UI.Color accColor = Windows.UI.Color.FromArgb(255, 0, 120, 215);
@@ -725,6 +664,7 @@ public sealed partial class PopupWindow : Window
                     if (g.TryGetProperty("DisableRoundedCorners", out p)) disableRoundedCorners = p.GetBoolean();
                     if (g.TryGetProperty("KeepOpen", out p)) keepOpen = p.GetBoolean();
                     if (g.TryGetProperty("TitleAlignment", out p)) groupTitleAlign = p.GetInt32();
+                    if (g.TryGetProperty("TaskbarOffset", out var pOffset)) taskbarOffset = pOffset.GetInt32();
 
                     bool isDynamicFolder = false;
                     string dynamicFolderPath = string.Empty;
@@ -1139,7 +1079,7 @@ public sealed partial class PopupWindow : Window
             logH = overhead + n * 36;
         }
 
-        else // Dialog-ish
+        else // Dialog-ish / Start Menu Folder Style
         {
             _classicSV.Visibility  = Visibility.Collapsed;
             _compactR.Visibility   = Visibility.Collapsed;
@@ -1150,8 +1090,8 @@ public sealed partial class PopupWindow : Window
 
             _cardContainer.Visibility = Visibility.Visible;
             _cardFooterName.Text      = name;
-            _cardFooterName.HorizontalAlignment = HorizontalAlignment.Center;
-            _cardFooterName.Margin    = new Thickness(0);
+            _cardFooterName.HorizontalAlignment = HorizontalAlignment.Left;
+            _cardFooterName.Margin    = new Thickness(4, 0, 0, 0);
 
             // Edge-to-edge flush border, no nested side gaps
             _border.Padding = new Thickness(0);
@@ -1165,7 +1105,7 @@ public sealed partial class PopupWindow : Window
             _cardFooterBorder.VerticalAlignment = VerticalAlignment.Stretch;
             _cardFooterBorder.HorizontalAlignment = HorizontalAlignment.Stretch;
             _cardFooterBorder.MinHeight = 40;
-            _cardFooterBorder.Padding = new Thickness(8, 8, 8, 8);
+            _cardFooterBorder.Padding = new Thickness(12, 6, 8, 6);
             _cardFooterBorder.BorderThickness = new Thickness(0, 1, 0, 0);
             _cardFooterBorder.BorderBrush = new SolidColorBrush(forceDark 
                 ? Windows.UI.Color.FromArgb(0x20, 0xFF, 0xFF, 0xFF) 
@@ -1174,28 +1114,41 @@ public sealed partial class PopupWindow : Window
                 ? Windows.UI.Color.FromArgb(0x25, 0x00, 0x00, 0x00) 
                 : Windows.UI.Color.FromArgb(0x35, 0x00, 0x00, 0x00));
 
-            // Always icon-only — no labels in Dialog-ish
+            // Respect showCardLabels or default to showing labels if not hidden
+            bool showLabels = showCardLabels || (!hideAppLabels && n > 0);
             foreach (var app in apps)
-                app.LabelVisibility = Visibility.Collapsed;
+                app.LabelVisibility = showLabels ? Visibility.Visible : Visibility.Collapsed;
 
             _cardR.ItemsSource = apps;
 
-            int requestedCols = gridCols > 0 ? gridCols : 3;
+            int cellW = showLabels ? 150 : 52;
+            int cellH = showLabels ? 38 : 52;
+            int requestedCols = gridCols > 0 ? gridCols : (showLabels ? 2 : 3);
             int cols = Math.Min(n, requestedCols);
-            if (cols == 0) cols = 3;
+            if (cols == 0) cols = showLabels ? 2 : 3;
             int allRows = (int)Math.Ceiling((double)n / cols);
 
-            int cell = 52;
-            int gridW = cols * cell + 16;
-            int gridH = allRows * cell + 8;
+            int gridW = cols * cellW + 16;
+            int gridH = allRows * cellH + 12;
             
             _cardR.Width = gridW;
             _cardR.Height = gridH;
-            _cardR.Padding = new Thickness(8, 4, 8, 4);
+            _cardR.Padding = new Thickness(8, 6, 8, 6);
             _cardR.HorizontalAlignment = HorizontalAlignment.Center;
             
+            if (!showLabels)
+            {
+                _cardR.ItemsPanel = (ItemsPanelTemplate)Microsoft.UI.Xaml.Markup.XamlReader.Load(
+                    "<ItemsPanelTemplate xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\"><ItemsWrapGrid ItemWidth=\"52\" ItemHeight=\"52\" Orientation=\"Horizontal\" HorizontalAlignment=\"Center\" /></ItemsPanelTemplate>");
+            }
+            else
+            {
+                _cardR.ItemsPanel = (ItemsPanelTemplate)Microsoft.UI.Xaml.Markup.XamlReader.Load(
+                    "<ItemsPanelTemplate xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\"><ItemsWrapGrid ItemWidth=\"150\" ItemHeight=\"38\" Orientation=\"Horizontal\" HorizontalAlignment=\"Center\" /></ItemsPanelTemplate>");
+            }
+
             logW = gridW;
-            logH = gridH + 44; // A tiny bit taller with comfortable chin and grid!
+            logH = gridH + 44; // Comfortable chin with footer
         }
 
 
@@ -1269,16 +1222,26 @@ public sealed partial class PopupWindow : Window
                 isRight = work.Width < outer.Width && work.X == outer.X;
             }
 
-            const int gap = 12;
+            int gap = (int)Math.Round(taskbarOffset * sc);
+            var trayHwnd = FindWindow("Shell_TrayWnd", null);
+            RECT trayRect = default;
+            bool hasTray = trayHwnd != IntPtr.Zero && GetWindowRect(trayHwnd, out trayRect);
+
             APPBARDATA abd = new APPBARDATA { cbSize = Marshal.SizeOf<APPBARDATA>() };
             nint state = SHAppBarMessage(ABM_GETSTATE, ref abd);
             bool isAutoHidden = (state.ToInt32() & ABS_AUTOHIDE) != 0;
-            int autoHideBuffer = isAutoHidden ? 48 : 0;
+            int autoHideBuffer = isAutoHidden ? (int)Math.Round(48 * sc) : 0;
 
             if      (isLeft)  { x = work.X + gap;                                              y = pt.Y - physH / 2; }
             else if (isRight) { x = work.X + work.Width - physW - gap;                         y = pt.Y - physH / 2; }
             else if (isTop)   { y = work.Y + gap;                                              x = pt.X - physW / 2; }
-            else              { y = work.Y + work.Height - physH - gap - autoHideBuffer;       x = pt.X - physW / 2; }
+            else
+            {
+                // Bottom taskbar: check physical trayRect if available to avoid Windows 11 Beta / Windhawk 12px overlap bug
+                int bottomBaseY = (hasTray && trayRect.Top > work.Y) ? trayRect.Top : (work.Y + work.Height);
+                y = bottomBaseY - physH - gap - autoHideBuffer;
+                x = pt.X - physW / 2;
+            }
 
             if (_disableFloat) {
                 if (isLeft) x = work.X;
@@ -1295,11 +1258,13 @@ public sealed partial class PopupWindow : Window
             x = Math.Clamp(x, work.X, work.X + work.Width  - physW);
             y = Math.Clamp(y, work.Y, work.Y + work.Height - physH - autoHideBuffer);
 
-            // Apply launch-side-aware pop-in scale animation
+            // Configure launch-side-aware pop-in translation
             if (!_isDesktopMode && _popIn != null)
             {
                 if (!_disableAnimation)
                 {
+                    if (_popInTranslateY != null) _popInTranslateY.From = isTop ? -12 : 12;
+                    if (_popInTranslateX != null) _popInTranslateX.From = isLeft ? -12 : isRight ? 12 : 0;
                     _root.Opacity = 0;
                 }
             }
@@ -1309,27 +1274,17 @@ public sealed partial class PopupWindow : Window
         int borderX = (AppWindow.Size.Width - AppWindow.ClientSize.Width) / 2;
         int borderTop = (AppWindow.Size.Height - AppWindow.ClientSize.Height) / 2; // Assuming symmetric vertical invisible borders
 
-        // Set up animation positions and move to start immediately
+        // Set target positions
         _targetX = x;
         _targetY = y;
         _animStartX = x;
         _animStartY = y;
-        int animDistance = 40;
-        if (!_disableAnimation)
-        {
-            if (isTop) _animStartY -= animDistance;
-            else if (isLeft) _animStartX -= animDistance;
-            else if (isRight) _animStartX += animDistance;
-            else _animStartY += animDistance; // bottom default
-        }
-        
-        // Clamp _animStartY to prevent the window from being positioned at Y < 0, which breaks DWM Acrylic
-        if (_animStartY - borderTop < 0) _animStartY = borderTop;
 
         // Use ResizeClient to guarantee exact client area, preventing right-edge clipping.
         AppWindow.ResizeClient(new Windows.Graphics.SizeInt32(physW, physH));
         
-        AppWindow.Move(new Windows.Graphics.PointInt32(_animStartX - borderX, _animStartY - borderTop));
+        // Position OS window directly at target - no jerky 15-step SetWindowPos loops on 60Hz displays
+        AppWindow.Move(new Windows.Graphics.PointInt32(_targetX - borderX, _targetY - borderTop));
 
         // Removed SetWindowRgn to prevent jagged corners!
 
@@ -1613,18 +1568,51 @@ public sealed partial class PopupWindow : Window
         }
     }
 
+    private static void LaunchTarget(string? targetPath, bool runAsAdmin = false)
+    {
+        if (string.IsNullOrWhiteSpace(targetPath)) return;
+        try
+        {
+            var psi = new ProcessStartInfo(targetPath)
+            {
+                UseShellExecute = true
+            };
+            if (runAsAdmin)
+            {
+                psi.Verb = "runas";
+            }
+            try
+            {
+                if (System.IO.File.Exists(targetPath) || System.IO.Directory.Exists(targetPath))
+                {
+                    var dir = System.IO.Path.GetDirectoryName(targetPath);
+                    if (!string.IsNullOrEmpty(dir) && System.IO.Directory.Exists(dir))
+                    {
+                        psi.WorkingDirectory = dir;
+                    }
+                }
+            }
+            catch { }
+
+            Process.Start(psi);
+        }
+        catch { }
+    }
+
     void App_ItemClick(object sender, ItemClickEventArgs e)
     {
         if (e.ClickedItem is AppEntryViewModel vm && !string.IsNullOrEmpty(vm.ExePath))
         {
-            try { Process.Start(new ProcessStartInfo(vm.ExePath) { UseShellExecute = true }); } catch { }
+            LaunchTarget(vm.ExePath);
         }
         _ = CloseWithFadeAsync();
     }
     void Open_Click(object s, RoutedEventArgs e)
     {
         if (s is MenuFlyoutItem i && i.Tag is string p && !string.IsNullOrEmpty(p))
-        { try { Process.Start(new ProcessStartInfo(p) { UseShellExecute = true }); } catch { } }
+        {
+            LaunchTarget(p);
+        }
         _ = CloseWithFadeAsync();
     }
     private async void RenameGroup_Click(object sender, RoutedEventArgs e)
@@ -1688,7 +1676,9 @@ public sealed partial class PopupWindow : Window
             {
                 var exe = app.ExePath;
                 if (!string.IsNullOrEmpty(exe))
-                { try { Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true }); } catch { } }
+                {
+                    LaunchTarget(exe);
+                }
             }
         }
         _ = CloseWithFadeAsync();
@@ -1696,7 +1686,9 @@ public sealed partial class PopupWindow : Window
     void RunAdmin_Click(object s, RoutedEventArgs e)
     {
         if (s is MenuFlyoutItem i && i.Tag is string p && !string.IsNullOrEmpty(p))
-        { try { Process.Start(new ProcessStartInfo(p) { UseShellExecute = true, Verb = "runas" }); } catch { } }
+        {
+            LaunchTarget(p, runAsAdmin: true);
+        }
         _ = CloseWithFadeAsync();
     }
     void OpenLoc_Click(object s, RoutedEventArgs e)

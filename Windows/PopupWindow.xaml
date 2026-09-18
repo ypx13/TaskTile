@@ -27,20 +27,59 @@
         </Grid.ContextFlyout>
 
         <Grid.Resources>
-            <Storyboard x:Name="_popIn">
-                <DoubleAnimation Storyboard.TargetName="_root" Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.160">
-                    <DoubleAnimation.EasingFunction>
-                        <CubicEase EasingMode="EaseOut" />
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
+            <ResourceDictionary>
+                <ResourceDictionary.ThemeDictionaries>
+                    <ResourceDictionary x:Key="Dark">
+                        <SolidColorBrush x:Key="TileControlFillDefault" Color="#0FFFFFFF" />
+                        <SolidColorBrush x:Key="TileControlFillSecondary" Color="#15FFFFFF" />
+                        <SolidColorBrush x:Key="TileControlFillTertiary" Color="#08FFFFFF" />
+                        <SolidColorBrush x:Key="TileControlStrokeDefault" Color="#14FFFFFF" />
+                        <SolidColorBrush x:Key="TileControlStrokeSecondary" Color="#1AFFFFFF" />
+                        <SolidColorBrush x:Key="TileElevationBorder" Color="#1AFFFFFF" />
+                    </ResourceDictionary>
+                    <ResourceDictionary x:Key="Light">
+                        <SolidColorBrush x:Key="TileControlFillDefault" Color="#B3FFFFFF" />
+                        <SolidColorBrush x:Key="TileControlFillSecondary" Color="#80F9F9F9" />
+                        <SolidColorBrush x:Key="TileControlFillTertiary" Color="#4DF9F9F9" />
+                        <SolidColorBrush x:Key="TileControlStrokeDefault" Color="#0F000000" />
+                        <SolidColorBrush x:Key="TileControlStrokeSecondary" Color="#29000000" />
+                        <SolidColorBrush x:Key="TileElevationBorder" Color="#29000000" />
+                    </ResourceDictionary>
+                </ResourceDictionary.ThemeDictionaries>
 
-            </Storyboard>
-            <AcrylicBrush x:Key="FlyoutAcrylic" TintColor="#202020" TintOpacity="0.5" TintLuminosityOpacity="0.96" FallbackColor="#1C1C1C" />
-            <LinearGradientBrush x:Key="HoverBorderBrush" StartPoint="0,0" EndPoint="0,1">
-                <GradientStop Color="#15FFFFFF" Offset="0.0" />
-                <GradientStop Color="#05FFFFFF" Offset="1.0" />
-            </LinearGradientBrush>
-            
+                <Storyboard x:Key="_popIn" x:Name="_popIn">
+                    <DoubleAnimation Storyboard.TargetName="_root" Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.140">
+                        <DoubleAnimation.EasingFunction>
+                            <CubicEase EasingMode="EaseOut" />
+                        </DoubleAnimation.EasingFunction>
+                    </DoubleAnimation>
+                    <DoubleAnimation x:Name="_popInTranslateY" Storyboard.TargetName="_rootTranslate" Storyboard.TargetProperty="Y" From="12" To="0" Duration="0:0:0.140">
+                        <DoubleAnimation.EasingFunction>
+                            <CubicEase EasingMode="EaseOut" />
+                        </DoubleAnimation.EasingFunction>
+                    </DoubleAnimation>
+                    <DoubleAnimation x:Name="_popInTranslateX" Storyboard.TargetName="_rootTranslate" Storyboard.TargetProperty="X" From="0" To="0" Duration="0:0:0.140">
+                        <DoubleAnimation.EasingFunction>
+                            <CubicEase EasingMode="EaseOut" />
+                        </DoubleAnimation.EasingFunction>
+                    </DoubleAnimation>
+                    <DoubleAnimation Storyboard.TargetName="_rootScale" Storyboard.TargetProperty="ScaleX" From="0.98" To="1" Duration="0:0:0.140">
+                        <DoubleAnimation.EasingFunction>
+                            <CubicEase EasingMode="EaseOut" />
+                        </DoubleAnimation.EasingFunction>
+                    </DoubleAnimation>
+                    <DoubleAnimation Storyboard.TargetName="_rootScale" Storyboard.TargetProperty="ScaleY" From="0.98" To="1" Duration="0:0:0.140">
+                        <DoubleAnimation.EasingFunction>
+                            <CubicEase EasingMode="EaseOut" />
+                        </DoubleAnimation.EasingFunction>
+                    </DoubleAnimation>
+                </Storyboard>
+                <AcrylicBrush x:Key="FlyoutAcrylic" TintColor="#202020" TintOpacity="0.5" TintLuminosityOpacity="0.96" FallbackColor="#1C1C1C" />
+                <LinearGradientBrush x:Key="HoverBorderBrush" StartPoint="0,0" EndPoint="0,1">
+                    <GradientStop Color="#15FFFFFF" Offset="0.0" />
+                    <GradientStop Color="#05FFFFFF" Offset="1.0" />
+                </LinearGradientBrush>
+            </ResourceDictionary>
         </Grid.Resources>
 
         <!-- Base container with padding, NO border to avoid clipping -->
@@ -520,107 +559,122 @@
                              </ListView.ItemTemplate>
                          </ListView>
                      </ScrollViewer>
-                     <!-- Dialog-ish -->
-                     <Grid x:Name="_cardContainer" Visibility="Collapsed" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
-                         <Grid.RowDefinitions>
-                             <RowDefinition Height="Auto" />
-                             <RowDefinition Height="*" />
-                         </Grid.RowDefinitions>
-                         <Border Grid.Row="0" Background="Transparent" CornerRadius="0">
-                             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                                 <GridView x:Name="_cardR" ItemClick="App_ItemClick" Padding="8,4,8,4" Margin="0" SelectionMode="None" IsItemClickEnabled="True" ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                                 <GridView.ItemsPanel>
-                                     <ItemsPanelTemplate>
-                                         <ItemsWrapGrid ItemWidth="52" ItemHeight="52" Orientation="Horizontal" HorizontalAlignment="Center" />
-                                     </ItemsPanelTemplate>
-                                 </GridView.ItemsPanel>
-                                 <GridView.ItemContainerTransitions>
-                                     <TransitionCollection>
-                                         <EntranceThemeTransition IsStaggeringEnabled="True"/>
-                                     </TransitionCollection>
-                                 </GridView.ItemContainerTransitions>
-                                 <GridView.ItemContainerStyle>
-                                     <Style TargetType="GridViewItem">
-                                         <Setter Property="Margin" Value="0"/>
-                                         <Setter Property="Padding" Value="0"/>
-                                         <Setter Property="Width" Value="52"/>
-                                         <Setter Property="Height" Value="52"/>
-                                         <Setter Property="MinWidth" Value="52"/>
-                                         <Setter Property="MinHeight" Value="52"/>
-                                         <Setter Property="HorizontalAlignment" Value="Center"/>
-                                         <Setter Property="VerticalAlignment" Value="Center"/>
-                                         <Setter Property="Background" Value="Transparent"/>
-                                         <Setter Property="Template">
-                                             <Setter.Value>
-                                                 <ControlTemplate TargetType="GridViewItem">
-                                                     <Grid x:Name="RootGrid" Background="Transparent" Width="52" Height="52">
-                                                         <VisualStateManager.VisualStateGroups>
-                                                             <VisualStateGroup x:Name="CommonStates">
-                                                                 <VisualState x:Name="Normal">
-                                                                     <Storyboard>
-                                                                         <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.250" />
-                                                                     </Storyboard>
-                                                                 </VisualState>
-                                                                 <VisualState x:Name="PointerOver">
-                                                                     <VisualState.Setters>
-                                                                         <Setter Target="HoverBg.BorderBrush" Value="{ThemeResource ControlElevationBorderBrush}" />
-                                                                     </VisualState.Setters>
-                                                                     <Storyboard>
-                                                                         <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.150" />
-                                                                     </Storyboard>
-                                                                 </VisualState>
-                                                                 <VisualState x:Name="Pressed">
-                                                                     <Storyboard>
-                                                                         <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="0.5" Duration="0:0:0.083" />
-                                                                     </Storyboard>
-                                                                 </VisualState>
-                                                             </VisualStateGroup>
-                                                         </VisualStateManager.VisualStateGroups>
-                                                         <Border x:Name="HoverBg" Opacity="0" CornerRadius="4" BorderThickness="1" Background="{ThemeResource SubtleFillColorSecondaryBrush}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="2" />
-                                                         <ContentPresenter x:Name="ContentPresenter" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0" Padding="0" />
-                                                     </Grid>
-                                                 </ControlTemplate>
-                                             </Setter.Value>
-                                         </Setter>
-                                     </Style>
-                                 </GridView.ItemContainerStyle>
-                                 <GridView.ItemTemplate>
-                                     <DataTemplate x:DataType="popups:AppEntryViewModel">
-                                         <Grid Width="52" Height="52" CornerRadius="0" ToolTipService.Placement="Bottom" ToolTipService.ToolTip="{x:Bind Name}">
-                                             <Grid.ContextFlyout>
-                                                 <MenuFlyout>
-                                                     <MenuFlyoutItem Text="Open" Click="Open_Click" Tag="{x:Bind ExePath}">
-                                                         <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8E5;" /></MenuFlyoutItem.Icon>
-                                                     </MenuFlyoutItem>
-                                                     <MenuFlyoutItem Text="Run as Administrator" Click="RunAdmin_Click" Tag="{x:Bind ExePath}">
-                                                         <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE7EF;" /></MenuFlyoutItem.Icon>
-                                                     </MenuFlyoutItem>
-                                                     <MenuFlyoutSeparator />
-                                                     <MenuFlyoutItem Text="Open file location" Click="OpenLoc_Click" Tag="{x:Bind ExePath}">
-                                                         <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8DA;" /></MenuFlyoutItem.Icon>
-                                                     </MenuFlyoutItem>
-                                                     <MenuFlyoutSeparator />
-                                                     <MenuFlyoutItem Text="Edit this Group" Click="EditGroup_Click">
-                                                         <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE70F;" /></MenuFlyoutItem.Icon>
-                                                     </MenuFlyoutItem>
-                                                     <MenuFlyoutItem Text="Launch All" Click="LaunchAll_Click">
-                                                         <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE768;" /></MenuFlyoutItem.Icon>
-                                                     </MenuFlyoutItem>
-                                                 </MenuFlyout>
-                                             </Grid.ContextFlyout>
-                                             <Image Width="24" Height="24" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" Source="{x:Bind IconImage, Mode=OneWay}" />
-                                         </Grid>
-                                     </DataTemplate>
-                                 </GridView.ItemTemplate>
-                             </GridView>
-                             </ScrollViewer>
-                         </Border>
+                      <!-- Dialog-ish / Folder Popup -->
+                      <Grid x:Name="_cardContainer" Visibility="Collapsed" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+                          <Grid.RowDefinitions>
+                              <RowDefinition Height="*" />
+                              <RowDefinition Height="Auto" />
+                          </Grid.RowDefinitions>
+                          <Border Grid.Row="0" Background="Transparent" CornerRadius="0">
+                              <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                  <GridView x:Name="_cardR" ItemClick="App_ItemClick" Padding="8,6,8,6" Margin="0" SelectionMode="None" IsItemClickEnabled="True" ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                  <GridView.ItemsPanel>
+                                      <ItemsPanelTemplate>
+                                          <ItemsWrapGrid ItemWidth="150" ItemHeight="38" Orientation="Horizontal" HorizontalAlignment="Center" />
+                                      </ItemsPanelTemplate>
+                                  </GridView.ItemsPanel>
+                                  <GridView.ItemContainerTransitions>
+                                      <TransitionCollection>
+                                          <EntranceThemeTransition IsStaggeringEnabled="True"/>
+                                      </TransitionCollection>
+                                  </GridView.ItemContainerTransitions>
+                                  <GridView.ItemContainerStyle>
+                                      <Style TargetType="GridViewItem">
+                                          <Setter Property="Margin" Value="0"/>
+                                          <Setter Property="Padding" Value="0"/>
+                                          <Setter Property="MinWidth" Value="0"/>
+                                          <Setter Property="MinHeight" Value="0"/>
+                                          <Setter Property="HorizontalAlignment" Value="Stretch"/>
+                                          <Setter Property="VerticalAlignment" Value="Stretch"/>
+                                          <Setter Property="Background" Value="Transparent"/>
+                                          <Setter Property="Template">
+                                              <Setter.Value>
+                                                  <ControlTemplate TargetType="GridViewItem">
+                                                      <Grid x:Name="RootGrid" Background="Transparent" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                                          <VisualStateManager.VisualStateGroups>
+                                                              <VisualStateGroup x:Name="CommonStates">
+                                                                  <VisualState x:Name="Normal">
+                                                                      <Storyboard>
+                                                                          <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.150" />
+                                                                      </Storyboard>
+                                                                  </VisualState>
+                                                                  <VisualState x:Name="PointerOver">
+                                                                      <VisualState.Setters>
+                                                                          <Setter Target="HoverBg.Background" Value="{ThemeResource TileControlFillSecondary}" />
+                                                                          <Setter Target="HoverBg.BorderBrush" Value="{ThemeResource TileControlStrokeDefault}" />
+                                                                      </VisualState.Setters>
+                                                                      <Storyboard>
+                                                                          <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.100" />
+                                                                      </Storyboard>
+                                                                  </VisualState>
+                                                                  <VisualState x:Name="Pressed">
+                                                                      <VisualState.Setters>
+                                                                          <Setter Target="HoverBg.Background" Value="{ThemeResource TileControlFillTertiary}" />
+                                                                          <Setter Target="HoverBg.BorderBrush" Value="{ThemeResource TileControlStrokeSecondary}" />
+                                                                      </VisualState.Setters>
+                                                                      <Storyboard>
+                                                                          <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="0.7" Duration="0:0:0.050" />
+                                                                      </Storyboard>
+                                                                  </VisualState>
+                                                              </VisualStateGroup>
+                                                          </VisualStateManager.VisualStateGroups>
+                                                          <Border x:Name="HoverBg" Opacity="0" CornerRadius="4" BorderThickness="1" Background="{ThemeResource TileControlFillSecondary}" BorderBrush="{ThemeResource TileControlStrokeDefault}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="2" />
+                                                          <ContentPresenter x:Name="ContentPresenter" HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="0" Padding="0" />
+                                                      </Grid>
+                                                  </ControlTemplate>
+                                              </Setter.Value>
+                                          </Setter>
+                                      </Style>
+                                  </GridView.ItemContainerStyle>
+                                  <GridView.ItemTemplate>
+                                      <DataTemplate x:DataType="popups:AppEntryViewModel">
+                                          <Grid CornerRadius="4" ToolTipService.Placement="Bottom" ToolTipService.ToolTip="{x:Bind Name}" HorizontalAlignment="Stretch" VerticalAlignment="Center" Padding="6,2,6,2">
+                                              <Grid.ContextFlyout>
+                                                  <MenuFlyout>
+                                                      <MenuFlyoutItem Text="Open" Click="Open_Click" Tag="{x:Bind ExePath}">
+                                                          <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8E5;" /></MenuFlyoutItem.Icon>
+                                                      </MenuFlyoutItem>
+                                                      <MenuFlyoutItem Text="Run as Administrator" Click="RunAdmin_Click" Tag="{x:Bind ExePath}">
+                                                          <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE7EF;" /></MenuFlyoutItem.Icon>
+                                                      </MenuFlyoutItem>
+                                                      <MenuFlyoutSeparator />
+                                                      <MenuFlyoutItem Text="Open file location" Click="OpenLoc_Click" Tag="{x:Bind ExePath}">
+                                                          <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8DA;" /></MenuFlyoutItem.Icon>
+                                                      </MenuFlyoutItem>
+                                                      <MenuFlyoutSeparator />
+                                                      <MenuFlyoutItem Text="Edit this Group" Click="EditGroup_Click">
+                                                          <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE70F;" /></MenuFlyoutItem.Icon>
+                                                      </MenuFlyoutItem>
+                                                      <MenuFlyoutItem Text="Launch All" Click="LaunchAll_Click">
+                                                          <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE768;" /></MenuFlyoutItem.Icon>
+                                                      </MenuFlyoutItem>
+                                                  </MenuFlyout>
+                                              </Grid.ContextFlyout>
+                                              <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" HorizontalAlignment="Left">
+                                                  <Image Width="24" Height="24" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" Source="{x:Bind IconImage, Mode=OneWay}" />
+                                                  <TextBlock Text="{x:Bind Name}" FontSize="12" FontWeight="Normal" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorPrimaryBrush}" TextTrimming="CharacterEllipsis" MaxWidth="110" Visibility="{x:Bind LabelVisibility, Mode=OneWay}" />
+                                              </StackPanel>
+                                          </Grid>
+                                      </DataTemplate>
+                                  </GridView.ItemTemplate>
+                              </GridView>
+                              </ScrollViewer>
+                          </Border>
 
-                         <!-- Bottom bar: subtle tinted chin stretching to the bottom edge with centered title -->
-                         <Border x:Name="_cardFooterBorder" Grid.Row="1" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Padding="8,8,8,8" BorderThickness="0,1,0,0">
-                             <TextBlock x:Name="_cardFooterName" VerticalAlignment="Center" HorizontalAlignment="Center" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" TextTrimming="CharacterEllipsis" />
-                         </Border>
-                     </Grid>
+                          <!-- Bottom bar: subtle tinted chin stretching to the bottom edge with 14px Semibold title and Edit button -->
+                          <Border x:Name="_cardFooterBorder" Grid.Row="1" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Padding="12,6,8,6" BorderThickness="0,1,0,0">
+                              <Grid>
+                                  <Grid.ColumnDefinitions>
+                                      <ColumnDefinition Width="*" />
+                                      <ColumnDefinition Width="Auto" />
+                                  </Grid.ColumnDefinitions>
+                                  <TextBlock x:Name="_cardFooterName" Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Left" FontSize="14" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" TextTrimming="CharacterEllipsis" Margin="4,0,0,0" />
+                                  <Button x:Name="_cardEditBtn" Grid.Column="1" Click="EditGroup_Click" ToolTipService.ToolTip="Edit this Group" Width="28" Height="28" Padding="0" Background="Transparent" BorderThickness="0" CornerRadius="4">
+                                      <FontIcon Glyph="&#xE70F;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                  </Button>
+                              </Grid>
+                          </Border>
+                      </Grid>
                 </Grid>
             </Grid>
         </Border>

@@ -2,6 +2,19 @@
 
 All notable changes to TaskTile will be documented in this file.
 
+## [v0.8.0] - 2026-09-19
+
+### Added
+- **60Hz Entrance Animation Overhaul**: Eliminated the sluggish 15-step `SetWindowPos` + `DwmFlush` loop in favor of instant OS window placement and hardware-accelerated 140ms WinUI 3 XAML GPU-composited animations (`CubicEase` ease-out), delivering butter-smooth 60fps+ transitions on standard 60Hz displays.
+- **Authentic Fluent 2 Secondary Button Styling**: Rebuilt button hover, pressed, and focus visual states using official Windows 11 WinUI 3 ThemeResource specifications (Dark: `#0FFFFFFF` default, `#15FFFFFF` secondary hover, `#14FFFFFF` stroke; Light: `#B3FFFFFF` default, `#80F9F9F9` secondary hover, `#0F000000` stroke).
+- **Start Menu Folder Style**: Modernized Dialog-ish mode into a sleek Windows 11 Start Menu Folder presentation featuring a 2-column layout (24px icons + 12px labels), footer with 14px Semibold title on the left and quick-edit pencil icon on the right, and context menu / flyout acrylic backdrop.
+- **Configurable Taskbar Offset**: Added support for `TaskbarOffset` (0–60px, default 12px) allowing users to dial in their preferred spacing from the taskbar.
+
+### Fixed
+- **Windows 11 Beta & Windhawk Taskbar Overlap**: Replaced static work area math with live physical taskbar rect detection via `FindWindow("Shell_TrayWnd", null)` to eliminate the 12px overlap/gap bug on Windows 11 Beta builds and custom taskbars.
+- **Search Selection Persistence**: Fixed an issue where searching for apps in the group creation and editing dialogs would deselect previously checked apps when clearing or modifying the query.
+- **Multi-Drive App Launch Working Directory**: Fixed apps failing to find dependency files or throwing "missing files" errors when installed across different drives by properly setting `WorkingDirectory` to the executable's directory.
+
 ## [v0.6.0] - Unreleased
 
 ### Added

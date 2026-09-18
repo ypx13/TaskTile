@@ -36,6 +36,7 @@ public class AppGroup
     public bool DisableRoundedCorners { get; set; } = false;
     public bool KeepOpen { get; set; } = false;
     public int GroupLaunchSide { get; set; } = 0; // 0=Top, 1=Bottom, 2=Left, 3=Right, 4=Center
+    public int TaskbarOffset { get; set; } = 12; // Gap/distance in px from taskbar/screen edge (default: 12px)
 
     // Advanced Rendering Settings
     public int AppIconStyle { get; set; } = 0; // 0 = Transparent/Normal, 1 = Monochrome, 2 = UWP Accent

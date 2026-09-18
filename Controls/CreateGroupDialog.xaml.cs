@@ -37,24 +37,37 @@ public sealed partial class CreateGroupDialog : ContentDialog
         AppListView.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
     }
 
+    private readonly HashSet<string> _selectedExePaths = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, AppEntry> _selectedAppsMap = new(StringComparer.OrdinalIgnoreCase);
+    private bool _isFiltering = false;
+
     private void ApplyFilter(string query)
     {
-        var oldSelections = AppListView.SelectedItems.OfType<AppEntry>().ToList();
-
-        var filtered = string.IsNullOrWhiteSpace(query)
-            ? _allApps.ToList()
-            : _allApps.Where(a => a.Name.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
-
-        _displayApps.Clear();
-        foreach (var item in filtered)
+        _isFiltering = true;
+        try
         {
-            _displayApps.Add(item);
+            var filtered = string.IsNullOrWhiteSpace(query)
+                ? _allApps.ToList()
+                : _allApps.Where(a => a.Name.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
+
+            _displayApps.Clear();
+            foreach (var item in filtered)
+            {
+                _displayApps.Add(item);
+            }
+
+            foreach (var item in _displayApps)
+            {
+                if (!string.IsNullOrEmpty(item.ExePath) && _selectedExePaths.Contains(item.ExePath))
+                {
+                    if (!AppListView.SelectedItems.Contains(item))
+                        AppListView.SelectedItems.Add(item);
+                }
+            }
         }
-
-        foreach (var sel in oldSelections)
+        finally
         {
-            if (_displayApps.Contains(sel))
-                AppListView.SelectedItems.Add(sel);
+            _isFiltering = false;
         }
     }
 
@@ -65,9 +78,38 @@ public sealed partial class CreateGroupDialog : ContentDialog
 
     private void AppListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        int count = AppListView.SelectedItems.Count;
+        if (_isFiltering) return;
+
+        foreach (var item in e.AddedItems.OfType<AppEntry>())
+        {
+            if (!string.IsNullOrEmpty(item.ExePath))
+            {
+                _selectedExePaths.Add(item.ExePath);
+                _selectedAppsMap[item.ExePath] = item;
+            }
+        }
+
+        foreach (var item in e.RemovedItems.OfType<AppEntry>())
+        {
+            if (!string.IsNullOrEmpty(item.ExePath))
+            {
+                _selectedExePaths.Remove(item.ExePath);
+                _selectedAppsMap.Remove(item.ExePath);
+            }
+        }
+
+        UpdateSelectedCountUI();
+    }
+
+    private void UpdateSelectedCountUI()
+    {
+        int count = _selectedExePaths.Count;
         SelectedCountText.Text = count == 0 ? "0 selected" :
                                  count == 1 ? "1 selected" : $"{count} selected";
+        if (Application.Current.Resources.TryGetValue("TextFillColorSecondaryBrush", out var brush) && brush is Brush b)
+        {
+            SelectedCountText.Foreground = b;
+        }
     }
 
     private async void BrowseButton_Click(object sender, RoutedEventArgs e)
@@ -112,8 +154,11 @@ public sealed partial class CreateGroupDialog : ContentDialog
         };
 
         _allApps.Insert(0, appEntry);
+        _selectedExePaths.Add(appEntry.ExePath);
+        _selectedAppsMap[appEntry.ExePath] = appEntry;
         SearchBox.Text = string.Empty; 
         ApplyFilter(string.Empty);
+        UpdateSelectedCountUI();
         
         // Slight delay to allow UI to generate the container
         _ = DispatcherQueue.TryEnqueue(() =>
@@ -135,7 +180,7 @@ public sealed partial class CreateGroupDialog : ContentDialog
             return;
         }
         
-        var selectedApps = AppListView.SelectedItems.OfType<AppEntry>().ToList();
+        var selectedApps = _selectedAppsMap.Values.ToList();
         if (selectedApps.Count == 0)
         {
             SelectedCountText.Foreground = new SolidColorBrush(Microsoft.UI.Colors.Red);
