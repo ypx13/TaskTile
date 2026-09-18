@@ -1,5 +1,8 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
+using Microsoft.UI.Xaml.Media.Animation;
 using TaskTile.Services;
 using System;
 using System.Linq;
@@ -14,6 +17,7 @@ public sealed partial class SettingsPage : Page
     {
         this.InitializeComponent();
 
+        MixUIToggle.IsOn             = SettingsService.Current.YpxMixUI;
         ThemeCombo.SelectedIndex    = SettingsService.Current.Theme;
         BackdropCombo.SelectedIndex  = SettingsService.Current.BackdropStyle;
         TitleAlignmentSlider.Value   = SettingsService.Current.TitleAlignment;
@@ -33,6 +37,151 @@ public sealed partial class SettingsPage : Page
 
 
         _isInitialized = true;
+    }
+
+    private void MixUIToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (!_isInitialized) return;
+        SettingsService.Current.YpxMixUI = MixUIToggle.IsOn;
+        SettingsService.Save();
+
+        if (MixUIToggle.IsOn)
+        {
+            PlayMixUIFizzEffect();
+        }
+    }
+
+    private void PlayMixUIFizzEffect()
+    {
+        if (EffectCanvas == null || MixUIToggle == null) return;
+
+        try
+        {
+            var transform = MixUIToggle.TransformToVisual(EffectCanvas);
+            var pt = transform.TransformPoint(new Windows.Foundation.Point(MixUIToggle.ActualWidth / 2, MixUIToggle.ActualHeight / 2));
+
+            var rand = new Random();
+            int bubbleCount = 14;
+
+            string ocPath = System.IO.Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "Assets", "ypx_oc.png");
+            bool hasOc = System.IO.File.Exists(ocPath);
+
+            for (int i = 0; i < bubbleCount; i++)
+            {
+                double size = rand.Next(18, 30);
+                var bubble = new Grid
+                {
+                    Width = size,
+                    Height = size,
+                    Opacity = 1.0,
+                    RenderTransformOrigin = new Windows.Foundation.Point(0.5, 0.5)
+                };
+
+                // Tinted blue bubble border
+                var circle = new Border
+                {
+                    Width = size,
+                    Height = size,
+                    CornerRadius = new CornerRadius(size / 2),
+                    Background = new SolidColorBrush(Windows.UI.Color.FromArgb(55, 30, 144, 255)),
+                    BorderBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(190, 135, 206, 250)),
+                    BorderThickness = new Thickness(1.5)
+                };
+                bubble.Children.Add(circle);
+
+                // OC Head inside bubble
+                if (hasOc)
+                {
+                    var img = new Image
+                    {
+                        Source = new BitmapImage(new Uri(ocPath)),
+                        Width = size * 0.85,
+                        Height = size * 0.85,
+                        Stretch = Microsoft.UI.Xaml.Media.Stretch.Uniform,
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        VerticalAlignment = VerticalAlignment.Center
+                    };
+                    bubble.Children.Add(img);
+                }
+
+                var tt = new TranslateTransform();
+                var st = new ScaleTransform { ScaleX = 0.25, ScaleY = 0.25 };
+                var tg = new TransformGroup();
+                tg.Children.Add(st);
+                tg.Children.Add(tt);
+                bubble.RenderTransform = tg;
+
+                // Initial position near toggle
+                double startX = pt.X + rand.Next(-20, 20) - (size / 2);
+                double startY = pt.Y + rand.Next(-10, 10) - (size / 2);
+                Canvas.SetLeft(bubble, startX);
+                Canvas.SetTop(bubble, startY);
+
+                EffectCanvas.Children.Add(bubble);
+
+                // Animate: shoot out and float up like soda fizz, then pop / fade
+                double targetX = rand.Next(-50, 50);
+                double targetY = -rand.Next(40, 100);
+                int durationMs = rand.Next(380, 700);
+
+                var sb = new Storyboard();
+
+                // Fade out
+                var daOpacity = new DoubleAnimation
+                {
+                    From = 1.0,
+                    To = 0.0,
+                    Duration = new Duration(TimeSpan.FromMilliseconds(durationMs)),
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
+                };
+                Storyboard.SetTarget(daOpacity, bubble);
+                Storyboard.SetTargetProperty(daOpacity, "Opacity");
+                sb.Children.Add(daOpacity);
+
+                // Float up and drift X
+                var daX = new DoubleAnimation
+                {
+                    To = targetX,
+                    Duration = new Duration(TimeSpan.FromMilliseconds(durationMs)),
+                    EasingFunction = new CircleEase { EasingMode = EasingMode.EaseOut }
+                };
+                Storyboard.SetTarget(daX, tt);
+                Storyboard.SetTargetProperty(daX, "X");
+                sb.Children.Add(daX);
+
+                var daY = new DoubleAnimation
+                {
+                    To = targetY,
+                    Duration = new Duration(TimeSpan.FromMilliseconds(durationMs)),
+                    EasingFunction = new CircleEase { EasingMode = EasingMode.EaseOut }
+                };
+                Storyboard.SetTarget(daY, tt);
+                Storyboard.SetTargetProperty(daY, "Y");
+                sb.Children.Add(daY);
+
+                // Pop / scale up quickly then fizz away
+                var daScaleX = new DoubleAnimationUsingKeyFrames();
+                daScaleX.KeyFrames.Add(new SplineDoubleKeyFrame { KeyTime = KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(durationMs * 0.35)), Value = 1.15 });
+                daScaleX.KeyFrames.Add(new SplineDoubleKeyFrame { KeyTime = KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(durationMs)), Value = 0.1 });
+                Storyboard.SetTarget(daScaleX, st);
+                Storyboard.SetTargetProperty(daScaleX, "ScaleX");
+                sb.Children.Add(daScaleX);
+
+                var daScaleY = new DoubleAnimationUsingKeyFrames();
+                daScaleY.KeyFrames.Add(new SplineDoubleKeyFrame { KeyTime = KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(durationMs * 0.35)), Value = 1.15 });
+                daScaleY.KeyFrames.Add(new SplineDoubleKeyFrame { KeyTime = KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(durationMs)), Value = 0.1 });
+                Storyboard.SetTarget(daScaleY, st);
+                Storyboard.SetTargetProperty(daScaleY, "ScaleY");
+                sb.Children.Add(daScaleY);
+
+                sb.Completed += (_, _) =>
+                {
+                    EffectCanvas.Children.Remove(bubble);
+                };
+                sb.Begin();
+            }
+        }
+        catch { }
     }
 
     private void PopupsConfigToggle_Toggled(object sender, RoutedEventArgs e)
@@ -325,7 +474,7 @@ public sealed partial class SettingsPage : Page
         StarWarsOverlay.Visibility = Visibility.Visible;
 
         var sb = new System.Text.StringBuilder();
-        sb.AppendLine("TASKTILE v0.5");
+        sb.AppendLine("TASKTILE v0.8");
         sb.AppendLine();
         foreach (var role in new[] { "DEVELOPER", "DESIGNER", "QA TEAM", "PROJECT MANAGER",
                                       "SPECIAL THANKS", "SOUND DIRECTOR", "CATERING", "CEO", "INTERN" })
@@ -424,7 +573,7 @@ public sealed partial class SettingsPage : Page
     {
         var s = SettingsService.Current;
         // System
-        DbgVersion.Text   = $"ver  v0.5  |  PDebug={s.PersistentDebugMode}";
+        DbgVersion.Text   = $"ver  v0.8  |  PDebug={s.PersistentDebugMode}";
         DbgOS.Text        = $"os   {Environment.OSVersion.Version}";
         DbgMachine.Text   = $"host {Environment.MachineName}";
         DbgUser.Text      = $"user {Environment.UserName}";

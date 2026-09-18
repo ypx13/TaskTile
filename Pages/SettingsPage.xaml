@@ -28,6 +28,31 @@
                          Message="These settings apply to both the configuration app and the launcher popup."
                          IsClosable="False" Margin="0,0,0,8" />
 
+                <!-- ypx.mixUI (Mix on WinUI 3) -->
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" CornerRadius="{ThemeResource OverlayCornerRadius}" Padding="16">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="ypx.mixUI" FontWeight="SemiBold"/>
+                                <Border Background="{ThemeResource AccentFillColorTertiaryBrush}" CornerRadius="4" Padding="6,1" VerticalAlignment="Center">
+                                    <TextBlock Text="mix on winui3" FontSize="10" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" FontWeight="Medium"/>
+                                </Border>
+                            </StackPanel>
+                            <TextBlock Text="Custom fluid animations, entrance transitions, and stylized aesthetics. When off, keeps everything strictly to native WinUI 3 and Fluent UI."
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <ToggleSwitch x:Name="MixUIToggle" Grid.Column="1" VerticalAlignment="Center"
+                                      HorizontalAlignment="Right" MinWidth="0"
+                                      OnContent="" OffContent="" Toggled="MixUIToggle_Toggled"/>
+                    </Grid>
+                </Border>
+
                 <!-- Theme -->
                 <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
@@ -376,7 +401,7 @@
                     <Button Content="Delete Data" Foreground="Red" Click="DeleteData_Click" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="0,0,0,12" />
                     
                     <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Bottom" Orientation="Horizontal">
-                        <TextBlock x:Name="MadeByText" Text="made by ypx.13 • v0.7" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Bottom" Tapped="MadeBy_Tapped" Margin="0,0,0,16"/>
+                        <TextBlock x:Name="MadeByText" Text="made by ypx.13 • v0.8" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Bottom" Tapped="MadeBy_Tapped" Margin="0,0,0,16"/>
                     </StackPanel>
                 </Grid>
             </StackPanel>
@@ -502,5 +527,8 @@
                 </Grid>
             </Border>
         </Grid>
+
+        <!-- Bubble / Particle Effect Overlay -->
+        <Canvas x:Name="EffectCanvas" IsHitTestVisible="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
     </Grid>
 </Page>

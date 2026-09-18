@@ -36,6 +36,9 @@ public class AppSettings
     public bool HasAcknowledgedBarDetection { get; set; } = false;
     public string LastDetectedBar { get; set; } = string.Empty;
 
+    // UI Styling & Custom Mix
+    public bool YpxMixUI { get; set; } = true;
+
     // Debug
     public bool PersistentDebugMode { get; set; } = false;
     // Changelog

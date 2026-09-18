@@ -125,13 +125,21 @@
                                 <Flyout.FlyoutPresenterStyle>
                                     <Style TargetType="FlyoutPresenter">
                                         <Setter Property="CornerRadius" Value="{ThemeResource OverlayCornerRadius}" />
-                                        <Setter Property="MaxWidth" Value="800" />
+                                        <Setter Property="MaxWidth" Value="1600" />
+                                        <Setter Property="MaxHeight" Value="1200" />
                                         <Setter Property="MinWidth" Value="400" />
+                                        <Setter Property="Padding" Value="0" />
                                     </Style>
                                 </Flyout.FlyoutPresenterStyle>
-                                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" MaxHeight="600" Padding="0,0,16,0">
-                                    <StackPanel Spacing="16" Margin="0,12,0,0">
-                                        <TextBlock Text="Group Settings" Style="{ThemeResource TitleTextBlockStyle}" Margin="0,0,0,8"/>
+                                <Grid x:Name="FlyoutRootGrid" Width="400" MaxHeight="600" Padding="16,12,16,12">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0" Text="Group Settings" Style="{ThemeResource TitleTextBlockStyle}" Margin="0,0,0,8"/>
+                                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,12,8">
+                                        <StackPanel Spacing="16" Margin="0,4,0,0">
                                         <ComboBox x:Name="PopupStyleCombo" Header="Layout style" SelectionChanged="SettingChanged" HorizontalAlignment="Stretch" PlaceholderText="Select layout">
                                             <x:String>Classic Grid</x:String>
                                             <x:String>Compact (Row/Column)</x:String>
@@ -263,6 +271,23 @@
                                         </StackPanel>
                                     </StackPanel>
                                 </ScrollViewer>
+
+                                    <!-- Fullscreen expand button in the bottom right corner (highlighted in user image) -->
+                                    <Grid Grid.Row="2" Margin="0,6,0,0">
+                                        <Button x:Name="FullscreenSettingsBtn"
+                                                Click="FullscreenSettingsBtn_Click"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Bottom"
+                                                Width="28" Height="28"
+                                                Padding="0"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                CornerRadius="4"
+                                                ToolTipService.ToolTip="Fullscreen settings">
+                                            <FontIcon x:Name="FullscreenSettingsIcon" Glyph="&#xE740;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        </Button>
+                                    </Grid>
+                                </Grid>
                             </Flyout>
                         </Button.Flyout>
                     </Button>

@@ -29,6 +29,10 @@ public sealed partial class GroupCard : UserControl
     public GroupCard()
     {
         this.InitializeComponent();
+        if (SettingsButton?.Flyout is Flyout flyout)
+        {
+            flyout.Closed += GroupSettingsFlyout_Closed;
+        }
     }
 
     private static void OnGroupDataChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -315,5 +319,39 @@ public sealed partial class GroupCard : UserControl
         var c = args.NewColor;
         _group.CustomBorderColor = $"#{c.R:X2}{c.G:X2}{c.B:X2}";
         GroupService.Instance.Save();
+    }
+
+    private bool _isSettingsFullscreen = false;
+
+    private void FullscreenSettingsBtn_Click(object sender, RoutedEventArgs e)
+    {
+        _isSettingsFullscreen = !_isSettingsFullscreen;
+        if (_isSettingsFullscreen)
+        {
+            var winSize = this.XamlRoot?.Size ?? new Windows.Foundation.Size(900, 700);
+            FlyoutRootGrid.Width = Math.Max(500, winSize.Width - 60);
+            FlyoutRootGrid.Height = Math.Max(400, winSize.Height - 60);
+            FlyoutRootGrid.MaxHeight = winSize.Height - 40;
+            FullscreenSettingsIcon.Glyph = "\uE73F"; // Restore
+            ToolTipService.SetToolTip(FullscreenSettingsBtn, "Exit fullscreen settings");
+        }
+        else
+        {
+            FlyoutRootGrid.Width = 400;
+            FlyoutRootGrid.Height = double.NaN;
+            FlyoutRootGrid.MaxHeight = 600;
+            FullscreenSettingsIcon.Glyph = "\uE740"; // Fullscreen
+            ToolTipService.SetToolTip(FullscreenSettingsBtn, "Fullscreen settings");
+        }
+    }
+
+    private void GroupSettingsFlyout_Closed(object sender, object e)
+    {
+        _isSettingsFullscreen = false;
+        FlyoutRootGrid.Width = 400;
+        FlyoutRootGrid.Height = double.NaN;
+        FlyoutRootGrid.MaxHeight = 600;
+        FullscreenSettingsIcon.Glyph = "\uE740";
+        ToolTipService.SetToolTip(FullscreenSettingsBtn, "Fullscreen settings");
     }
 }

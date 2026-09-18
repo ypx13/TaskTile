@@ -609,7 +609,7 @@ public sealed partial class PopupWindow : Window
         var apps = new ObservableCollection<AppEntryViewModel>();
         string name="Group"; bool hideName=false, hideAppLabels=false, showCardLabels=false; int popupStyle=0,compactAlign=0,gridCols=3,gridRows=0,themeOverride=0,appIconStyle=0;
         bool launchAtCenter=false, makeMainFocus=false, overrideLaunchSide=false; int groupLaunchSide=0;
-        bool disableAnimation = false, disableAutoHide = false, disableFloat = false, disableRoundedCorners = false, keepOpen = false;
+        bool disableAnimation = !TaskTile.Services.SettingsService.Current.YpxMixUI, disableAutoHide = false, disableFloat = false, disableRoundedCorners = false, keepOpen = false;
         int groupTitleAlign = -1;
         int taskbarOffset = 12;
 
