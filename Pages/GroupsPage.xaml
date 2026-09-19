@@ -92,14 +92,17 @@
                 <Button x:Name="CloseFullSettingsBtn" Grid.Column="0"
                         Click="CloseFullSettingsBtn_Click"
                         Width="36" Height="36" Padding="0"
-                        Style="{ThemeResource SubtleButtonStyle}"
+                        Background="Transparent" BorderThickness="0"
                         CornerRadius="{ThemeResource ControlCornerRadius}"
                         ToolTipService.ToolTip="Close settings (Back to Groups)">
                     <FontIcon Glyph="&#xE711;" FontSize="14"/>
                 </Button>
 
-                <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
-                    <TextBlock x:Name="FullSettingsGroupName" Text="Group Settings" Style="{ThemeResource TitleTextBlockStyle}"/>
+                <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center" Spacing="3">
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <TextBlock Text="Group Settings —" Style="{ThemeResource TitleTextBlockStyle}" VerticalAlignment="Center"/>
+                        <TextBox x:Name="FullSettingsGroupNameBox" PlaceholderText="Group Name" FontSize="18" FontWeight="Bold" Width="260" VerticalAlignment="Center" TextChanged="FullSettingsGroupNameBox_TextChanged"/>
+                    </StackPanel>
                     <TextBlock Text="Customize layout style, spacing, backdrops, and launcher behavior"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
                 </StackPanel>
@@ -126,6 +129,53 @@
 
                     <!-- Left Column: Layout & Appearance -->
                     <StackPanel Grid.Column="0" Spacing="16">
+                        <!-- Applications in Group Card -->
+                        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1" CornerRadius="{ThemeResource OverlayCornerRadius}" Padding="16">
+                            <StackPanel Spacing="12">
+                                <Grid>
+                                    <TextBlock Text="Applications in Group" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center"/>
+                                    <Button x:Name="FullAddAppBtn" Click="FullAddAppBtn_Click" HorizontalAlignment="Right" Padding="10,4" CornerRadius="{ThemeResource ControlCornerRadius}">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <FontIcon Glyph="&#xE710;" FontSize="11"/>
+                                            <TextBlock Text="Add App" FontSize="12"/>
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+                                <ListView x:Name="FullAppsListView" SelectionMode="None" MaxHeight="220" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" CornerRadius="6">
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Padding="6,4">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                                    <FontIcon Glyph="&#xE71D;" FontSize="14" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                                                    <TextBlock Text="{Binding Name}" FontWeight="Medium" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="160"/>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                    <Button Click="FullAppMoveUp_Click" Tag="{Binding}" ToolTipService.ToolTip="Move Up" Width="28" Height="28" Padding="0" Background="Transparent" BorderThickness="0">
+                                                        <FontIcon Glyph="&#xE74A;" FontSize="11"/>
+                                                    </Button>
+                                                    <Button Click="FullAppMoveDown_Click" Tag="{Binding}" ToolTipService.ToolTip="Move Down" Width="28" Height="28" Padding="0" Background="Transparent" BorderThickness="0">
+                                                        <FontIcon Glyph="&#xE74B;" FontSize="11"/>
+                                                    </Button>
+                                                    <Button Click="FullAppCycleSize_Click" Tag="{Binding}" ToolTipService.ToolTip="Cycle Tile Size (1x1, 2x1, 2x2)" Width="28" Height="28" Padding="0" Background="Transparent" BorderThickness="0">
+                                                        <FontIcon Glyph="&#xE740;" FontSize="11"/>
+                                                    </Button>
+                                                    <Button Click="FullAppDelete_Click" Tag="{Binding}" ToolTipService.ToolTip="Remove App" Width="28" Height="28" Padding="0" Background="Transparent" BorderThickness="0">
+                                                        <FontIcon Glyph="&#xE74D;" FontSize="11" Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
+                                                    </Button>
+                                                </StackPanel>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
+                            </StackPanel>
+                        </Border>
+
                         <!-- Layout Card -->
                         <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"

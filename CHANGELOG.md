@@ -2,6 +2,26 @@
 
 All notable changes to TaskTile will be documented in this file.
 
+## [v0.8.2] - 2026-09-19
+
+### Fixed
+- **Groups Page Crash**: Removed undefined `SubtleButtonStyle` on the fullscreen settings dismissal button, fixing the crash when navigating to Groups.
+- **In-Popup Edit Mode Crash on Removal**: Fixed visual tree teardown mid-event dispatch by updating the items collection directly rather than clearing and reloading containers.
+- **Tile Click-Through in Edit Mode**: Guarded app click and context launch handlers during edit mode so tapping or dragging tiles never launches the app or closes the window.
+
+### Added
+- **Multi-Size Live Tiles (1x1, 2x1 Wide, 2x2 Large)**: Implemented full variable tile sizing using `VariableSizedWrapGrid` and responsive layouts:
+  - 1x1: 84x84 classic tile with centered icon and label.
+  - 2x1: 176x84 wide banner tile with side-by-side icon and bold title.
+  - 2x2: 176x176 large tile with high-resolution 56x56 icon.
+  - Resizing supports both clicking the size badge and dragging the handle delta.
+- **Drag-and-Drop Reordering**: Enabled native GridView drag reordering in edit mode with automatic synchronization to `group.Apps`.
+- **Rock-Solid File Picker**: Added Win32 `GetOpenFileName` fallback to prevent WinRT picker hangs when adding apps from borderless popup windows.
+- **Two Distinct Rename Experiences**:
+  - When `ypx.mixUI` is ON: Directional comic speech bubble overlay pointing to the title with smooth window expansion.
+  - When `ypx.mixUI` is OFF: Standard native WinUI 3 `ContentDialog` with authentic Fluent typography and controls.
+- **Fullscreen Settings Apps Management**: Added editable Group Name in the header and an Applications card supporting app reordering (up/down), tile resizing, deletion, and addition.
+
 ## [v0.8.1] - 2026-09-19
 
 ### Added

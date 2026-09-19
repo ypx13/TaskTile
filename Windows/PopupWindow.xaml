@@ -116,103 +116,124 @@
                                     <Setter Property="Background" Value="Transparent"/>
                                     <Setter Property="Template">
                                         <Setter.Value>
-                                            <ControlTemplate TargetType="GridViewItem">
-                                            <Grid x:Name="RootGrid" Background="Transparent" Width="84" Height="84">
-                                                <VisualStateManager.VisualStateGroups>
-                                                    <VisualStateGroup x:Name="CommonStates">
-                                                        <VisualState x:Name="Normal">
-                                                            <Storyboard>
-                                                                <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.090" />
-                                                            </Storyboard>
-                                                        </VisualState>
-                                                        <VisualState x:Name="PointerOver">
-                                                            <VisualState.Setters>
-                                                                <Setter Target="HoverBg.BorderBrush" Value="{ThemeResource ControlElevationBorderBrush}" />
-                                                            </VisualState.Setters>
-                                                            <Storyboard>
-                                                                <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.070" />
-                                                            </Storyboard>
-                                                        </VisualState>
-                                                        <VisualState x:Name="Pressed">
-                                                            <Storyboard>
-                                                                <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="0.5" Duration="0:0:0.083" />
-                                                            </Storyboard>
-                                                        </VisualState>
-                                                    </VisualStateGroup>
-                                                </VisualStateManager.VisualStateGroups>
+                                             <ControlTemplate TargetType="GridViewItem">
+                                             <Grid x:Name="RootGrid" Background="Transparent" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                                 <VisualStateManager.VisualStateGroups>
+                                                     <VisualStateGroup x:Name="CommonStates">
+                                                         <VisualState x:Name="Normal">
+                                                             <Storyboard>
+                                                                 <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.090" />
+                                                             </Storyboard>
+                                                         </VisualState>
+                                                         <VisualState x:Name="PointerOver">
+                                                             <VisualState.Setters>
+                                                                 <Setter Target="HoverBg.BorderBrush" Value="{ThemeResource ControlElevationBorderBrush}" />
+                                                             </VisualState.Setters>
+                                                             <Storyboard>
+                                                                 <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.070" />
+                                                             </Storyboard>
+                                                         </VisualState>
+                                                         <VisualState x:Name="Pressed">
+                                                             <Storyboard>
+                                                                 <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="0.5" Duration="0:0:0.083" />
+                                                             </Storyboard>
+                                                         </VisualState>
+                                                     </VisualStateGroup>
+                                                 </VisualStateManager.VisualStateGroups>
 
-                                                <!-- Hover bg: Margin="2" keeps 1px border safely inside the 84x84 cell bounds -->
-                                                <Border x:Name="HoverBg" Opacity="0" CornerRadius="4" BorderThickness="1" Background="{ThemeResource SubtleFillColorSecondaryBrush}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="2" />
-                                                <ContentPresenter x:Name="ContentPresenter" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0" Padding="0" />
-                                            </Grid>
-                                        </ControlTemplate>
-                                        </Setter.Value>
-                                    </Setter>
-                                </Style>
-                            </GridView.ItemContainerStyle>
-                            <GridView.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <ItemsWrapGrid x:Name="_classicWrapGrid" ItemWidth="84" ItemHeight="84" Orientation="Horizontal" MaximumRowsOrColumns="3" />
-                                </ItemsPanelTemplate>
-                            </GridView.ItemsPanel>
-                            <GridView.ItemContainerTransitions>
-                                <TransitionCollection>
-                                    <EntranceThemeTransition IsStaggeringEnabled="True"/>
-                                </TransitionCollection>
-                            </GridView.ItemContainerTransitions>
-                            <GridView.ItemTemplate>
-                                <DataTemplate x:DataType="popups:AppEntryViewModel">
-                                    <Grid Width="84" Height="84" CornerRadius="4" ToolTipService.Placement="Bottom" ToolTipService.ToolTip="{x:Bind Name}" Background="Transparent">
-                                        <Grid.ContextFlyout>
-                                            <MenuFlyout>
-                                                <MenuFlyoutItem Text="Open" Click="Open_Click" Tag="{x:Bind ExePath}">
-                                                    <MenuFlyoutItem.Icon>
-                                                        <FontIcon Glyph="&#xE8E5;" />
-                                                    </MenuFlyoutItem.Icon>
-                                                </MenuFlyoutItem>
-                                                <MenuFlyoutItem Text="Run as Administrator" Click="RunAdmin_Click" Tag="{x:Bind ExePath}">
-                                                    <MenuFlyoutItem.Icon>
-                                                        <FontIcon Glyph="&#xE7EF;" />
-                                                    </MenuFlyoutItem.Icon>
-                                                </MenuFlyoutItem>
-                                                <MenuFlyoutSeparator />
-                                                <MenuFlyoutItem Text="Open file location" Click="OpenLoc_Click" Tag="{x:Bind ExePath}">
-                                                    <MenuFlyoutItem.Icon>
-                                                        <FontIcon Glyph="&#xE8DA;" />
-                                                    </MenuFlyoutItem.Icon>
-                                                </MenuFlyoutItem>
-                                                <MenuFlyoutSeparator />
-                                                <MenuFlyoutItem Text="Edit this Group" Click="EditGroup_Click">
-                                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE70F;" /></MenuFlyoutItem.Icon>
-                                                </MenuFlyoutItem>
-                                                <MenuFlyoutItem Text="Launch All" Click="LaunchAll_Click">
-                                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE768;" /></MenuFlyoutItem.Icon>
-                                                </MenuFlyoutItem>
-                                            </MenuFlyout>
-                                        </Grid.ContextFlyout>
-                                        <StackPanel Spacing="6" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                            <Grid Width="32" Height="32">
-                                                <Border CornerRadius="0" Width="32" Height="32" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                                <Image Width="32" Height="32" Stretch="Uniform" Source="{x:Bind IconImage, Mode=OneWay}" />
-                                            </Grid>
-                                            <TextBlock FontSize="10.5" TextAlignment="Center" TextWrapping="Wrap" MaxLines="2" LineHeight="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind Name}" />
-                                        </StackPanel>
+                                                 <Border x:Name="HoverBg" Opacity="0" CornerRadius="4" BorderThickness="1" Background="{ThemeResource SubtleFillColorSecondaryBrush}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="2" />
+                                                 <ContentPresenter x:Name="ContentPresenter" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="0" Padding="0" />
+                                             </Grid>
+                                         </ControlTemplate>
+                                         </Setter.Value>
+                                     </Setter>
+                                 </Style>
+                             </GridView.ItemContainerStyle>
+                             <GridView.ItemsPanel>
+                                 <ItemsPanelTemplate>
+                                     <VariableSizedWrapGrid x:Name="_classicWrapGrid" ItemWidth="88" ItemHeight="88" Orientation="Horizontal" MaximumRowsOrColumns="3" />
+                                 </ItemsPanelTemplate>
+                             </GridView.ItemsPanel>
+                             <GridView.ItemContainerTransitions>
+                                 <TransitionCollection>
+                                     <EntranceThemeTransition IsStaggeringEnabled="True"/>
+                                 </TransitionCollection>
+                             </GridView.ItemContainerTransitions>
+                             <GridView.ItemTemplate>
+                                 <DataTemplate x:DataType="popups:AppEntryViewModel">
+                                     <Grid Width="{x:Bind TileWidth, Mode=OneWay}" Height="{x:Bind TileHeight, Mode=OneWay}" CornerRadius="6" ToolTipService.Placement="Bottom" ToolTipService.ToolTip="{x:Bind Name}" Background="Transparent">
+                                         <Grid.ContextFlyout>
+                                             <MenuFlyout>
+                                                 <MenuFlyoutItem Text="Open" Click="Open_Click" Tag="{x:Bind ExePath}">
+                                                     <MenuFlyoutItem.Icon>
+                                                         <FontIcon Glyph="&#xE8E5;" />
+                                                     </MenuFlyoutItem.Icon>
+                                                 </MenuFlyoutItem>
+                                                 <MenuFlyoutItem Text="Run as Administrator" Click="RunAdmin_Click" Tag="{x:Bind ExePath}">
+                                                     <MenuFlyoutItem.Icon>
+                                                         <FontIcon Glyph="&#xE7EF;" />
+                                                     </MenuFlyoutItem.Icon>
+                                                 </MenuFlyoutItem>
+                                                 <MenuFlyoutSeparator />
+                                                 <MenuFlyoutItem Text="Open file location" Click="OpenLoc_Click" Tag="{x:Bind ExePath}">
+                                                     <MenuFlyoutItem.Icon>
+                                                         <FontIcon Glyph="&#xE8DA;" />
+                                                     </MenuFlyoutItem.Icon>
+                                                 </MenuFlyoutItem>
+                                                 <MenuFlyoutSeparator />
+                                                 <MenuFlyoutItem Text="Edit this Group" Click="EditGroup_Click">
+                                                     <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE70F;" /></MenuFlyoutItem.Icon>
+                                                 </MenuFlyoutItem>
+                                                 <MenuFlyoutItem Text="Launch All" Click="LaunchAll_Click">
+                                                     <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE768;" /></MenuFlyoutItem.Icon>
+                                                 </MenuFlyoutItem>
+                                             </MenuFlyout>
+                                         </Grid.ContextFlyout>
 
-                                        <!-- Edit Mode Remove Badge (Top-Right) -->
-                                        <Button Click="RemoveAppBtn_Click" Tag="{x:Bind}" Visibility="{x:Bind EditModeVisibility, Mode=OneWay}"
-                                                HorizontalAlignment="Right" VerticalAlignment="Top" Width="18" Height="18" Padding="0" Margin="0,3,3,0"
-                                                CornerRadius="9" Background="#E81123" BorderThickness="0" ToolTipService.ToolTip="Remove from group">
-                                            <FontIcon Glyph="&#xE711;" FontSize="8" Foreground="White" />
-                                        </Button>
-                                        <!-- Edit Mode Size Cycle Badge (Bottom-Right) -->
-                                        <Button Click="CycleSizeBtn_Click" Tag="{x:Bind}" Visibility="{x:Bind EditModeVisibility, Mode=OneWay}"
-                                                HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="18" Height="18" Padding="0" Margin="0,0,3,3"
-                                                CornerRadius="9" Background="{ThemeResource SubtleFillColorSecondaryBrush}" BorderThickness="1" BorderBrush="{ThemeResource ControlElevationBorderBrush}" ToolTipService.ToolTip="Change tile size (1x1 to 2x2)">
-                                            <FontIcon Glyph="&#xE740;" FontSize="8" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
-                                        </Button>
-                                    </Grid>
-                                </DataTemplate>
-                            </GridView.ItemTemplate>
+                                         <!-- 1x1 Standard layout -->
+                                         <StackPanel Spacing="6" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="{x:Bind SmallTileVisibility, Mode=OneWay}">
+                                             <Grid Width="32" Height="32">
+                                                 <Border CornerRadius="0" Width="32" Height="32" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                 <Image Width="32" Height="32" Stretch="Uniform" Source="{x:Bind IconImage, Mode=OneWay}" />
+                                             </Grid>
+                                             <TextBlock FontSize="10.5" TextAlignment="Center" TextWrapping="Wrap" MaxLines="2" LineHeight="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind Name}" />
+                                         </StackPanel>
+
+                                         <!-- 2x1 Wide layout -->
+                                         <Grid HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="14,0,14,0" Visibility="{x:Bind WideTileVisibility, Mode=OneWay}">
+                                             <Grid.ColumnDefinitions>
+                                                 <ColumnDefinition Width="Auto" />
+                                                 <ColumnDefinition Width="*" />
+                                             </Grid.ColumnDefinitions>
+                                             <Image Grid.Column="0" Width="36" Height="36" Stretch="Uniform" VerticalAlignment="Center" Source="{x:Bind IconImage, Mode=OneWay}" Margin="0,0,12,0" />
+                                             <TextBlock Grid.Column="1" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" MaxLines="2" LineHeight="16" Foreground="{ThemeResource TextFillColorPrimaryBrush}" Text="{x:Bind Name}" />
+                                         </Grid>
+
+                                         <!-- 2x2 Large layout -->
+                                         <StackPanel Spacing="8" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="{x:Bind LargeTileVisibility, Mode=OneWay}">
+                                             <Grid Width="56" Height="56">
+                                                 <Image Width="56" Height="56" Stretch="Uniform" Source="{x:Bind IconImage, Mode=OneWay}" />
+                                             </Grid>
+                                             <TextBlock FontSize="13" FontWeight="SemiBold" TextAlignment="Center" TextWrapping="Wrap" MaxLines="2" LineHeight="18" Foreground="{ThemeResource TextFillColorPrimaryBrush}" Text="{x:Bind Name}" MaxWidth="150" />
+                                         </StackPanel>
+
+                                         <!-- Edit Mode Remove Badge (Top-Right) -->
+                                         <Button Click="RemoveAppBtn_Click" Tag="{x:Bind}" Visibility="{x:Bind EditModeVisibility, Mode=OneWay}"
+                                                 HorizontalAlignment="Right" VerticalAlignment="Top" Width="20" Height="20" Padding="0" Margin="0,3,3,0"
+                                                 CornerRadius="10" Background="#E81123" BorderThickness="0" ToolTipService.ToolTip="Remove from group">
+                                             <FontIcon Glyph="&#xE711;" FontSize="9" Foreground="White" />
+                                         </Button>
+                                         <!-- Edit Mode Size Cycle Badge (Bottom-Right) -->
+                                         <Button Click="CycleSizeBtn_Click" Tag="{x:Bind}" Visibility="{x:Bind EditModeVisibility, Mode=OneWay}"
+                                                 ManipulationMode="TranslateX,TranslateY"
+                                                 ManipulationDelta="SizeBadge_ManipulationDelta"
+                                                 HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="20" Height="20" Padding="0" Margin="0,0,3,3"
+                                                 CornerRadius="10" Background="{ThemeResource SubtleFillColorSecondaryBrush}" BorderThickness="1" BorderBrush="{ThemeResource ControlElevationBorderBrush}" ToolTipService.ToolTip="Click or drag to resize (1x1, 2x1, 2x2)">
+                                             <FontIcon Glyph="&#xE740;" FontSize="9" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                                         </Button>
+                                     </Grid>
+                                 </DataTemplate>
+                             </GridView.ItemTemplate>
                         </GridView>
                         </StackPanel>
                     </ScrollViewer>
@@ -503,6 +524,8 @@
                                         </Button>
                                         <!-- Edit Mode Size Cycle Badge -->
                                         <Button Click="CycleSizeBtn_Click" Tag="{x:Bind}" Visibility="{x:Bind EditModeVisibility, Mode=OneWay}"
+                                                ManipulationMode="TranslateX,TranslateY"
+                                                ManipulationDelta="SizeBadge_ManipulationDelta"
                                                 HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="16" Height="16" Padding="0" Margin="0,0,2,2"
                                                 CornerRadius="8" Background="{ThemeResource SubtleFillColorSecondaryBrush}" BorderThickness="1" BorderBrush="{ThemeResource ControlElevationBorderBrush}" ToolTipService.ToolTip="Change tile size">
                                             <FontIcon Glyph="&#xE740;" FontSize="7" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />

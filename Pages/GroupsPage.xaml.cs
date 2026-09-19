@@ -60,6 +60,8 @@ public sealed partial class GroupsPage : Page
             FullGroupSettingsOverlay.Visibility = Visibility.Collapsed;
             GroupsListRoot.Visibility = Visibility.Visible;
         }
+        GroupsItemsView.ItemsSource = null;
+        GroupsItemsView.ItemsSource = GroupService.Instance.Groups;
         RefreshGroups();
     }
 
@@ -112,7 +114,8 @@ public sealed partial class GroupsPage : Page
     {
         _isUpdatingFullUI = true;
 
-        FullSettingsGroupName.Text = string.IsNullOrEmpty(group.Name) ? "Group Settings" : $"Group Settings — {group.Name}";
+        FullSettingsGroupNameBox.Text = group.Name ?? "";
+        RefreshFullAppsList();
 
         FullPopupStyleCombo.SelectedIndex = group.PopupStyle;
         FullHideNameToggle.IsOn = group.HideName;
@@ -206,6 +209,124 @@ public sealed partial class GroupsPage : Page
         _currentSettingsGroup.GridColumns = (int)FullColumnsBox.Value;
         _currentSettingsGroup.GridRows = (int)FullRowsBox.Value;
         GroupService.Instance.Save();
+    }
+
+    private void RefreshFullAppsList()
+    {
+        if (_currentSettingsGroup != null)
+        {
+            FullAppsListView.ItemsSource = null;
+            FullAppsListView.ItemsSource = new System.Collections.ObjectModel.ObservableCollection<AppEntry>(_currentSettingsGroup.Apps);
+        }
+    }
+
+    private void FullSettingsGroupNameBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_isUpdatingFullUI || _currentSettingsGroup == null) return;
+        string newName = FullSettingsGroupNameBox.Text.Trim();
+        if (!string.IsNullOrEmpty(newName) && _currentSettingsGroup.Name != newName)
+        {
+            _currentSettingsGroup.Name = newName;
+            GroupService.Instance.Save();
+            if (_currentSettingsGroup.IsPinned) TaskbarService.PinGroup(_currentSettingsGroup);
+        }
+    }
+
+    private async void FullAddAppBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentSettingsGroup == null) return;
+        try
+        {
+            var picker = new Windows.Storage.Pickers.FileOpenPicker();
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(App.MainWindowInstance);
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+
+            picker.ViewMode = Windows.Storage.Pickers.PickerViewMode.List;
+            picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.Desktop;
+            picker.FileTypeFilter.Add(".exe");
+            picker.FileTypeFilter.Add(".lnk");
+            picker.FileTypeFilter.Add(".url");
+            picker.FileTypeFilter.Add(".bat");
+            picker.FileTypeFilter.Add(".cmd");
+            picker.FileTypeFilter.Add(".msi");
+            picker.FileTypeFilter.Add("*");
+
+            var file = await picker.PickSingleFileAsync();
+            if (file != null)
+            {
+                string friendlyName = await System.Threading.Tasks.Task.Run(() =>
+                {
+                    try
+                    {
+                        var info = System.Diagnostics.FileVersionInfo.GetVersionInfo(file.Path);
+                        if (!string.IsNullOrWhiteSpace(info.ProductName)) return info.ProductName.Trim();
+                        if (!string.IsNullOrWhiteSpace(info.FileDescription)) return info.FileDescription.Trim();
+                    }
+                    catch { }
+                    return System.IO.Path.GetFileNameWithoutExtension(file.Path);
+                });
+
+                _currentSettingsGroup.Apps.Add(new AppEntry
+                {
+                    Name = friendlyName,
+                    ExePath = file.Path,
+                    TileSize = 1
+                });
+                GroupService.Instance.Save();
+                if (_currentSettingsGroup.IsPinned) TaskbarService.PinGroup(_currentSettingsGroup);
+                RefreshFullAppsList();
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error adding app in full settings: {ex.Message}");
+        }
+    }
+
+    private void FullAppMoveUp_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentSettingsGroup == null || sender is not Button btn || btn.Tag is not AppEntry app) return;
+        int idx = _currentSettingsGroup.Apps.IndexOf(app);
+        if (idx > 0)
+        {
+            _currentSettingsGroup.Apps.RemoveAt(idx);
+            _currentSettingsGroup.Apps.Insert(idx - 1, app);
+            GroupService.Instance.Save();
+            if (_currentSettingsGroup.IsPinned) TaskbarService.PinGroup(_currentSettingsGroup);
+            RefreshFullAppsList();
+        }
+    }
+
+    private void FullAppMoveDown_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentSettingsGroup == null || sender is not Button btn || btn.Tag is not AppEntry app) return;
+        int idx = _currentSettingsGroup.Apps.IndexOf(app);
+        if (idx >= 0 && idx < _currentSettingsGroup.Apps.Count - 1)
+        {
+            _currentSettingsGroup.Apps.RemoveAt(idx);
+            _currentSettingsGroup.Apps.Insert(idx + 1, app);
+            GroupService.Instance.Save();
+            if (_currentSettingsGroup.IsPinned) TaskbarService.PinGroup(_currentSettingsGroup);
+            RefreshFullAppsList();
+        }
+    }
+
+    private void FullAppCycleSize_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentSettingsGroup == null || sender is not Button btn || btn.Tag is not AppEntry app) return;
+        app.TileSize = (app.TileSize % 3) + 1;
+        GroupService.Instance.Save();
+        if (_currentSettingsGroup.IsPinned) TaskbarService.PinGroup(_currentSettingsGroup);
+        RefreshFullAppsList();
+    }
+
+    private void FullAppDelete_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentSettingsGroup == null || sender is not Button btn || btn.Tag is not AppEntry app) return;
+        _currentSettingsGroup.Apps.Remove(app);
+        GroupService.Instance.Save();
+        if (_currentSettingsGroup.IsPinned) TaskbarService.PinGroup(_currentSettingsGroup);
+        RefreshFullAppsList();
     }
 
     private async void FullDeleteGroupBtn_Click(object sender, RoutedEventArgs e)

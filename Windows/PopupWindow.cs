@@ -87,8 +87,32 @@ public class AppEntryViewModel : System.ComponentModel.INotifyPropertyChanged
     public int TileSize
     {
         get => _tileSize;
-        set { if (_tileSize != value) { _tileSize = value; PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(TileSize))); } }
+        set
+        {
+            if (_tileSize != value)
+            {
+                _tileSize = value;
+                PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(TileSize)));
+                PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(ColSpan)));
+                PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(RowSpan)));
+                PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(TileWidth)));
+                PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(TileHeight)));
+                PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(SmallTileVisibility)));
+                PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(WideTileVisibility)));
+                PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(LargeTileVisibility)));
+            }
+        }
     }
+
+    public int ColSpan => (_tileSize == 2 || _tileSize == 3) ? 2 : 1;
+    public int RowSpan => (_tileSize == 3) ? 2 : 1;
+    public double TileWidth => ColSpan == 2 ? 176 : 84;
+    public double TileHeight => RowSpan == 2 ? 176 : 84;
+
+    public Visibility SmallTileVisibility => _tileSize == 1 ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility WideTileVisibility => _tileSize == 2 ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility LargeTileVisibility => _tileSize == 3 ? Visibility.Visible : Visibility.Collapsed;
+
     public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
 }
 
@@ -334,6 +358,7 @@ public sealed partial class PopupWindow : Window
         } catch { }
 
         this.InitializeComponent();
+        _classicR.ContainerContentChanging += ClassicR_ContainerContentChanging;
 
         // Cloak the window BEFORE Activation or sizing to mask the compositor initialization
         var h = WindowNative.GetWindowHandle(this);
@@ -992,10 +1017,12 @@ public sealed partial class PopupWindow : Window
                         Padding = new Thickness(8, 4, 8, 4),
                         ItemTemplate = _classicR.ItemTemplate,
                         ItemContainerStyle = _classicR.ItemContainerStyle,
+                        ItemsPanel = _classicR.ItemsPanel,
                         SelectionMode = ListViewSelectionMode.None,
                         IsItemClickEnabled = true,
                         HorizontalAlignment = HorizontalAlignment.Center
                     };
+                    gv.ContainerContentChanging += ClassicR_ContainerContentChanging;
                     if (!_disableAnimation)
                     {
                         var trans = new Microsoft.UI.Xaml.Media.Animation.TransitionCollection();
@@ -1660,32 +1687,99 @@ public sealed partial class PopupWindow : Window
         catch { }
     }
 
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+    private struct OPENFILENAME
+    {
+        public int lStructSize;
+        public IntPtr hwndOwner;
+        public IntPtr hInstance;
+        public string lpstrFilter;
+        public string lpstrCustomFilter;
+        public int nMaxCustFilter;
+        public int nFilterIndex;
+        public string lpstrFile;
+        public int nMaxFile;
+        public string lpstrFileTitle;
+        public int nMaxFileTitle;
+        public string lpstrInitialDir;
+        public string lpstrTitle;
+        public int Flags;
+        public short nFileOffset;
+        public short nFileExtension;
+        public string lpstrDefExt;
+        public IntPtr lCustData;
+        public IntPtr lpfnHook;
+        public string lpTemplateName;
+        public IntPtr pvReserved;
+        public int dwReserved;
+        public int FlagsEx;
+    }
+
+    [DllImport("comdlg32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+    private static extern bool GetOpenFileName([In, Out] OPENFILENAME ofn);
+
+    private const int OFN_FILEMUSTEXIST = 0x00001000;
+    private const int OFN_PATHMUSTEXIST = 0x00000800;
+    private const int OFN_EXPLORER      = 0x00080000;
+    private const int OFN_NOCHANGEDIR   = 0x00000008;
+
+    private static string? PickExecutableWin32(IntPtr hwnd)
+    {
+        var ofn = new OPENFILENAME();
+        ofn.lStructSize = Marshal.SizeOf(ofn);
+        ofn.hwndOwner = hwnd;
+        ofn.lpstrFilter = "Applications & Shortcuts (*.exe;*.lnk;*.url;*.bat;*.cmd;*.msi)\0*.exe;*.lnk;*.url;*.bat;*.cmd;*.msi\0All Files (*.*)\0*.*\0\0";
+        ofn.lpstrFile = new string(new char[2048]);
+        ofn.nMaxFile = 2048;
+        ofn.lpstrTitle = "Select an Application or Shortcut";
+        ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_EXPLORER | OFN_NOCHANGEDIR;
+
+        if (GetOpenFileName(ofn))
+        {
+            return ofn.lpstrFile.TrimEnd('\0');
+        }
+        return null;
+    }
+
+    private void ClassicR_ContainerContentChanging(ListViewBase sender, ContainerContentChangingEventArgs args)
+    {
+        if (args.ItemContainer is GridViewItem container && args.Item is AppEntryViewModel vm)
+        {
+            VariableSizedWrapGrid.SetColumnSpan(container, vm.ColSpan);
+            VariableSizedWrapGrid.SetRowSpan(container, vm.RowSpan);
+        }
+    }
+
     void App_ItemClick(object sender, ItemClickEventArgs e)
     {
+        if (_isInEditMode) return;
         if (e.ClickedItem is AppEntryViewModel vm && !string.IsNullOrEmpty(vm.ExePath))
         {
             LaunchTarget(vm.ExePath);
         }
         _ = CloseWithFadeAsync();
     }
+
     void Open_Click(object s, RoutedEventArgs e)
     {
+        if (_isInEditMode) return;
         if (s is MenuFlyoutItem i && i.Tag is string p && !string.IsNullOrEmpty(p))
         {
             LaunchTarget(p);
         }
         _ = CloseWithFadeAsync();
     }
-    private void RenameGroup_Click(object sender, RoutedEventArgs e)
+
+    private async void RenameGroup_Click(object sender, RoutedEventArgs e)
     {
         var group = TaskTile.Services.GroupService.Instance.Groups.FirstOrDefault(g => g.Id.ToString() == _groupId);
         if (group == null) return;
 
-        _renameBox.Text = group.Name;
         bool mix = TaskTile.Services.SettingsService.Current.YpxMixUI;
 
         if (mix)
         {
+            // Ypx.MixUI: Playful comic speech bubble with tail pointing to title
             _preRenameW = AppWindow.Size.Width;
             _preRenameH = AppWindow.Size.Height;
             _renameBubbleTail.Visibility = Visibility.Visible;
@@ -1693,18 +1787,66 @@ public sealed partial class PopupWindow : Window
             {
                 AppWindow.ResizeClient(new Windows.Graphics.SizeInt32(Math.Max(_preRenameW, 320), Math.Max(_preRenameH, 220)));
             }
+
+            _renameBox.Text = group.Name;
+            _renameBubbleGrid.Visibility = Visibility.Visible;
+            _savedKeepOpen = _keepOpen;
+            _keepOpen = true;
+
+            _renameBox.SelectAll();
+            _renameBox.Focus(FocusState.Programmatic);
         }
         else
         {
-            _renameBubbleTail.Visibility = Visibility.Collapsed;
+            // Standard Fluent / WinUI 3: Clean, un-styled native ContentDialog
+            await ShowNativeRenameDialogAsync(group);
         }
+    }
 
-        _renameBubbleGrid.Visibility = Visibility.Visible;
+    private async System.Threading.Tasks.Task ShowNativeRenameDialogAsync(TaskTile.Models.AppGroup group)
+    {
         _savedKeepOpen = _keepOpen;
         _keepOpen = true;
+        try
+        {
+            var textBox = new TextBox
+            {
+                Text = group.Name,
+                PlaceholderText = "Group name",
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                Margin = new Thickness(0, 8, 0, 0)
+            };
+            textBox.SelectAll();
 
-        _renameBox.SelectAll();
-        _renameBox.Focus(FocusState.Programmatic);
+            var dialog = new ContentDialog
+            {
+                Title = "Rename Group",
+                Content = textBox,
+                PrimaryButtonText = "Save",
+                CloseButtonText = "Cancel",
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = this.Content.XamlRoot
+            };
+
+            var result = await dialog.ShowAsync();
+            if (result == ContentDialogResult.Primary && !string.IsNullOrWhiteSpace(textBox.Text))
+            {
+                group.Name = textBox.Text.Trim();
+                if (_title != null) _title.Text = group.Name;
+                if (_cardFooterName != null) _cardFooterName.Text = group.Name;
+
+                TaskTile.Services.GroupService.Instance.Save();
+                if (group.IsPinned) TaskTile.Services.TaskbarService.PinGroup(group);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error showing native rename dialog: {ex.Message}");
+        }
+        finally
+        {
+            _keepOpen = _savedKeepOpen;
+        }
     }
 
     private void RenameSave_Click(object sender, RoutedEventArgs e)
@@ -1769,10 +1911,40 @@ public sealed partial class PopupWindow : Window
         _savedKeepOpen = _keepOpen;
         _keepOpen = true;
         _editModeHeaderPanel.Visibility = Visibility.Visible;
+
         foreach (var app in _appsList)
         {
             app.EditModeVisibility = Visibility.Visible;
         }
+
+        // Display all apps in a single scrollable grid for editing/reordering
+        if (_classicPagesPanel.Children.Count > 1 || !_classicPagesPanel.Children.Contains(_classicR))
+        {
+            _classicPagesPanel.Children.Clear();
+            _classicPagesPanel.Children.Add(_classicR);
+        }
+        _classicR.ItemsSource = _appsList;
+        _classicR.Visibility = Visibility.Visible;
+        _pageDots.Visibility = Visibility.Collapsed;
+        _classicSV.VerticalScrollMode = ScrollMode.Auto;
+        _classicSV.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+
+        _classicR.CanReorderItems = true;
+        _classicR.CanDragItems = true;
+        _classicR.AllowDrop = true;
+        _classicR.IsItemClickEnabled = false;
+
+        _modernR.CanReorderItems = true;
+        _modernR.CanDragItems = true;
+        _modernR.AllowDrop = true;
+        _modernR.IsItemClickEnabled = false;
+
+        _cardR.CanReorderItems = true;
+        _cardR.CanDragItems = true;
+        _cardR.AllowDrop = true;
+        _cardR.IsItemClickEnabled = false;
+
+        UpdateWindowSizeForEdit();
     }
 
     void ExitEditMode()
@@ -1780,11 +1952,29 @@ public sealed partial class PopupWindow : Window
         _isInEditMode = false;
         _keepOpen = _savedKeepOpen;
         _editModeHeaderPanel.Visibility = Visibility.Collapsed;
+
         foreach (var app in _appsList)
         {
             app.EditModeVisibility = Visibility.Collapsed;
         }
+
+        _classicR.CanReorderItems = false;
+        _classicR.CanDragItems = false;
+        _classicR.AllowDrop = false;
+        _classicR.IsItemClickEnabled = true;
+
+        _modernR.CanReorderItems = false;
+        _modernR.CanDragItems = false;
+        _modernR.AllowDrop = false;
+        _modernR.IsItemClickEnabled = true;
+
+        _cardR.CanReorderItems = false;
+        _cardR.CanDragItems = false;
+        _cardR.AllowDrop = false;
+        _cardR.IsItemClickEnabled = true;
+
         SaveCurrentGroupApps();
+        LoadAndPosition();
     }
 
     void DoneEditBtn_Click(object s, RoutedEventArgs e)
@@ -1796,33 +1986,48 @@ public sealed partial class PopupWindow : Window
     {
         try
         {
-            var picker = new Windows.Storage.Pickers.FileOpenPicker();
-            picker.ViewMode = Windows.Storage.Pickers.PickerViewMode.List;
-            picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.Desktop;
-            picker.FileTypeFilter.Add(".exe");
-            picker.FileTypeFilter.Add(".msi");
-            picker.FileTypeFilter.Add(".bat");
-            picker.FileTypeFilter.Add(".cmd");
-            picker.FileTypeFilter.Add(".lnk");
-            picker.FileTypeFilter.Add(".url");
-            picker.FileTypeFilter.Add(".dll");
-
             var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
-            WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+            string? selectedFilePath = null;
 
-            var selectedFile = await picker.PickSingleFileAsync();
-            if (selectedFile == null) return;
+            try
+            {
+                var picker = new Windows.Storage.Pickers.FileOpenPicker();
+                picker.ViewMode = Windows.Storage.Pickers.PickerViewMode.List;
+                picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.Desktop;
+                picker.FileTypeFilter.Add(".exe");
+                picker.FileTypeFilter.Add(".lnk");
+                picker.FileTypeFilter.Add(".url");
+                picker.FileTypeFilter.Add(".bat");
+                picker.FileTypeFilter.Add(".cmd");
+                picker.FileTypeFilter.Add(".msi");
+                picker.FileTypeFilter.Add("*");
+
+                WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+                var file = await picker.PickSingleFileAsync();
+                if (file != null) selectedFilePath = file.Path;
+            }
+            catch
+            {
+                selectedFilePath = null;
+            }
+
+            if (string.IsNullOrEmpty(selectedFilePath))
+            {
+                selectedFilePath = await System.Threading.Tasks.Task.Run(() => PickExecutableWin32(hwnd));
+            }
+
+            if (string.IsNullOrEmpty(selectedFilePath) || !System.IO.File.Exists(selectedFilePath)) return;
 
             string friendlyName = await System.Threading.Tasks.Task.Run(() =>
             {
                 try
                 {
-                    var info = System.Diagnostics.FileVersionInfo.GetVersionInfo(selectedFile.Path);
+                    var info = System.Diagnostics.FileVersionInfo.GetVersionInfo(selectedFilePath);
                     if (!string.IsNullOrWhiteSpace(info.ProductName)) return info.ProductName.Trim();
                     if (!string.IsNullOrWhiteSpace(info.FileDescription)) return info.FileDescription.Trim();
                 }
                 catch { }
-                return System.IO.Path.GetFileNameWithoutExtension(selectedFile.Path);
+                return System.IO.Path.GetFileNameWithoutExtension(selectedFilePath);
             });
 
             var group = TaskTile.Services.GroupService.Instance.Groups.FirstOrDefault(g => g.Id.ToString() == _groupId);
@@ -1831,15 +2036,39 @@ public sealed partial class PopupWindow : Window
                 var newEntry = new TaskTile.Models.AppEntry
                 {
                     Name = friendlyName,
-                    ExePath = selectedFile.Path,
+                    ExePath = selectedFilePath,
                     TileSize = 1
                 };
                 group.Apps.Add(newEntry);
                 TaskTile.Services.GroupService.Instance.Save();
                 if (group.IsPinned) TaskTile.Services.TaskbarService.PinGroup(group);
 
-                LoadAndPosition();
-                EnterEditMode();
+                var vm = new AppEntryViewModel
+                {
+                    Name = friendlyName,
+                    ExePath = selectedFilePath,
+                    IconImage = null,
+                    NormalVisibility = Visibility.Visible,
+                    MonotoneVisibility = Visibility.Collapsed,
+                    LabelVisibility = Visibility.Visible,
+                    UwpBackground = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
+                    TileCornerRadius = new CornerRadius(10),
+                    EditModeVisibility = Visibility.Visible,
+                    TileSize = 1
+                };
+                _appsList.Add(vm);
+
+                var dispatcher = this.DispatcherQueue;
+                _ = System.Threading.Tasks.Task.Run(() =>
+                {
+                    var extracted = ExtractIconSync(selectedFilePath, "", false, false, Windows.UI.Color.FromArgb(255, 0, 120, 215));
+                    if (extracted != null)
+                    {
+                        dispatcher?.TryEnqueue(() => vm.IconImage = new BitmapImage(new Uri(extracted)));
+                    }
+                });
+
+                UpdateWindowSizeForEdit();
             }
         }
         catch (Exception ex)
@@ -1865,8 +2094,7 @@ public sealed partial class PopupWindow : Window
                 }
             }
             _appsList.Remove(vm);
-            LoadAndPosition();
-            EnterEditMode();
+            UpdateWindowSizeForEdit();
         }
     }
 
@@ -1874,19 +2102,96 @@ public sealed partial class PopupWindow : Window
     {
         if (sender is Button btn && btn.Tag is AppEntryViewModel vm)
         {
-            vm.TileSize = (vm.TileSize % 3) + 1;
-            var group = TaskTile.Services.GroupService.Instance.Groups.FirstOrDefault(g => g.Id.ToString() == _groupId);
-            if (group != null)
+            int nextSize = (vm.TileSize % 3) + 1;
+            ApplyTileSize(vm, nextSize);
+        }
+    }
+
+    private double _dragAccumX = 0;
+    private double _dragAccumY = 0;
+
+    private void SizeBadge_ManipulationDelta(object sender, ManipulationDeltaRoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is AppEntryViewModel vm)
+        {
+            _dragAccumX += e.Delta.Translation.X;
+            _dragAccumY += e.Delta.Translation.Y;
+
+            if (_dragAccumX > 28 || _dragAccumY > 28)
             {
-                var match = group.Apps.FirstOrDefault(a => a.ExePath == vm.ExePath && a.Name == vm.Name)
-                            ?? group.Apps.FirstOrDefault(a => a.ExePath == vm.ExePath);
-                if (match != null)
+                _dragAccumX = 0;
+                _dragAccumY = 0;
+                int next = vm.TileSize switch
                 {
-                    match.TileSize = vm.TileSize;
-                    TaskTile.Services.GroupService.Instance.Save();
-                }
+                    1 => 2,
+                    2 => 3,
+                    _ => 3
+                };
+                if (next != vm.TileSize) ApplyTileSize(vm, next);
+            }
+            else if (_dragAccumX < -28 || _dragAccumY < -28)
+            {
+                _dragAccumX = 0;
+                _dragAccumY = 0;
+                int next = vm.TileSize switch
+                {
+                    3 => 2,
+                    2 => 1,
+                    _ => 1
+                };
+                if (next != vm.TileSize) ApplyTileSize(vm, next);
             }
         }
+    }
+
+    private void ApplyTileSize(AppEntryViewModel vm, int newSize)
+    {
+        vm.TileSize = newSize;
+
+        if (_classicR.ContainerFromItem(vm) is GridViewItem container)
+        {
+            VariableSizedWrapGrid.SetColumnSpan(container, vm.ColSpan);
+            VariableSizedWrapGrid.SetRowSpan(container, vm.RowSpan);
+        }
+        _classicR.InvalidateMeasure();
+        _classicR.InvalidateArrange();
+
+        var group = TaskTile.Services.GroupService.Instance.Groups.FirstOrDefault(g => g.Id.ToString() == _groupId);
+        if (group != null)
+        {
+            var match = group.Apps.FirstOrDefault(a => a.ExePath == vm.ExePath && a.Name == vm.Name)
+                        ?? group.Apps.FirstOrDefault(a => a.ExePath == vm.ExePath);
+            if (match != null)
+            {
+                match.TileSize = vm.TileSize;
+                TaskTile.Services.GroupService.Instance.Save();
+            }
+        }
+        UpdateWindowSizeForEdit();
+    }
+
+    private void UpdateWindowSizeForEdit()
+    {
+        try
+        {
+            int cols = 3;
+            var group = TaskTile.Services.GroupService.Instance.Groups.FirstOrDefault(g => g.Id.ToString() == _groupId);
+            if (group != null && group.GridColumns > 0) cols = group.GridColumns;
+
+            double scale = _root.XamlRoot?.RasterizationScale ?? 1.0;
+            int neededW = Math.Max((int)Math.Round((cols * 88 + 36) * scale), 280);
+            int currentW = AppWindow.Size.Width;
+            int currentH = AppWindow.Size.Height;
+
+            int targetW = Math.Max(currentW, neededW);
+            int targetH = Math.Max(currentH, (int)Math.Round(220 * scale));
+
+            if (targetW != currentW || targetH != currentH)
+            {
+                AppWindow.ResizeClient(new Windows.Graphics.SizeInt32(targetW, targetH));
+            }
+        }
+        catch { }
     }
 
     private void SaveCurrentGroupApps()
@@ -1894,12 +2199,35 @@ public sealed partial class PopupWindow : Window
         var group = TaskTile.Services.GroupService.Instance.Groups.FirstOrDefault(g => g.Id.ToString() == _groupId);
         if (group != null)
         {
+            var updated = new List<TaskTile.Models.AppEntry>();
+            foreach (var vm in _appsList)
+            {
+                var existing = group.Apps.FirstOrDefault(a => a.ExePath == vm.ExePath && a.Name == vm.Name)
+                            ?? group.Apps.FirstOrDefault(a => a.ExePath == vm.ExePath);
+                if (existing != null)
+                {
+                    existing.TileSize = vm.TileSize;
+                    updated.Add(existing);
+                }
+                else
+                {
+                    updated.Add(new TaskTile.Models.AppEntry
+                    {
+                        Name = vm.Name,
+                        ExePath = vm.ExePath,
+                        TileSize = vm.TileSize
+                    });
+                }
+            }
+            group.Apps = updated;
             TaskTile.Services.GroupService.Instance.Save();
             if (group.IsPinned) TaskTile.Services.TaskbarService.PinGroup(group);
         }
     }
+
     void LaunchAll_Click(object s, RoutedEventArgs e)
     {
+        if (_isInEditMode) return;
         var group = TaskTile.Services.GroupService.Instance.Groups.FirstOrDefault(g => g.Id.ToString() == _groupId);
         if (group?.Apps != null)
         {
@@ -1914,8 +2242,10 @@ public sealed partial class PopupWindow : Window
         }
         _ = CloseWithFadeAsync();
     }
+
     void RunAdmin_Click(object s, RoutedEventArgs e)
     {
+        if (_isInEditMode) return;
         if (s is MenuFlyoutItem i && i.Tag is string p && !string.IsNullOrEmpty(p))
         {
             LaunchTarget(p, runAsAdmin: true);
