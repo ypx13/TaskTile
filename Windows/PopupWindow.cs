@@ -319,7 +319,7 @@ public sealed partial class PopupWindow : Window
             op.IsAlwaysOnTop = true;
             op.SetBorderAndTitleBar(true, false); // REQUIRED for SystemBackdrop to not fail and turn black
         }
-        AppWindow.IsShownInSwitchers = false;
+        try { AppWindow.IsShownInSwitchers = false; } catch { }
         
         // Set Window Icon
         try
