@@ -9,4 +9,5 @@ public class AppEntry
     /// May be empty if icon extraction failed.
     /// </summary>
     public string IconPath { get; set; } = string.Empty;
+    public int TileSize { get; set; } = 1;
 }

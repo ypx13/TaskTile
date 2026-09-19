@@ -24,8 +24,210 @@ public sealed partial class GroupsPage : Page
         };
         GroupsItemsView.ItemsSource = GroupService.Instance.Groups;
 
+        GroupCard.OpenFullSettingsRequested += OnOpenFullSettingsRequested;
+
         this.Loaded += (_, _) => RefreshGroups();
         GroupService.Instance.Groups.CollectionChanged += (_, _) => RefreshGroups();
+    }
+
+    private AppGroup? _currentSettingsGroup;
+    private bool _isUpdatingFullUI = false;
+
+    private void OnOpenFullSettingsRequested(GroupCard card, AppGroup group)
+    {
+        _currentSettingsGroup = group;
+        PopulateFullSettings(group);
+
+        if (SettingsService.Current.YpxMixUI)
+        {
+            Play3DFlipTransition(GroupsListRoot, FullGroupSettingsOverlay, forward: true);
+        }
+        else
+        {
+            GroupsListRoot.Visibility = Visibility.Collapsed;
+            FullGroupSettingsOverlay.Visibility = Visibility.Visible;
+        }
+    }
+
+    private void CloseFullSettingsBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (SettingsService.Current.YpxMixUI)
+        {
+            Play3DFlipTransition(FullGroupSettingsOverlay, GroupsListRoot, forward: false);
+        }
+        else
+        {
+            FullGroupSettingsOverlay.Visibility = Visibility.Collapsed;
+            GroupsListRoot.Visibility = Visibility.Visible;
+        }
+        RefreshGroups();
+    }
+
+    private void Play3DFlipTransition(FrameworkElement fromElement, FrameworkElement toElement, bool forward)
+    {
+        var projFrom = new PlaneProjection { CenterOfRotationX = 0.5, CenterOfRotationY = 0.5 };
+        var projTo = new PlaneProjection { CenterOfRotationX = 0.5, CenterOfRotationY = 0.5 };
+        fromElement.Projection = projFrom;
+        toElement.Projection = projTo;
+
+        var sbOut = new Microsoft.UI.Xaml.Media.Animation.Storyboard();
+        var daOut = new Microsoft.UI.Xaml.Media.Animation.DoubleAnimation
+        {
+            From = 0,
+            To = forward ? 90 : -90,
+            Duration = new Duration(TimeSpan.FromMilliseconds(160)),
+            EasingFunction = new Microsoft.UI.Xaml.Media.Animation.CubicEase { EasingMode = Microsoft.UI.Xaml.Media.Animation.EasingMode.EaseIn }
+        };
+        Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTarget(daOut, projFrom);
+        Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTargetProperty(daOut, "RotationY");
+        sbOut.Children.Add(daOut);
+
+        sbOut.Completed += (s, ev) =>
+        {
+            fromElement.Visibility = Visibility.Collapsed;
+            projFrom.RotationY = 0;
+
+            toElement.Visibility = Visibility.Visible;
+            projTo.RotationY = forward ? -90 : 90;
+
+            var sbIn = new Microsoft.UI.Xaml.Media.Animation.Storyboard();
+            var daIn = new Microsoft.UI.Xaml.Media.Animation.DoubleAnimation
+            {
+                From = forward ? -90 : 90,
+                To = 0,
+                Duration = new Duration(TimeSpan.FromMilliseconds(160)),
+                EasingFunction = new Microsoft.UI.Xaml.Media.Animation.CubicEase { EasingMode = Microsoft.UI.Xaml.Media.Animation.EasingMode.EaseOut }
+            };
+            Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTarget(daIn, projTo);
+            Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTargetProperty(daIn, "RotationY");
+            sbIn.Children.Add(daIn);
+            sbIn.Completed += (_, _) => { toElement.Projection = null; fromElement.Projection = null; };
+            sbIn.Begin();
+        };
+
+        sbOut.Begin();
+    }
+
+    private void PopulateFullSettings(AppGroup group)
+    {
+        _isUpdatingFullUI = true;
+
+        FullSettingsGroupName.Text = string.IsNullOrEmpty(group.Name) ? "Group Settings" : $"Group Settings — {group.Name}";
+
+        FullPopupStyleCombo.SelectedIndex = group.PopupStyle;
+        FullHideNameToggle.IsOn = group.HideName;
+        FullHideAppLabelsToggle.IsOn = group.HideAppLabels;
+        FullMarqueeAppLabelsToggle.IsOn = group.MarqueeAppLabels;
+        FullScrollAppLabelsToggle.IsOn = group.ScrollAppLabels;
+        FullShowCardLabelsToggle.IsOn = group.ShowCardLabels;
+        FullOverrideLaunchSideToggle.IsOn = group.OverrideLaunchSide;
+        FullLaunchPositionCombo.SelectedIndex = group.GroupLaunchSide;
+        FullDisableAnimationToggle.IsOn = group.DisableAnimation;
+        FullDisableFloatToggle.IsOn = group.DisableFloat;
+        FullDisableRoundedCornersToggle.IsOn = group.DisableRoundedCorners;
+        FullDisableAutoHideToggle.IsOn = group.DisableAutoHide;
+        FullMakeMainFocusToggle.IsOn = group.MakeMainFocus;
+        FullKeepOpenToggle.IsOn = group.KeepOpen;
+        FullDesktopModeToggle.IsOn = group.IsDesktopMode;
+        FullPopupBackdropCombo.SelectedIndex = group.BackdropStyle;
+        FullAlignmentCombo.SelectedIndex = group.CompactAlignment;
+        FullAppIconStyleCombo.SelectedIndex = group.AppIconStyle;
+        FullThemeOverrideCombo.SelectedIndex = group.ThemeOverride;
+        FullTitleAlignmentSlider.Value = group.TitleAlignment;
+        FullColumnsBox.Value = group.GridColumns;
+        FullRowsBox.Value = group.GridRows;
+
+        FullTaskbarOffsetSlider.Value = group.TaskbarOffset;
+        FullTaskbarOffsetValText.Text = $"{group.TaskbarOffset}px";
+        FullTileSpacingSlider.Value = group.TileSpacing;
+        FullTileSpacingValText.Text = $"{group.TileSpacing}px";
+
+        UpdateFullVisibility();
+        _isUpdatingFullUI = false;
+    }
+
+    private void UpdateFullVisibility()
+    {
+        if (_currentSettingsGroup == null) return;
+        bool isCompact = FullPopupStyleCombo.SelectedIndex == 1;
+        FullAlignmentCombo.Visibility = isCompact ? Visibility.Visible : Visibility.Collapsed;
+
+        bool isDialog = FullPopupStyleCombo.SelectedIndex == 4;
+        FullShowCardLabelsToggle.Visibility = isDialog ? Visibility.Visible : Visibility.Collapsed;
+
+        bool showOverrides = FullOverrideLaunchSideToggle.IsOn;
+        FullLaunchPositionCombo.Visibility = showOverrides ? Visibility.Visible : Visibility.Collapsed;
+        FullMakeMainFocusToggle.Visibility = (showOverrides && FullLaunchPositionCombo.SelectedIndex == 4) ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void FullSettingChanged(object sender, RoutedEventArgs e)
+    {
+        if (_isUpdatingFullUI || _currentSettingsGroup == null) return;
+
+        _currentSettingsGroup.PopupStyle = FullPopupStyleCombo.SelectedIndex;
+        _currentSettingsGroup.HideName = FullHideNameToggle.IsOn;
+        _currentSettingsGroup.HideAppLabels = FullHideAppLabelsToggle.IsOn;
+        _currentSettingsGroup.MarqueeAppLabels = FullMarqueeAppLabelsToggle.IsOn;
+        _currentSettingsGroup.ScrollAppLabels = FullScrollAppLabelsToggle.IsOn;
+        _currentSettingsGroup.ShowCardLabels = FullShowCardLabelsToggle.IsOn;
+        _currentSettingsGroup.OverrideLaunchSide = FullOverrideLaunchSideToggle.IsOn;
+        _currentSettingsGroup.GroupLaunchSide = FullLaunchPositionCombo.SelectedIndex;
+        _currentSettingsGroup.DisableAnimation = FullDisableAnimationToggle.IsOn;
+        _currentSettingsGroup.DisableFloat = FullDisableFloatToggle.IsOn;
+        _currentSettingsGroup.DisableRoundedCorners = FullDisableRoundedCornersToggle.IsOn;
+        _currentSettingsGroup.DisableAutoHide = FullDisableAutoHideToggle.IsOn;
+        _currentSettingsGroup.MakeMainFocus = FullMakeMainFocusToggle.IsOn;
+        _currentSettingsGroup.KeepOpen = FullKeepOpenToggle.IsOn;
+        _currentSettingsGroup.IsDesktopMode = FullDesktopModeToggle.IsOn;
+        _currentSettingsGroup.BackdropStyle = FullPopupBackdropCombo.SelectedIndex;
+        _currentSettingsGroup.CompactAlignment = FullAlignmentCombo.SelectedIndex;
+        _currentSettingsGroup.AppIconStyle = FullAppIconStyleCombo.SelectedIndex;
+        _currentSettingsGroup.ThemeOverride = FullThemeOverrideCombo.SelectedIndex;
+        _currentSettingsGroup.TitleAlignment = (int)FullTitleAlignmentSlider.Value;
+
+        GroupService.Instance.Save();
+        UpdateFullVisibility();
+        if (_currentSettingsGroup.IsPinned) TaskbarService.PinGroup(_currentSettingsGroup);
+    }
+
+    private void FullGapSettingChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    {
+        if (_isUpdatingFullUI || _currentSettingsGroup == null) return;
+        _currentSettingsGroup.TaskbarOffset = (int)FullTaskbarOffsetSlider.Value;
+        FullTaskbarOffsetValText.Text = $"{_currentSettingsGroup.TaskbarOffset}px";
+        _currentSettingsGroup.TileSpacing = (int)FullTileSpacingSlider.Value;
+        FullTileSpacingValText.Text = $"{_currentSettingsGroup.TileSpacing}px";
+        GroupService.Instance.Save();
+    }
+
+    private void FullNumberBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
+    {
+        if (_isUpdatingFullUI || _currentSettingsGroup == null) return;
+        _currentSettingsGroup.GridColumns = (int)FullColumnsBox.Value;
+        _currentSettingsGroup.GridRows = (int)FullRowsBox.Value;
+        GroupService.Instance.Save();
+    }
+
+    private async void FullDeleteGroupBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentSettingsGroup == null) return;
+
+        var dialog = new ContentDialog
+        {
+            Title = $"Delete \"{_currentSettingsGroup.Name}\"?",
+            Content = "Are you sure you want to delete this group? This cannot be undone.",
+            PrimaryButtonText = "Delete",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = this.XamlRoot
+        };
+
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+        {
+            if (_currentSettingsGroup.IsPinned) TaskbarService.UnpinGroup(_currentSettingsGroup);
+            GroupService.Instance.RemoveGroup(_currentSettingsGroup.Id);
+            CloseFullSettingsBtn_Click(sender, e);
+        }
     }
 
     private void RefreshGroups()

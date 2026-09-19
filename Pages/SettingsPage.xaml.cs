@@ -474,7 +474,7 @@ public sealed partial class SettingsPage : Page
         StarWarsOverlay.Visibility = Visibility.Visible;
 
         var sb = new System.Text.StringBuilder();
-        sb.AppendLine("TASKTILE v0.8");
+        sb.AppendLine("TASKTILE v0.8.1");
         sb.AppendLine();
         foreach (var role in new[] { "DEVELOPER", "DESIGNER", "QA TEAM", "PROJECT MANAGER",
                                       "SPECIAL THANKS", "SOUND DIRECTOR", "CATERING", "CEO", "INTERN" })
@@ -573,7 +573,7 @@ public sealed partial class SettingsPage : Page
     {
         var s = SettingsService.Current;
         // System
-        DbgVersion.Text   = $"ver  v0.8  |  PDebug={s.PersistentDebugMode}";
+        DbgVersion.Text   = $"ver  v0.8.1  |  PDebug={s.PersistentDebugMode}";
         DbgOS.Text        = $"os   {Environment.OSVersion.Version}";
         DbgMachine.Text   = $"host {Environment.MachineName}";
         DbgUser.Text      = $"user {Environment.UserName}";

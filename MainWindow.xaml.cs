@@ -147,7 +147,6 @@ public sealed partial class MainWindow : Window
             _cachedPopupWindow.LoadGroup(groupId);
             _cachedPopupWindow.AppWindow.Show();
             _cachedPopupWindow.Activate();
-            _cachedPopupWindow.PlayPopInAnimation();
             
             var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(_cachedPopupWindow);
             TaskTile.NativeMethods.SetForegroundWindow(hwnd);

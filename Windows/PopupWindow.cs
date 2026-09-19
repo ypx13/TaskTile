@@ -77,6 +77,18 @@ public class AppEntryViewModel : System.ComponentModel.INotifyPropertyChanged
         get => _labelTrimming;
         set { if (_labelTrimming != value) { _labelTrimming = value; PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(LabelTrimming))); } }
     }
+    private Visibility _editModeVisibility = Visibility.Collapsed;
+    public Visibility EditModeVisibility
+    {
+        get => _editModeVisibility;
+        set { if (_editModeVisibility != value) { _editModeVisibility = value; PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(EditModeVisibility))); } }
+    }
+    private int _tileSize = 1; // 1 = 1x1, 2 = 2x1, 3 = 2x2
+    public int TileSize
+    {
+        get => _tileSize;
+        set { if (_tileSize != value) { _tileSize = value; PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(TileSize))); } }
+    }
     public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
 }
 
@@ -259,6 +271,11 @@ public sealed partial class PopupWindow : Window
     List<List<AppEntryViewModel>> _classicPages = new();
     int             _classicPage = 0;
 
+    ObservableCollection<AppEntryViewModel> _appsList = new();
+    bool _isInEditMode = false;
+    bool _savedKeepOpen = false;
+    int _preRenameW = 0, _preRenameH = 0;
+
     string _groupId;
     int _backdropStyle = 0;
     bool _overrideBorderColor = false;
@@ -325,7 +342,14 @@ public sealed partial class PopupWindow : Window
 
         ApplyWindowFlags();
         this.Activated += OnActivated;
-        this.Activate(); // Shows window (cloaked), stealing focus back correctly!
+        if (!string.IsNullOrEmpty(_groupId))
+        {
+            this.Activate(); // Shows window (cloaked), stealing focus back correctly!
+        }
+        else
+        {
+            try { AppWindow.Hide(); } catch { }
+        }
 
         // WinUI 3 resets DWM attributes on Activate(), so re-apply them IMMEDIATELY before compositor initializes
         var hw = WindowNative.GetWindowHandle(this);
@@ -340,6 +364,7 @@ public sealed partial class PopupWindow : Window
         {
             DispatcherQueue.TryEnqueue(() =>
             {
+                ConfigureEntranceAnimation();
                 if (!_disableAnimation)
                 {
                     _root.Opacity = 0;
@@ -355,6 +380,43 @@ public sealed partial class PopupWindow : Window
                 }
             });
         });
+    }
+
+    void ConfigureEntranceAnimation()
+    {
+        bool mix = TaskTile.Services.SettingsService.Current.YpxMixUI;
+        if (!mix)
+        {
+            // Pure native Fluent slide-up: no scale bounce, snappy ease-out slide
+            _popInOpacity.From = 0.5;
+            _popInOpacity.To = 1.0;
+            _popInOpacity.Duration = new Duration(TimeSpan.FromMilliseconds(100));
+            _popInTranslateY.From = 10;
+            _popInTranslateY.To = 0;
+            _popInTranslateY.Duration = new Duration(TimeSpan.FromMilliseconds(100));
+            _popInScaleX.From = 1.0;
+            _popInScaleX.To = 1.0;
+            _popInScaleX.Duration = new Duration(TimeSpan.FromMilliseconds(100));
+            _popInScaleY.From = 1.0;
+            _popInScaleY.To = 1.0;
+            _popInScaleY.Duration = new Duration(TimeSpan.FromMilliseconds(100));
+        }
+        else
+        {
+            // Ypx MixUI: custom playful entrance with scale zoom + cubic slide-up
+            _popInOpacity.From = 0.0;
+            _popInOpacity.To = 1.0;
+            _popInOpacity.Duration = new Duration(TimeSpan.FromMilliseconds(140));
+            _popInTranslateY.From = 14;
+            _popInTranslateY.To = 0;
+            _popInTranslateY.Duration = new Duration(TimeSpan.FromMilliseconds(140));
+            _popInScaleX.From = 0.94;
+            _popInScaleX.To = 1.0;
+            _popInScaleX.Duration = new Duration(TimeSpan.FromMilliseconds(140));
+            _popInScaleY.From = 0.94;
+            _popInScaleY.To = 1.0;
+            _popInScaleY.Duration = new Duration(TimeSpan.FromMilliseconds(140));
+        }
     }
 
     void ApplyWindowFlags()
@@ -392,7 +454,7 @@ public sealed partial class PopupWindow : Window
         return DefSubclassProc(hWnd, uMsg, wParam, lParam);
     }
 
-    private async void Window_Activated(object sender, WindowActivatedEventArgs args)
+    private void Window_Activated(object sender, WindowActivatedEventArgs args)
     {
         if (sender is FrameworkElement el && el.DataContext is AppEntryViewModel vm)
         {
@@ -576,6 +638,8 @@ public sealed partial class PopupWindow : Window
     public void LoadGroup(string groupId)
     {
         _groupId = groupId;
+        _isInEditMode = false;
+        if (_editModeHeaderPanel != null) _editModeHeaderPanel.Visibility = Visibility.Collapsed;
         LoadAndPosition();
         
         // RESET PAGE
@@ -591,6 +655,7 @@ public sealed partial class PopupWindow : Window
         
         if (!_disableAnimation)
         {
+            ConfigureEntranceAnimation();
             _root.Opacity = 0;
             _popIn.Begin();
         }
@@ -606,12 +671,13 @@ public sealed partial class PopupWindow : Window
 
     void LoadAndPosition()
     {
-        var apps = new ObservableCollection<AppEntryViewModel>();
+        _appsList.Clear();
         string name="Group"; bool hideName=false, hideAppLabels=false, showCardLabels=false; int popupStyle=0,compactAlign=0,gridCols=3,gridRows=0,themeOverride=0,appIconStyle=0;
         bool launchAtCenter=false, makeMainFocus=false, overrideLaunchSide=false; int groupLaunchSide=0;
         bool disableAnimation = !TaskTile.Services.SettingsService.Current.YpxMixUI, disableAutoHide = false, disableFloat = false, disableRoundedCorners = false, keepOpen = false;
         int groupTitleAlign = -1;
         int taskbarOffset = 12;
+        int tileSpacing = 8;
 
         Brush accentBrush = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
         Windows.UI.Color accColor = Windows.UI.Color.FromArgb(255, 0, 120, 215);
@@ -657,7 +723,7 @@ public sealed partial class PopupWindow : Window
                     if (g.TryGetProperty("OverrideBorderColor", out p))   _overrideBorderColor = p.GetBoolean();
                     if (g.TryGetProperty("CustomBorderColor",  out p))    _customBorderColor = p.GetString() ?? "";
                     if (g.TryGetProperty("GroupLaunchSide",    out p))    groupLaunchSide = p.GetInt32();
-                                        if (g.TryGetProperty("IsDesktopMode",      out p))    _isDesktopMode  = p.GetBoolean();
+                    if (g.TryGetProperty("IsDesktopMode",      out p))    _isDesktopMode  = p.GetBoolean();
                     if (g.TryGetProperty("DisableAnimation",   out p))    disableAnimation = p.GetBoolean();
                     if (g.TryGetProperty("DisableAutoHide",    out p))    disableAutoHide = p.GetBoolean();
                     if (g.TryGetProperty("DisableFloat",       out p))    disableFloat = p.GetBoolean();
@@ -665,6 +731,7 @@ public sealed partial class PopupWindow : Window
                     if (g.TryGetProperty("KeepOpen", out p)) keepOpen = p.GetBoolean();
                     if (g.TryGetProperty("TitleAlignment", out p)) groupTitleAlign = p.GetInt32();
                     if (g.TryGetProperty("TaskbarOffset", out var pOffset)) taskbarOffset = pOffset.GetInt32();
+                    if (g.TryGetProperty("TileSpacing", out var pSpacing)) tileSpacing = pSpacing.GetInt32();
 
                     bool isDynamicFolder = false;
                     string dynamicFolderPath = string.Empty;
@@ -699,9 +766,11 @@ public sealed partial class PopupWindow : Window
                                 MonotoneVisibility = monotone ? Visibility.Visible   : Visibility.Collapsed,
                                 LabelVisibility    = hideAppLabels ? Visibility.Collapsed : Visibility.Visible,
                                 UwpBackground      = uwp ? accentBrush : new SolidColorBrush(Microsoft.UI.Colors.Transparent),
-                                TileCornerRadius   = uwp ? new CornerRadius(0) : new CornerRadius(10)
+                                TileCornerRadius   = uwp ? new CornerRadius(0) : new CornerRadius(10),
+                                EditModeVisibility = _isInEditMode ? Visibility.Visible : Visibility.Collapsed,
+                                TileSize           = 1
                             };
-                            apps.Add(entry);
+                            _appsList.Add(entry);
 
                             if (initialIcon == null)
                             {
@@ -723,6 +792,8 @@ public sealed partial class PopupWindow : Window
                         {
                             var exe  = a.GetProperty("ExePath").GetString()!;
                             var icon = a.TryGetProperty("IconPath", out var ic) ? ic.GetString() : "";
+                            int tileSize = 1;
+                            if (a.TryGetProperty("TileSize", out var pSize)) tileSize = pSize.GetInt32();
 
                             ImageSource? initialIcon = null;
                             if (!monotone && !onetone && !string.IsNullOrEmpty(icon) && File.Exists(icon))
@@ -744,9 +815,11 @@ public sealed partial class PopupWindow : Window
                                 LabelVisibility    = hideAppLabels ? Visibility.Collapsed : Visibility.Visible,
                                 LabelTrimming      = (marqueeAppLabels || scrollAppLabels) ? TextTrimming.None : TextTrimming.CharacterEllipsis,
                                 UwpBackground      = uwp ? accentBrush : new SolidColorBrush(Microsoft.UI.Colors.Transparent),
-                                TileCornerRadius   = uwp ? new CornerRadius(0) : new CornerRadius(10)
+                                TileCornerRadius   = uwp ? new CornerRadius(0) : new CornerRadius(10),
+                                EditModeVisibility = _isInEditMode ? Visibility.Visible : Visibility.Collapsed,
+                                TileSize           = tileSize
                             };
-                            apps.Add(entry);
+                            _appsList.Add(entry);
 
                             if (initialIcon == null)
                             {
@@ -864,7 +937,7 @@ public sealed partial class PopupWindow : Window
         if (alignPref == 0) titleAlign = HorizontalAlignment.Left;
         else if (alignPref == 2) titleAlign = HorizontalAlignment.Right;
 
-        int n = apps.Count;
+        int n = _appsList.Count;
         if (n == 0) return;
 
         double logW = 0, logH = 0;
@@ -884,7 +957,7 @@ public sealed partial class PopupWindow : Window
             int rowMax  = gridRows > 0 ? gridRows : 3;
             int pageSize = cols * rowMax;
 
-            int cell = 84, sp = 0;
+            int cell = 84, sp = tileSpacing;
             
             int visibleRows = (n <= pageSize) ? (int)Math.Ceiling((double)n / cols) : rowMax;
             if (visibleRows == 0) visibleRows = 1;
@@ -895,9 +968,9 @@ public sealed partial class PopupWindow : Window
 
             if (n <= pageSize)
             {
-                _classicR.Width = cols * cell + 16;
+                _classicR.Width = cols * cell + (cols - 1) * sp + 16;
                 _classicR.Height = gH + 8;
-                _classicR.ItemsSource = apps;
+                _classicR.ItemsSource = _appsList;
                 _classicR.Visibility  = Visibility.Visible;
                 _pageDots.Visibility  = Visibility.Collapsed;
                 _classicPagesPanel.Children.Clear();
@@ -909,11 +982,11 @@ public sealed partial class PopupWindow : Window
                 _classicPagesPanel.Children.Clear();
                 for (int i = 0; i < n; i += pageSize)
                 {
-                    var page = apps.Skip(i).Take(pageSize).ToList();
+                    var page = _appsList.Skip(i).Take(pageSize).ToList();
                     _classicPages.Add(page);
                     var gv = new GridView {
                         ItemsSource = page,
-                        Width = cols * cell + 16,
+                        Width = cols * cell + (cols - 1) * sp + 16,
                         Height = gH + 8,
                         Margin = new Thickness(0, 0, 0, 20),
                         Padding = new Thickness(8, 4, 8, 4),
@@ -949,7 +1022,7 @@ public sealed partial class PopupWindow : Window
             _holder.HorizontalAlignment = HorizontalAlignment.Center;
             _holder.VerticalAlignment = VerticalAlignment.Center;
             
-            logW = 24 + (cols * cell + 16) + 24;
+            logW = 24 + (cols * cell + (cols - 1) * sp + 16) + 24;
             logH = (noTitle ? 0 : 38) + (gH + 8) + 24 + 16;
         }
         else if (popupStyle == 1) // Compact
@@ -965,7 +1038,7 @@ public sealed partial class PopupWindow : Window
             if (compactAlign == 0) 
             { 
                 _compactR.Visibility  = Visibility.Visible;
-                _compactR.ItemsSource = apps;
+                _compactR.ItemsSource = _appsList;
                 _compactR.Width = n * 42;
                 logW = n * 42 + 12;
                 logH = 30;
@@ -982,7 +1055,7 @@ public sealed partial class PopupWindow : Window
             else                   
             { 
                 _compactRVertical.Visibility = Visibility.Visible;
-                _compactRVertical.ItemsSource = apps;
+                _compactRVertical.ItemsSource = _appsList;
                 _compactRVertical.Height = n * 42;
                 logH = n * 42 + 12;  
                 logW = 30;     
@@ -1009,7 +1082,7 @@ public sealed partial class PopupWindow : Window
             _cardContainer.Visibility = Visibility.Collapsed;
             _modernSV.Visibility   = Visibility.Visible;
             _pageDots.Visibility   = Visibility.Collapsed;
-            _modernR.ItemsSource   = apps;
+            _modernR.ItemsSource   = _appsList;
 
             int requestedCols = gridCols > 0 ? gridCols : 3;
             int cols = Math.Min(n, requestedCols);
@@ -1047,7 +1120,7 @@ public sealed partial class PopupWindow : Window
             _pageDots.Visibility   = Visibility.Collapsed;
             
             _listSV.Visibility     = Visibility.Visible;
-            _listR.ItemsSource     = apps;
+            _listR.ItemsSource     = _appsList;
             _listR.Padding         = new Thickness(0);
             _listR.Margin          = new Thickness(0);
             
@@ -1116,10 +1189,10 @@ public sealed partial class PopupWindow : Window
 
             // Respect showCardLabels or default to showing labels if not hidden
             bool showLabels = showCardLabels || (!hideAppLabels && n > 0);
-            foreach (var app in apps)
+            foreach (var app in _appsList)
                 app.LabelVisibility = showLabels ? Visibility.Visible : Visibility.Collapsed;
 
-            _cardR.ItemsSource = apps;
+            _cardR.ItemsSource = _appsList;
 
             int cellW = showLabels ? 150 : 52;
             int cellH = showLabels ? 38 : 52;
@@ -1128,8 +1201,8 @@ public sealed partial class PopupWindow : Window
             if (cols == 0) cols = showLabels ? 2 : 3;
             int allRows = (int)Math.Ceiling((double)n / cols);
 
-            int gridW = cols * cellW + 16;
-            int gridH = allRows * cellH + 12;
+            int gridW = cols * cellW + (cols - 1) * tileSpacing + 16;
+            int gridH = allRows * cellH + (allRows - 1) * tileSpacing + 12;
             
             _cardR.Width = gridW;
             _cardR.Height = gridH;
@@ -1375,77 +1448,65 @@ public sealed partial class PopupWindow : Window
             _taskbarTracker.Stop();
         }
 
-        var sbPopup = new Storyboard();
-        if (_dimWin?.Content is Grid dg)
+        try
         {
-            var daDim = new DoubleAnimation { To = 0, Duration = new Duration(TimeSpan.FromMilliseconds(150)) };
-            Storyboard.SetTarget(daDim, dg);
-            Storyboard.SetTargetProperty(daDim, "Opacity");
-            sbPopup.Children.Add(daDim);
-        }
-        sbPopup.Begin();
+            if (_dimWin?.Content is Grid dg)
+            {
+                var daDim = new DoubleAnimation { To = 0, Duration = new Duration(TimeSpan.FromMilliseconds(80)) };
+                var sbDim = new Storyboard();
+                Storyboard.SetTarget(daDim, dg);
+                Storyboard.SetTargetProperty(daDim, "Opacity");
+                sbDim.Children.Add(daDim);
+                sbDim.Begin();
+            }
 
-        if (!_disableAnimation)
+            if (!_disableAnimation && _root != null)
+            {
+                var fadeOut = new DoubleAnimation { To = 0, Duration = new Duration(TimeSpan.FromMilliseconds(80)) };
+                var sb = new Storyboard();
+                Storyboard.SetTarget(fadeOut, _root);
+                Storyboard.SetTargetProperty(fadeOut, "Opacity");
+                sb.Children.Add(fadeOut);
+                sb.Begin();
+                await System.Threading.Tasks.Task.Delay(85);
+            }
+        }
+        catch { }
+
+        try
         {
-            var hwnd = WindowNative.GetWindowHandle(this);
-            GetWindowRect(hwnd, out var currentRect);
-            
-            int borderX = (AppWindow.Size.Width - AppWindow.ClientSize.Width) / 2;
-            int borderTop = (AppWindow.Size.Height - AppWindow.ClientSize.Height) / 2;
-
-            var sw = System.Diagnostics.Stopwatch.StartNew();
-            int startX = currentRect.Left;
-            int startY = currentRect.Top;
-            int steps = 10;
-            int finalX = _animStartX - borderX;
-            int finalY = _animStartY - borderTop;
-            int currentStep = 0;
-            int lastX = startX;
-            int lastY = startY;
-
-            await System.Threading.Tasks.Task.Run(() => {
-                System.Threading.Thread.CurrentThread.Priority = System.Threading.ThreadPriority.Highest;
-
-                while (true) {
-                    currentStep++;
-                    double t = (double)currentStep / steps;
-                    double ease = currentStep >= steps ? 1.0 : t * t * t; // easeInCubic
-
-                    int currentX = (int)Math.Round(startX + (finalX - startX) * ease);
-                    int currentY = (int)Math.Round(startY + (finalY - startY) * ease);
-
-                    if (currentStep >= steps) {
-                        currentX = finalX;
-                        currentY = finalY;
-                    }
-
-                    if (currentX != lastX || currentY != lastY) {
-                        SetWindowPos(hwnd, IntPtr.Zero, currentX, currentY, 0, 0,
-                            SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
-                        TaskTile.NativeMethods.DwmFlush();
-                        lastX = currentX;
-                        lastY = currentY;
-                    }
-                    else {
-                        TaskTile.NativeMethods.DwmFlush();
-                    }
-
-                    if (currentStep >= steps) break;
-                }
-            });
+            if (_dimWin != null)
+            {
+                _dimWin.Close();
+                _dimWin = null;
+            }
         }
-        
-        if (TaskTile.Services.SettingsService.Current.StartPopupsInBackground) {
-            var hwnd = WindowNative.GetWindowHandle(this);
-            TaskTile.NativeMethods.ShowWindow(hwnd, 0); // SW_HIDE
-            _isClosing = false; // Reset state for next use
-        } else {
-            this.Close();
+        catch { }
+
+        if (TaskTile.Services.SettingsService.Current.StartPopupsInBackground)
+        {
+            try { AppWindow.Hide(); } catch { }
+            _isClosing = false;
+        }
+        else
+        {
+            try { this.Close(); } catch { }
         }
     }
 
     // ─── Events ──────────────────────────────────────────────────────────────
-    void OnActivated(object s, WindowActivatedEventArgs e) { if (e.WindowActivationState != WindowActivationState.Deactivated) _activated = true; else if (_activated && !_keepOpen) _ = CloseWithFadeAsync(); }
+    void OnActivated(object s, WindowActivatedEventArgs e)
+    {
+        if (!AppWindow.IsVisible) return;
+        if (e.WindowActivationState != WindowActivationState.Deactivated)
+        {
+            _activated = true;
+        }
+        else if (_activated && !_keepOpen && !_isInEditMode)
+        {
+            _ = CloseWithFadeAsync();
+        }
+    }
 
     private void AppLabel_Loaded(object sender, RoutedEventArgs e)
     {
@@ -1615,57 +1676,227 @@ public sealed partial class PopupWindow : Window
         }
         _ = CloseWithFadeAsync();
     }
-    private async void RenameGroup_Click(object sender, RoutedEventArgs e)
+    private void RenameGroup_Click(object sender, RoutedEventArgs e)
     {
         var group = TaskTile.Services.GroupService.Instance.Groups.FirstOrDefault(g => g.Id.ToString() == _groupId);
         if (group == null) return;
 
-        var tb = new TextBox 
-        { 
-            Text = group.Name, 
-            PlaceholderText = "Enter new group name", 
-            HorizontalAlignment = HorizontalAlignment.Stretch
-        };
-        // select all text
-        tb.Loaded += (s, ev) => { tb.SelectAll(); tb.Focus(FocusState.Programmatic); };
+        _renameBox.Text = group.Name;
+        bool mix = TaskTile.Services.SettingsService.Current.YpxMixUI;
 
-        var dialog = new ContentDialog
+        if (mix)
         {
-            Title = "Rename App Group",
-            Content = tb,
-            PrimaryButtonText = "Save",
-            CloseButtonText = "Cancel",
-            DefaultButton = ContentDialogButton.Primary,
-            XamlRoot = _content.XamlRoot
-        };
-
-        var result = await dialog.ShowAsync();
-        if (result == ContentDialogResult.Primary && !string.IsNullOrWhiteSpace(tb.Text))
-        {
-            group.Name = tb.Text;
-            if (_title != null) _title.Text = group.Name;
-            
-            // Save config so it persists
-            TaskTile.Services.GroupService.Instance.Save();
-            
-            // Refresh main window if it's open
-            if (App.MainWindowInstance != null)
+            _preRenameW = AppWindow.Size.Width;
+            _preRenameH = AppWindow.Size.Height;
+            _renameBubbleTail.Visibility = Visibility.Visible;
+            if (_preRenameW < 320 || _preRenameH < 220)
             {
-                // Force a layout update in main window if needed by just saving config,
-                // the collection changed event doesn't fire for property updates,
-                // but we can trigger a manual refresh or just let it update on next launch.
+                AppWindow.ResizeClient(new Windows.Graphics.SizeInt32(Math.Max(_preRenameW, 320), Math.Max(_preRenameH, 220)));
             }
         }
+        else
+        {
+            _renameBubbleTail.Visibility = Visibility.Collapsed;
+        }
+
+        _renameBubbleGrid.Visibility = Visibility.Visible;
+        _savedKeepOpen = _keepOpen;
+        _keepOpen = true;
+
+        _renameBox.SelectAll();
+        _renameBox.Focus(FocusState.Programmatic);
+    }
+
+    private void RenameSave_Click(object sender, RoutedEventArgs e)
+    {
+        CloseRenameBubble(save: true);
+    }
+
+    private void RenameCancel_Click(object sender, RoutedEventArgs e)
+    {
+        CloseRenameBubble(save: false);
+    }
+
+    private void RenameBox_KeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key == Windows.System.VirtualKey.Enter)
+        {
+            CloseRenameBubble(save: true);
+            e.Handled = true;
+        }
+        else if (e.Key == Windows.System.VirtualKey.Escape)
+        {
+            CloseRenameBubble(save: false);
+            e.Handled = true;
+        }
+    }
+
+    private void CloseRenameBubble(bool save)
+    {
+        if (save && !string.IsNullOrWhiteSpace(_renameBox.Text))
+        {
+            var group = TaskTile.Services.GroupService.Instance.Groups.FirstOrDefault(g => g.Id.ToString() == _groupId);
+            if (group != null)
+            {
+                group.Name = _renameBox.Text.Trim();
+                if (_title != null) _title.Text = group.Name;
+                if (_cardFooterName != null) _cardFooterName.Text = group.Name;
+
+                TaskTile.Services.GroupService.Instance.Save();
+                if (group.IsPinned) TaskTile.Services.TaskbarService.PinGroup(group);
+            }
+        }
+
+        if (_preRenameW > 0 && _preRenameH > 0)
+        {
+            AppWindow.ResizeClient(new Windows.Graphics.SizeInt32(_preRenameW, _preRenameH));
+            _preRenameW = 0;
+            _preRenameH = 0;
+        }
+
+        _renameBubbleGrid.Visibility = Visibility.Collapsed;
+        _keepOpen = _savedKeepOpen;
     }
 
     void EditGroup_Click(object s, RoutedEventArgs e)
     {
-        if (App.MainWindowInstance != null)
+        EnterEditMode();
+    }
+
+    void EnterEditMode()
+    {
+        _isInEditMode = true;
+        _savedKeepOpen = _keepOpen;
+        _keepOpen = true;
+        _editModeHeaderPanel.Visibility = Visibility.Visible;
+        foreach (var app in _appsList)
         {
-            App.MainWindowInstance.AppWindow.Show();
-            App.MainWindowInstance.NavigateTo(typeof(TaskTile.Pages.GroupsPage));
+            app.EditModeVisibility = Visibility.Visible;
         }
-        _ = CloseWithFadeAsync();
+    }
+
+    void ExitEditMode()
+    {
+        _isInEditMode = false;
+        _keepOpen = _savedKeepOpen;
+        _editModeHeaderPanel.Visibility = Visibility.Collapsed;
+        foreach (var app in _appsList)
+        {
+            app.EditModeVisibility = Visibility.Collapsed;
+        }
+        SaveCurrentGroupApps();
+    }
+
+    void DoneEditBtn_Click(object s, RoutedEventArgs e)
+    {
+        ExitEditMode();
+    }
+
+    private async void AddAppBtn_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var picker = new Windows.Storage.Pickers.FileOpenPicker();
+            picker.ViewMode = Windows.Storage.Pickers.PickerViewMode.List;
+            picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.Desktop;
+            picker.FileTypeFilter.Add(".exe");
+            picker.FileTypeFilter.Add(".msi");
+            picker.FileTypeFilter.Add(".bat");
+            picker.FileTypeFilter.Add(".cmd");
+            picker.FileTypeFilter.Add(".lnk");
+            picker.FileTypeFilter.Add(".url");
+            picker.FileTypeFilter.Add(".dll");
+
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+
+            var selectedFile = await picker.PickSingleFileAsync();
+            if (selectedFile == null) return;
+
+            string friendlyName = await System.Threading.Tasks.Task.Run(() =>
+            {
+                try
+                {
+                    var info = System.Diagnostics.FileVersionInfo.GetVersionInfo(selectedFile.Path);
+                    if (!string.IsNullOrWhiteSpace(info.ProductName)) return info.ProductName.Trim();
+                    if (!string.IsNullOrWhiteSpace(info.FileDescription)) return info.FileDescription.Trim();
+                }
+                catch { }
+                return System.IO.Path.GetFileNameWithoutExtension(selectedFile.Path);
+            });
+
+            var group = TaskTile.Services.GroupService.Instance.Groups.FirstOrDefault(g => g.Id.ToString() == _groupId);
+            if (group != null)
+            {
+                var newEntry = new TaskTile.Models.AppEntry
+                {
+                    Name = friendlyName,
+                    ExePath = selectedFile.Path,
+                    TileSize = 1
+                };
+                group.Apps.Add(newEntry);
+                TaskTile.Services.GroupService.Instance.Save();
+                if (group.IsPinned) TaskTile.Services.TaskbarService.PinGroup(group);
+
+                LoadAndPosition();
+                EnterEditMode();
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error adding app: {ex.Message}");
+        }
+    }
+
+    private void RemoveAppBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is AppEntryViewModel vm)
+        {
+            var group = TaskTile.Services.GroupService.Instance.Groups.FirstOrDefault(g => g.Id.ToString() == _groupId);
+            if (group != null)
+            {
+                var match = group.Apps.FirstOrDefault(a => a.ExePath == vm.ExePath && a.Name == vm.Name)
+                            ?? group.Apps.FirstOrDefault(a => a.ExePath == vm.ExePath);
+                if (match != null)
+                {
+                    group.Apps.Remove(match);
+                    TaskTile.Services.GroupService.Instance.Save();
+                    if (group.IsPinned) TaskTile.Services.TaskbarService.PinGroup(group);
+                }
+            }
+            _appsList.Remove(vm);
+            LoadAndPosition();
+            EnterEditMode();
+        }
+    }
+
+    private void CycleSizeBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is AppEntryViewModel vm)
+        {
+            vm.TileSize = (vm.TileSize % 3) + 1;
+            var group = TaskTile.Services.GroupService.Instance.Groups.FirstOrDefault(g => g.Id.ToString() == _groupId);
+            if (group != null)
+            {
+                var match = group.Apps.FirstOrDefault(a => a.ExePath == vm.ExePath && a.Name == vm.Name)
+                            ?? group.Apps.FirstOrDefault(a => a.ExePath == vm.ExePath);
+                if (match != null)
+                {
+                    match.TileSize = vm.TileSize;
+                    TaskTile.Services.GroupService.Instance.Save();
+                }
+            }
+        }
+    }
+
+    private void SaveCurrentGroupApps()
+    {
+        var group = TaskTile.Services.GroupService.Instance.Groups.FirstOrDefault(g => g.Id.ToString() == _groupId);
+        if (group != null)
+        {
+            TaskTile.Services.GroupService.Instance.Save();
+            if (group.IsPinned) TaskTile.Services.TaskbarService.PinGroup(group);
+        }
     }
     void LaunchAll_Click(object s, RoutedEventArgs e)
     {

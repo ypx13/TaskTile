@@ -2,6 +2,23 @@
 
 All notable changes to TaskTile will be documented in this file.
 
+## [v0.8.1] - 2026-09-19
+
+### Added
+- **Dedicated Fullscreen Group Settings View**: Replaced the small/clipped card flyout with a full-tab settings view inside `MainWindow` featuring an 'X' button on the top-left to dismiss, and an Accent button in the flyout.
+- **Metro UI 3D Flip Transition**: When `ypx.mixUI` is ON, opening Group Settings performs an authentic Windows 8 / Windows Phone 3D tile flip on the Y-axis via `PlaneProjection.RotationY`; when OFF, uses a clean native transition.
+- **Adaptive Entrance Animations**: Snappy 100ms pure Fluent slide-up when `ypx.mixUI` is OFF; custom scale zoom (0.94 -> 1.0) + slide-up when ON. App tile hover response times tuned to 70ms (`PointerOver`) and 90ms (`Normal`).
+- **In-Popup Interactive Edit Mode**: Right-click -> "Edit this Group" (or pencil icon) enters edit mode directly in the popup without closing:
+  - Header displays a `+` button to add executables/shortcuts and a `✓` button to exit edit mode.
+  - Tiles display a top-right tiny `x` badge to remove apps from the group.
+  - Tiles display a bottom-right size handle icon cycling sizes (1x1 to 2x2).
+- **Directional Speech Bubble Group Rename**: When `ypx.mixUI` is ON, the popup window dynamically expands and reveals a directional comic speech bubble pointing to the group title; when OFF, uses a compact inline input.
+- **Intra-Tile Spacing Customization**: Added `TileSpacing` slider (0–32px, default 8px) alongside `TaskbarOffset` (0–60px, default 12px) in both group cards and fullscreen settings.
+
+### Fixed
+- **Alt-Tab / Focus Freeze Bug**: Completely eliminated the DWM thread freeze caused by high-priority `DwmFlush()` background loops during Alt-Tab; replaced raw Win32 hide calls with `AppWindow.Hide()`; and eliminated phantom window activations in the background cached popup.
+- **Animation Stutter on Launch**: Removed duplicate pop-in animation triggers in `MainWindow.ShowGroup()`.
+
 ## [v0.8.0] - 2026-09-19
 
 ### Added

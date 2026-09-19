@@ -16,6 +16,8 @@ public sealed partial class GroupCard : UserControl
     private AppGroup? _group;
     private bool _isUpdatingUI = false;
 
+    public static event Action<GroupCard, AppGroup>? OpenFullSettingsRequested;
+
     public static readonly DependencyProperty GroupDataProperty =
         DependencyProperty.Register(nameof(GroupData), typeof(AppGroup), typeof(GroupCard),
             new PropertyMetadata(null, OnGroupDataChanged));
@@ -134,6 +136,10 @@ public sealed partial class GroupCard : UserControl
         AppIconStyleCombo.SelectedIndex = group.AppIconStyle;
         ThemeOverrideCombo.SelectedIndex = group.ThemeOverride;
         TitleAlignmentSlider.Value = group.TitleAlignment;
+        TaskbarOffsetSlider.Value = group.TaskbarOffset;
+        TaskbarOffsetValText.Text = $"{group.TaskbarOffset}px";
+        TileSpacingSlider.Value = group.TileSpacing;
+        TileSpacingValText.Text = $"{group.TileSpacing}px";
         ColumnsBox.Value = group.GridColumns;
         RowsBox.Value = group.GridRows;
 
@@ -321,37 +327,33 @@ public sealed partial class GroupCard : UserControl
         GroupService.Instance.Save();
     }
 
-    private bool _isSettingsFullscreen = false;
+    private void GapSettingChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    {
+        if (_isUpdatingUI || _group == null) return;
+        _group.TaskbarOffset = (int)TaskbarOffsetSlider.Value;
+        TaskbarOffsetValText.Text = $"{_group.TaskbarOffset}px";
+        _group.TileSpacing = (int)TileSpacingSlider.Value;
+        TileSpacingValText.Text = $"{_group.TileSpacing}px";
+        GroupService.Instance.Save();
+    }
+
+    private void SettingsButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_group == null) return;
+        SettingsButton.Flyout?.Hide();
+        OpenFullSettingsRequested?.Invoke(this, _group);
+    }
 
     private void FullscreenSettingsBtn_Click(object sender, RoutedEventArgs e)
     {
-        _isSettingsFullscreen = !_isSettingsFullscreen;
-        if (_isSettingsFullscreen)
-        {
-            var winSize = this.XamlRoot?.Size ?? new Windows.Foundation.Size(900, 700);
-            FlyoutRootGrid.Width = Math.Max(500, winSize.Width - 60);
-            FlyoutRootGrid.Height = Math.Max(400, winSize.Height - 60);
-            FlyoutRootGrid.MaxHeight = winSize.Height - 40;
-            FullscreenSettingsIcon.Glyph = "\uE73F"; // Restore
-            ToolTipService.SetToolTip(FullscreenSettingsBtn, "Exit fullscreen settings");
-        }
-        else
-        {
-            FlyoutRootGrid.Width = 400;
-            FlyoutRootGrid.Height = double.NaN;
-            FlyoutRootGrid.MaxHeight = 600;
-            FullscreenSettingsIcon.Glyph = "\uE740"; // Fullscreen
-            ToolTipService.SetToolTip(FullscreenSettingsBtn, "Fullscreen settings");
-        }
+        if (_group == null) return;
+        SettingsButton.Flyout?.Hide();
+        OpenFullSettingsRequested?.Invoke(this, _group);
     }
 
     private void GroupSettingsFlyout_Closed(object sender, object e)
     {
-        _isSettingsFullscreen = false;
-        FlyoutRootGrid.Width = 400;
-        FlyoutRootGrid.Height = double.NaN;
-        FlyoutRootGrid.MaxHeight = 600;
         FullscreenSettingsIcon.Glyph = "\uE740";
-        ToolTipService.SetToolTip(FullscreenSettingsBtn, "Fullscreen settings");
+        ToolTipService.SetToolTip(FullscreenSettingsBtn, "Open full settings tab");
     }
 }
