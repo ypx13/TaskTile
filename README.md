@@ -26,7 +26,7 @@
 
 ## ✦ what is TaskTile exactly?
 
-Meet **TaskTile** — yes, the name is a deliberate pun on **tactile**, because every click and transition is made completely in WinUI3 an C# making it pretty fast and smooth.
+meet **TaskTile** — yes, the name is a deliberate pun on **tactile**, because every click and transition is made completely in WinUI3 an C# making it pretty fast and smooth.
 
 TaskTile might be the **first 100% native C# and WinUI 3 app group launcher/taskbar utility for Windows 11**. No Webview2, no PWA, none, i personally hate web apps, which is why i made TaskTile just pure WinUI 3, Windows App SDK, and low-level DWM compositing. It might be a little *over-engineered*, but that's for you to judge, and honestly? It might be why it feels.. built-in!
 
