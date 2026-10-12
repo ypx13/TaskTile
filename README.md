@@ -4,7 +4,7 @@
 
 # TaskTile
 
-**a truly *tactile* (ba dum tssh ;D) Windows 11 taskbar utility — lightweight and snappy.**
+**a truly *tactile* (ba dum tssh ;D) Windows 11 taskbar utility.**
 
 [![Platform](https://img.shields.io/badge/Platform-Windows%2011-0078D4?style=flat&logo=windows11&logoColor=white)](https://github.com/ypx13/TaskTile)
 [![Framework](https://img.shields.io/badge/Framework-.NET%208%20%7C%20WinAppSDK%201.6-512BD4?style=flat&logo=dotnet&logoColor=white)](https://github.com/ypx13/TaskTile)
@@ -79,11 +79,11 @@ TaskTile might be the **first 100% native C# and WinUI 3 app group launcher/task
 
 ## developer's note
 
-> *"Why do updates take so long?"*
+> *"why do updates take so long??"*
 
-TaskTile is being built by a **solo developer** (`ypx13`) who is learning advanced WinUI 3, XAML, and Windows API internals as he builds. 
-
-icon extraction pipelines and animation, style programming and auto-hide tracking, literally everything is being made from scratch. If updates take a bit of time, it's because each release is being refined and tested to ensure it feels like real Windows 11 software. Feedback, testing, and issue reports are always greatly appreciated! 💖
+TaskTile is being built by a **solo developer** (`ypx13`) who is learning advanced WinUI 3, XAML, and Windows API internals as he builds. (yes me!)
+ 
+icon extraction pipelines and animation, style programming and auto-hide tracking, literally everything is being made from scratch (or MAYBE a bit of inspiration from github or stackoverflow but still!) but if updates do take a bit of time, it's because each release is being refined to ensure it feels like real Windows 11 software. Feedback, testing, and issue reports are always greatly appreciated! 💖
 
 ---
 
