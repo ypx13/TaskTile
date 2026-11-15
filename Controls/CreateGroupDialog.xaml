@@ -7,7 +7,7 @@
 
     <StackPanel Spacing="16" Width="480">
 
-        <!-- Dialog Title (Placed inside content StackPanel for pixel-perfect horizontal alignment with fields below) -->
+        // title
         <TextBlock x:Name="DialogTitleText"
                    Text="Create Group"
                    Style="{ThemeResource SubtitleTextBlockStyle}"
@@ -15,7 +15,7 @@
                    FontSize="20"
                    Margin="0,0,0,0"/>
 
-        <!-- Group name input -->
+        // thye input
         <StackPanel Spacing="6">
             <TextBlock x:Name="GroupNameHeader" Text="Group name" Style="{ThemeResource BodyStrongTextBlockStyle}"/>
             <TextBox
@@ -68,7 +68,7 @@
             <!-- Loading state -->
             <ProgressRing x:Name="LoadingRing" IsActive="True" Visibility="Visible" HorizontalAlignment="Center" Margin="0,12"/>
 
-            <!-- App list with native Fluent 2 CheckBoxes and clean non-bleeding icons -->
+            
             <ListView
                 x:Name="AppListView"
                 Height="270"
@@ -107,7 +107,7 @@
                                       Margin="0,0,10,0"
                                       VerticalAlignment="Center"/>
 
-                            <!-- App Icon (Shrunk to 20x20 & Cleanly Aligned like Image 2) -->
+                            
                             <Border Grid.Column="1" Width="20" Height="20"
                                     Margin="0,0,10,0"
                                     CornerRadius="3"
@@ -117,7 +117,7 @@
                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
 
-                            <!-- App Name & Executable Path -->
+                    
                             <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="1">
                                 <TextBlock Text="{Binding Name}"
                                            FontWeight="SemiBold"
@@ -136,7 +136,7 @@
             </ListView>
         </StackPanel>
 
-        <!-- Custom Buttons -->
+     
         <Grid Margin="0,4,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
