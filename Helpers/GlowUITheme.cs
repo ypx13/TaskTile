@@ -8,9 +8,6 @@ namespace TaskTile.Helpers;
 
 /// <summary>
 /// FireCube GlowUI design system theme helper.
-/// Replicates the signature FireCubeStudios GlowUI aesthetic:
-/// dynamic Windows SystemAccentColor gradients, luminous glowing accent borders,
-/// subtle frosted backgrounds, and accent hover highlights.
 /// </summary>
 public static class GlowUITheme
 {
@@ -42,7 +39,7 @@ public static class GlowUITheme
     }
 
     /// <summary>
-    /// Signature FireCube diagonal luminous accent gradient border brush.
+    /// i forgot what to put here
     /// </summary>
     public static LinearGradientBrush CreateGlowBorderBrush(bool isHover = false)
     {
@@ -87,7 +84,7 @@ public static class GlowUITheme
     }
 
     /// <summary>
-    /// Soft translucent accent-tinted tile hover background (FireCube ResponsiveAccentBrush).
+    /// si, ai si
     /// </summary>
     public static SolidColorBrush CreateTileHoverBackgroundBrush()
     {
@@ -96,7 +93,7 @@ public static class GlowUITheme
     }
 
     /// <summary>
-    /// FireCube dark frosted card background (Mica / 1cBrush / 24Brush).
+    /// ok dark bg i see
     /// </summary>
     public static SolidColorBrush CreateCardBackgroundBrush()
     {
