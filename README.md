@@ -98,9 +98,9 @@ TaskTile is built with SWEAT and TEARS, but i do have to say it basically is get
 
 ---
 
-## 📄 License & Terms
+## License & Terms [IMPORTANT!!]
 
-see the full [LICENSE](LICENSE) file for legal details. But I'm going to simply explain it here ⬇️
+see the full [LICENSE](LICENSE) file for legal details. But I'm going to simply explain it here
 
 * **🔒 current status (pre-v1.0 — study & preview only)**:
   * **Educational & Personal Use Only**: You are welcome to inspect, read, and learn from the codebase.
