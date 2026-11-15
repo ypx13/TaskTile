@@ -43,7 +43,7 @@
                 <!-- Feedback InfoBar (at the top so user sees status immediately) -->
                 <InfoBar x:Name="FeedbackInfoBar" IsOpen="False" Severity="Success" Margin="0,0,0,4"/>
 
-                <!-- ════════════════════════════ RESTORE ARCHIVE ════════════════════════════ -->
+                <!-- old code here -->
                 <StackPanel Spacing="4" Margin="0,0,0,4">
                     <StackPanel Spacing="2" Margin="0,0,0,4">
                         <TextBlock Text="Restore" Style="{ThemeResource SubtitleTextBlockStyle}" />
@@ -71,7 +71,7 @@
                     </Border>
                 </StackPanel>
 
-                <!-- ════════════════════════════ CREATE BACKUP ════════════════════════════ -->
+                <!-- new code here i think -->
                 <StackPanel x:Name="BackupControlsPanel" Spacing="10">
                     <StackPanel Spacing="2" Margin="0,0,0,4">
                         <TextBlock Text="Create Backup" Style="{ThemeResource SubtitleTextBlockStyle}" />
