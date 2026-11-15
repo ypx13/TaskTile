@@ -240,3 +240,5 @@ namespace TaskTile.Controls
         }
     }
 }
+
+// isnt she lovelyyyyyy
