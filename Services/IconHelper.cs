@@ -43,6 +43,59 @@ namespace TaskTile.Services
         public const uint FILE_ATTRIBUTE_NORMAL = 0x00000080;
         public const uint SHGFI_USEFILEATTRIBUTES = 0x000000010;
 
+        [ComImport]
+        [Guid("46EB5926-582E-4017-9FDF-E8998DAA0950")]
+        [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+        private interface IImageList
+        {
+            [PreserveSig]
+            int GetIcon(int i, int flags, ref IntPtr picon);
+        }
+
+        public const int SHIL_LARGE = 0x0;
+        public const int SHIL_SMALL = 0x1;
+        public const int SHIL_EXTRALARGE = 0x2;
+        public const int SHIL_SYSSMALL = 0x3;
+        public const int SHIL_JUMBO = 0x4;
+        public const int ILD_TRANSPARENT = 0x1;
+        public const uint SHGFI_SYSICONINDEX = 0x000004000;
+
+        [DllImport("shell32.dll", EntryPoint = "#727")]
+        private static extern int SHGetImageList(int iImageList, ref Guid riid, out IImageList ppv);
+
+        public static Bitmap? ExtractJumboIcon(string filePath)
+        {
+            try
+            {
+                var shinfo = new SHFILEINFO();
+                IntPtr res = SHGetFileInfo(filePath, 0, out shinfo, (uint)Marshal.SizeOf(shinfo), SHGFI_SYSICONINDEX);
+                if (res != IntPtr.Zero && shinfo.iIcon >= 0)
+                {
+                    Guid iidImageList = new Guid("46EB5926-582E-4017-9FDF-E8998DAA0950");
+                    int hr = SHGetImageList(SHIL_JUMBO, ref iidImageList, out IImageList imgList);
+                    if (hr != 0 || imgList == null)
+                    {
+                        hr = SHGetImageList(SHIL_EXTRALARGE, ref iidImageList, out imgList);
+                    }
+
+                    if (hr == 0 && imgList != null)
+                    {
+                        IntPtr hIcon = IntPtr.Zero;
+                        imgList.GetIcon(shinfo.iIcon, ILD_TRANSPARENT, ref hIcon);
+                        if (hIcon != IntPtr.Zero)
+                        {
+                            using var ico = Icon.FromHandle(hIcon);
+                            var bmp = new Bitmap(ico.ToBitmap());
+                            DestroyIcon(hIcon);
+                            return bmp;
+                        }
+                    }
+                }
+            }
+            catch { }
+            return null;
+        }
+
         public static Bitmap? ExtractFolderIcon()
         {
             try
@@ -66,11 +119,12 @@ namespace TaskTile.Services
             if (string.IsNullOrEmpty(filePath)) return "";
 
             bool isDir = Directory.Exists(filePath);
-            if (!isDir && !File.Exists(filePath)) return "";
+            bool fileExists = File.Exists(filePath);
+            if (!isDir && !fileExists && string.IsNullOrEmpty(Path.GetExtension(filePath))) return "";
 
             string hash = ComputeHash(filePath);
             string name = isDir ? Path.GetFileName(filePath.TrimEnd('\\', '/')) : Path.GetFileNameWithoutExtension(filePath);
-            if (string.IsNullOrEmpty(name)) name = "folder";
+            if (string.IsNullOrEmpty(name)) name = "file";
             string cachedPath = Path.Combine(CacheDir, $"{name}_{hash}.png");
 
             if (File.Exists(cachedPath))
@@ -87,46 +141,65 @@ namespace TaskTile.Services
                 {
                     iconBitmap = ExtractFolderIcon();
                 }
-                else if (Path.GetExtension(filePath).Equals(".lnk", StringComparison.OrdinalIgnoreCase))
+                else if (!fileExists)
                 {
-                    iconBitmap = ExtractWindowsAppIcon(filePath);
-                    if (iconBitmap == null)
+                    string ext = Path.GetExtension(filePath);
+                    if (string.IsNullOrEmpty(ext)) ext = ".exe";
+                    var shinfo = new SHFILEINFO();
+                    IntPtr hImg = SHGetFileInfo(ext, FILE_ATTRIBUTE_NORMAL, out shinfo, (uint)Marshal.SizeOf(shinfo), SHGFI_ICON | SHGFI_LARGEICON | SHGFI_USEFILEATTRIBUTES);
+                    if (shinfo.hIcon != IntPtr.Zero)
                     {
-                        try
-                        {
-                            dynamic shell = Microsoft.VisualBasic.Interaction.CreateObject("WScript.Shell");
-                            dynamic shortcut = shell.CreateShortcut(filePath);
-                            string iconPath = shortcut.IconLocation;
-                            string targetPath = shortcut.TargetPath;
-
-                            if (!string.IsNullOrEmpty(iconPath) && iconPath != ",")
-                            {
-                                string[] iconInfo = iconPath.Split(',');
-                                string actualIconPath = iconInfo[0].Trim();
-                                int iconIndex = iconInfo.Length > 1 ? int.Parse(iconInfo[1].Trim()) : 0;
-                                if (File.Exists(actualIconPath))
-                                {
-                                    iconBitmap = ExtractSpecificIcon(actualIconPath, iconIndex);
-                                }
-                            }
-
-                            if (iconBitmap == null && !string.IsNullOrEmpty(targetPath) && File.Exists(targetPath))
-                            {
-                                iconBitmap = ExtractIconWithoutArrow(targetPath);
-                            }
-
-                            if (iconBitmap == null)
-                            {
-                                var icon = Icon.ExtractAssociatedIcon(filePath);
-                                if (icon != null) iconBitmap = icon.ToBitmap();
-                            }
-                        }
-                        catch { }
+                        using var icon = Icon.FromHandle(shinfo.hIcon);
+                        iconBitmap = new Bitmap(icon.ToBitmap());
+                        DestroyIcon(shinfo.hIcon);
                     }
                 }
                 else
                 {
-                    iconBitmap = ExtractIconWithoutArrow(filePath);
+                    // Prioritize ultra-high-resolution (up to 256x256 JUMBO) extraction
+                    iconBitmap = ExtractJumboIcon(filePath);
+
+                    if (iconBitmap == null && Path.GetExtension(filePath).Equals(".lnk", StringComparison.OrdinalIgnoreCase))
+                    {
+                        iconBitmap = ExtractWindowsAppIcon(filePath);
+                        if (iconBitmap == null)
+                        {
+                            try
+                            {
+                                dynamic shell = Microsoft.VisualBasic.Interaction.CreateObject("WScript.Shell");
+                                dynamic shortcut = shell.CreateShortcut(filePath);
+                                string iconPath = shortcut.IconLocation;
+                                string targetPath = shortcut.TargetPath;
+
+                                if (!string.IsNullOrEmpty(iconPath) && iconPath != ",")
+                                {
+                                    string[] iconInfo = iconPath.Split(',');
+                                    string actualIconPath = iconInfo[0].Trim();
+                                    int iconIndex = iconInfo.Length > 1 ? int.Parse(iconInfo[1].Trim()) : 0;
+                                    if (File.Exists(actualIconPath))
+                                    {
+                                        iconBitmap = ExtractJumboIcon(actualIconPath) ?? ExtractSpecificIcon(actualIconPath, iconIndex);
+                                    }
+                                }
+
+                                if (iconBitmap == null && !string.IsNullOrEmpty(targetPath) && File.Exists(targetPath))
+                                {
+                                    iconBitmap = ExtractJumboIcon(targetPath) ?? ExtractIconWithoutArrow(targetPath);
+                                }
+
+                                if (iconBitmap == null)
+                                {
+                                    var icon = Icon.ExtractAssociatedIcon(filePath);
+                                    if (icon != null) iconBitmap = icon.ToBitmap();
+                                }
+                            }
+                            catch { }
+                        }
+                    }
+                    else if (iconBitmap == null)
+                    {
+                        iconBitmap = ExtractIconWithoutArrow(filePath);
+                    }
                 }
 
                 if (iconBitmap != null)
@@ -142,6 +215,41 @@ namespace TaskTile.Services
             }
 
             return "";
+        }
+
+        public static string GetOrExtractMonochromeIcon(string filePath)
+        {
+            string colorPath = GetOrExtractIcon(filePath);
+            if (string.IsNullOrEmpty(colorPath) || !File.Exists(colorPath)) return colorPath;
+
+            string monoPath = Path.Combine(Path.GetDirectoryName(colorPath)!, Path.GetFileNameWithoutExtension(colorPath) + "_mono.png");
+            if (File.Exists(monoPath)) return monoPath;
+
+            try
+            {
+                using var src = new Bitmap(colorPath);
+                using var mono = new Bitmap(src.Width, src.Height, PixelFormat.Format32bppArgb);
+                using var g = Graphics.FromImage(mono);
+
+                float[][] matrix = {
+                    new float[] {0.299f, 0.299f, 0.299f, 0, 0},
+                    new float[] {0.587f, 0.587f, 0.587f, 0, 0},
+                    new float[] {0.114f, 0.114f, 0.114f, 0, 0},
+                    new float[] {0, 0, 0, 1, 0},
+                    new float[] {0, 0, 0, 0, 1}
+                };
+                var cm = new ColorMatrix(matrix);
+                using var ia = new ImageAttributes();
+                ia.SetColorMatrix(cm);
+
+                g.DrawImage(src, new Rectangle(0, 0, src.Width, src.Height), 0, 0, src.Width, src.Height, GraphicsUnit.Pixel, ia);
+                mono.Save(monoPath, ImageFormat.Png);
+                return monoPath;
+            }
+            catch
+            {
+                return colorPath;
+            }
         }
 
         private static Bitmap? ExtractSpecificIcon(string iconPath, int iconIndex)

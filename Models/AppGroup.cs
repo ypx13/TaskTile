@@ -6,7 +6,8 @@ public class AppGroup
     public string Name { get; set; } = string.Empty;
     public List<AppEntry> Apps { get; set; } = new();
     public bool IsPinned { get; set; } = false;
-    public GroupType GroupType { get; set; } = GroupType.Apps; // Apps or Files
+    public GroupType GroupType { get; set; } = GroupType.Apps; // Apps, Files, or Radial
+    public string Shortcut { get; set; } = "Ctrl+Shift+A"; // Global hotkey for Radial menu
     public bool IsDynamicFolder { get; set; } = false;
     public string DynamicFolderPath { get; set; } = string.Empty;
     // Card Settings
@@ -15,7 +16,7 @@ public class AppGroup
     public bool ShowCardLabels { get; set; } = false;
     public bool MarqueeAppLabels { get; set; } = false;
     public bool ScrollAppLabels { get; set; } = false;
-    public int FolderIconStyle { get; set; } = 0; // 0 = Normal, 1 = Transparent, 2 = UWP (Accent)
+    public int FolderIconStyle { get; set; } = 0; // 0 = Transparent (Default), 1 = Normal (Dark), 2 = UWP (Accent)
     public bool MonochromeFolderIcon { get; set; } = false;
     public string CustomIconPath { get; set; } = string.Empty;
     
@@ -24,6 +25,7 @@ public class AppGroup
     public int BackdropStyle { get; set; } = 1; // 0 = Acrylic, 1 = Mica, 2 = Transparent / Mica Alt
     public int CompactAlignment { get; set; } = 0; // 0 = Top, 1 = Bottom
     public int TitleAlignment { get; set; } = -1; // -1 = Global, 0 = Left, 1 = Center, 2 = Right
+    public int RunningIndicatorStyle { get; set; } = -1; // -1 = Global, 0 = Bar, 1 = Corner Dot
     public bool LaunchAtCenter { get; set; } = false; // Kept for backwards compatibility if needed
     public bool MakeMainFocus { get; set; } = false;
     public bool IsDesktopMode { get; set; } = false;
@@ -36,12 +38,12 @@ public class AppGroup
     public bool DisableRoundedCorners { get; set; } = false;
     public bool KeepOpen { get; set; } = false;
     public int GroupLaunchSide { get; set; } = 0; // 0=Top, 1=Bottom, 2=Left, 3=Right, 4=Center
-    public int TaskbarOffset { get; set; } = 12; // Gap/distance in px from taskbar/screen edge (default: 12px)
+    public int TaskbarOffset { get; set; } = 8; // Gap/distance in px from taskbar/screen edge (default: 8px)
     public int TileSpacing { get; set; } = 8; // Spacing/gap between app tiles in px (default: 8px)
 
     // Advanced Rendering Settings
     public int AppIconStyle { get; set; } = 0; // 0 = Transparent/Normal, 1 = Monochrome, 2 = UWP Accent
     public int ThemeOverride { get; set; } = 0; // 0 = Global, 1 = Light, 2 = Dark
     public int GridColumns { get; set; } = 3;
-    public int GridRows { get; set; } = 0; // 0 = Auto
+    public int GridRows { get; set; } = 3;
 }

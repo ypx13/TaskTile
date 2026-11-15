@@ -20,7 +20,7 @@ namespace TaskTile
             public IntPtr hCursor;
             public IntPtr hbrBackground;
             [MarshalAs(UnmanagedType.LPWStr)]
-            public string lpszMenuName;
+            public string? lpszMenuName;
             [MarshalAs(UnmanagedType.LPWStr)]
             public string lpszClassName;
             public IntPtr hIconSm;
@@ -83,7 +83,7 @@ namespace TaskTile
         public static extern IntPtr DefWindowProc(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam);
 
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
-        public static extern IntPtr GetModuleHandle(string lpModuleName);
+        public static extern IntPtr GetModuleHandle(string? lpModuleName);
 
         [DllImport("user32.dll")]
         public static extern IntPtr LoadCursor(IntPtr hInstance, uint lpCursorName);
@@ -131,5 +131,13 @@ namespace TaskTile
 
         [DllImport("user32.dll")]
         public static extern bool DestroyWindow(IntPtr hWnd);
+
+        // Memory trimming — reduce working set when popup is hidden
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool SetProcessWorkingSetSize(IntPtr process, IntPtr minimumWorkingSetSize, IntPtr maximumWorkingSetSize);
+
+        // Shell change notification — tell Explorer to refresh taskbar icons
+        [DllImport("shell32.dll")]
+        public static extern void SHChangeNotify(int wEventId, uint uFlags, IntPtr dwItem1, IntPtr dwItem2);
     }
 }

@@ -1,6 +1,9 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Animation;
+using System;
 using TaskTile.Controls;
 using TaskTile.Models;
 using TaskTile.Services;
@@ -13,101 +16,185 @@ public sealed partial class GroupsPage : Page
     {
         this.InitializeComponent();
 
-        GroupsItemsView.Layout = new UniformGridLayout
-        {
-            MinItemWidth     = 240,
-            MinItemHeight    = 170,
-            MaximumRowsOrColumns = 4,
-            ItemsStretch     = UniformGridLayoutItemsStretch.Fill,
-            MinColumnSpacing = 14,
-            MinRowSpacing    = 14
-        };
+        ApplyLayoutForCurrentStyle();
         GroupsItemsView.ItemsSource = GroupService.Instance.Groups;
 
         GroupCard.OpenFullSettingsRequested += OnOpenFullSettingsRequested;
+        GroupCard.EditModeRequested += OnEditModeRequested;
 
-        this.Loaded += (_, _) => RefreshGroups();
+        SetupFullTitleAlignmentPreview();
+
+        this.AddHandler(UIElement.PointerPressedEvent, new PointerEventHandler(OnGlobalPointerPressed), true);
+
+        this.Loaded += (_, _) =>
+        {
+            ApplyLayoutForCurrentStyle();
+            RefreshGroups();
+            var items = GroupsItemsView.ItemsSource;
+            GroupsItemsView.ItemsSource = null;
+            GroupsItemsView.ItemsSource = items;
+        };
         GroupService.Instance.Groups.CollectionChanged += (_, _) => RefreshGroups();
+        SettingsService.SettingsChanged += OnSettingsChanged;
+        this.Unloaded += (_, _) =>
+        {
+            this.RemoveHandler(UIElement.PointerPressedEvent, new PointerEventHandler(OnGlobalPointerPressed));
+            SettingsService.SettingsChanged -= OnSettingsChanged;
+            GroupCard.EditModeRequested -= OnEditModeRequested;
+        };
+
+        // Radial menu option hidden - removed NewRadialGroupBtn_Click method and radial menu button
+        // Backup settings hidden - removed EnableBackupSystemToggle functionality
+    }
+
+    private void OnGlobalPointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        var source = e.OriginalSource as FrameworkElement;
+        if (source is not TextBox)
+        {
+            GroupCard.CommitActiveRename();
+        }
+    }
+
+    private void ApplyLayoutForCurrentStyle()
+    {
+        int style = SettingsService.Current.GroupCardStyle;
+        if (GroupsItemsView.Layout is not UniformGridLayout layout)
+        {
+            layout = new UniformGridLayout();
+            GroupsItemsView.Layout = layout;
+        }
+
+        layout.ItemsStretch = UniformGridLayoutItemsStretch.Fill;
+
+        if (style == 2)
+        {
+            // Compact (formerly Super Compact): single line per group, horizontally fills the width, vertically short
+            layout.MinItemWidth = 400;
+            layout.MinItemHeight = 52;
+            layout.MaximumRowsOrColumns = 1;
+            layout.MinColumnSpacing = 0;
+            layout.MinRowSpacing = 8;
+        }
+        else if (style == 1)
+        {
+            // Detailed (formerly Visitor ID): prominent square card
+            layout.MinItemWidth = 190;
+            layout.MinItemHeight = 215;
+            layout.MaximumRowsOrColumns = 6;
+            layout.MinColumnSpacing = 12;
+            layout.MinRowSpacing = 12;
+        }
+        else
+        {
+            // Classic (formerly Default): horizontal card, chin eliminated
+            layout.MinItemWidth = 240;
+            layout.MinItemHeight = 130;
+            layout.MaximumRowsOrColumns = 4;
+            layout.MinColumnSpacing = 14;
+            layout.MinRowSpacing = 14;
+        }
+    }
+
+    private void OnEditModeRequested()
+    {
+        this.DispatcherQueue?.TryEnqueue(() =>
+        {
+            DoneReorderButton.Visibility = Visibility.Visible;
+            GroupCard.SetGlobalEditMode(true);
+        });
+    }
+
+    private void DoneReorderButton_Click(object sender, RoutedEventArgs e)
+    {
+        DoneReorderButton.Visibility = Visibility.Collapsed;
+        GroupCard.SetGlobalEditMode(false);
+        GroupService.Instance.Save();
+    }
+
+    private void OnSettingsChanged()
+    {
+        this.DispatcherQueue?.TryEnqueue(() =>
+        {
+            ApplyLayoutForCurrentStyle();
+            RefreshGroups();
+            var items = GroupsItemsView.ItemsSource;
+            GroupsItemsView.ItemsSource = null;
+            GroupsItemsView.ItemsSource = items;
+        });
     }
 
     private AppGroup? _currentSettingsGroup;
     private bool _isUpdatingFullUI = false;
 
+    public void OpenGroupFullSettings(Guid groupId)
+    {
+        var group = GroupService.Instance.Groups.FirstOrDefault(g => g.Id == groupId);
+        if (group != null)
+        {
+            _currentSettingsGroup = group;
+            PopulateFullSettings(group);
+            if (FullGroupSettingsOverlay.Visibility != Visibility.Visible)
+            {
+                PlayNormalFluentTransition(GroupsListRoot, FullGroupSettingsOverlay, forward: true);
+            }
+        }
+    }
+
     private void OnOpenFullSettingsRequested(GroupCard card, AppGroup group)
     {
         _currentSettingsGroup = group;
         PopulateFullSettings(group);
-
-        if (SettingsService.Current.YpxMixUI)
-        {
-            Play3DFlipTransition(GroupsListRoot, FullGroupSettingsOverlay, forward: true);
-        }
-        else
-        {
-            GroupsListRoot.Visibility = Visibility.Collapsed;
-            FullGroupSettingsOverlay.Visibility = Visibility.Visible;
-        }
+        PlayNormalFluentTransition(GroupsListRoot, FullGroupSettingsOverlay, forward: true);
     }
 
     private void CloseFullSettingsBtn_Click(object sender, RoutedEventArgs e)
     {
-        if (SettingsService.Current.YpxMixUI)
-        {
-            Play3DFlipTransition(FullGroupSettingsOverlay, GroupsListRoot, forward: false);
-        }
-        else
-        {
-            FullGroupSettingsOverlay.Visibility = Visibility.Collapsed;
-            GroupsListRoot.Visibility = Visibility.Visible;
-        }
+        FadeOutFullPreview();
+        PlayNormalFluentTransition(FullGroupSettingsOverlay, GroupsListRoot, forward: false);
         GroupsItemsView.ItemsSource = null;
         GroupsItemsView.ItemsSource = GroupService.Instance.Groups;
         RefreshGroups();
     }
 
-    private void Play3DFlipTransition(FrameworkElement fromElement, FrameworkElement toElement, bool forward)
+    private void PlayNormalFluentTransition(FrameworkElement fromElement, FrameworkElement toElement, bool forward)
     {
-        var projFrom = new PlaneProjection { CenterOfRotationX = 0.5, CenterOfRotationY = 0.5 };
-        var projTo = new PlaneProjection { CenterOfRotationX = 0.5, CenterOfRotationY = 0.5 };
-        fromElement.Projection = projFrom;
-        toElement.Projection = projTo;
+        fromElement.Visibility = Visibility.Collapsed;
+        toElement.Visibility = Visibility.Visible;
 
-        var sbOut = new Microsoft.UI.Xaml.Media.Animation.Storyboard();
-        var daOut = new Microsoft.UI.Xaml.Media.Animation.DoubleAnimation
+        var trans = new TranslateTransform { Y = forward ? 14 : -14 };
+        toElement.RenderTransform = trans;
+        toElement.Opacity = 0;
+
+        var sb = new Microsoft.UI.Xaml.Media.Animation.Storyboard();
+        var daFade = new Microsoft.UI.Xaml.Media.Animation.DoubleAnimation
         {
             From = 0,
-            To = forward ? 90 : -90,
-            Duration = new Duration(TimeSpan.FromMilliseconds(160)),
-            EasingFunction = new Microsoft.UI.Xaml.Media.Animation.CubicEase { EasingMode = Microsoft.UI.Xaml.Media.Animation.EasingMode.EaseIn }
+            To = 1,
+            Duration = new Duration(TimeSpan.FromMilliseconds(140)),
+            EasingFunction = new Microsoft.UI.Xaml.Media.Animation.CubicEase { EasingMode = Microsoft.UI.Xaml.Media.Animation.EasingMode.EaseOut }
         };
-        Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTarget(daOut, projFrom);
-        Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTargetProperty(daOut, "RotationY");
-        sbOut.Children.Add(daOut);
+        Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTarget(daFade, toElement);
+        Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTargetProperty(daFade, "Opacity");
+        sb.Children.Add(daFade);
 
-        sbOut.Completed += (s, ev) =>
+        var daSlide = new Microsoft.UI.Xaml.Media.Animation.DoubleAnimation
         {
-            fromElement.Visibility = Visibility.Collapsed;
-            projFrom.RotationY = 0;
-
-            toElement.Visibility = Visibility.Visible;
-            projTo.RotationY = forward ? -90 : 90;
-
-            var sbIn = new Microsoft.UI.Xaml.Media.Animation.Storyboard();
-            var daIn = new Microsoft.UI.Xaml.Media.Animation.DoubleAnimation
-            {
-                From = forward ? -90 : 90,
-                To = 0,
-                Duration = new Duration(TimeSpan.FromMilliseconds(160)),
-                EasingFunction = new Microsoft.UI.Xaml.Media.Animation.CubicEase { EasingMode = Microsoft.UI.Xaml.Media.Animation.EasingMode.EaseOut }
-            };
-            Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTarget(daIn, projTo);
-            Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTargetProperty(daIn, "RotationY");
-            sbIn.Children.Add(daIn);
-            sbIn.Completed += (_, _) => { toElement.Projection = null; fromElement.Projection = null; };
-            sbIn.Begin();
+            From = forward ? 14 : -14,
+            To = 0,
+            Duration = new Duration(TimeSpan.FromMilliseconds(140)),
+            EasingFunction = new Microsoft.UI.Xaml.Media.Animation.CubicEase { EasingMode = Microsoft.UI.Xaml.Media.Animation.EasingMode.EaseOut }
         };
+        Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTarget(daSlide, trans);
+        Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTargetProperty(daSlide, "Y");
+        sb.Children.Add(daSlide);
 
-        sbOut.Begin();
+        sb.Completed += (_, _) =>
+        {
+            toElement.RenderTransform = null;
+            toElement.Opacity = 1;
+        };
+        sb.Begin();
     }
 
     private void PopulateFullSettings(AppGroup group)
@@ -135,15 +222,43 @@ public sealed partial class GroupsPage : Page
         FullPopupBackdropCombo.SelectedIndex = group.BackdropStyle;
         FullAlignmentCombo.SelectedIndex = group.CompactAlignment;
         FullAppIconStyleCombo.SelectedIndex = group.AppIconStyle;
+        FullRunningIndicatorStyleCombo.SelectedIndex = group.RunningIndicatorStyle == 0 ? 1 : (group.RunningIndicatorStyle == 1 ? 2 : 0);
         FullThemeOverrideCombo.SelectedIndex = group.ThemeOverride;
-        FullTitleAlignmentSlider.Value = group.TitleAlignment;
+        int titleAlign = group.TitleAlignment < 0 ? SettingsService.Current.TitleAlignment : group.TitleAlignment;
+        FullTitleAlignmentSlider.Value = Math.Clamp(titleAlign, 0, 2);
+        FullTaskbarGapSlider.Value = group.TaskbarOffset;
+        if (FullPreviewTitleText != null)
+        {
+            FullPreviewTitleText.Text = string.IsNullOrWhiteSpace(group.Name) ? "Sample" : group.Name;
+        }
+        UpdateFullPreviewTitlePosition((int)FullTitleAlignmentSlider.Value, animate: false);
         FullColumnsBox.Value = group.GridColumns;
         FullRowsBox.Value = group.GridRows;
 
-        FullTaskbarOffsetSlider.Value = group.TaskbarOffset;
-        FullTaskbarOffsetValText.Text = $"{group.TaskbarOffset}px";
-        FullTileSpacingSlider.Value = group.TileSpacing;
-        FullTileSpacingValText.Text = $"{group.TileSpacing}px";
+        FullFolderIconStyleCombo.SelectedIndex = Math.Clamp(group.FolderIconStyle, 0, 2);
+        FullMonochromeFolderIconToggle.IsOn = group.MonochromeFolderIcon;
+        FullClearCustomIconButton.Visibility = (!string.IsNullOrEmpty(group.CustomIconPath) && System.IO.File.Exists(group.CustomIconPath))
+            ? Visibility.Visible : Visibility.Collapsed;
+
+        FullOverrideBorderColorToggle.IsOn = group.OverrideBorderColor;
+        try
+        {
+            string hex = group.CustomBorderColor;
+            if (!string.IsNullOrEmpty(hex) && hex.Length >= 7)
+            {
+                byte r = byte.Parse(hex.Substring(1, 2), System.Globalization.NumberStyles.HexNumber);
+                byte g = byte.Parse(hex.Substring(3, 2), System.Globalization.NumberStyles.HexNumber);
+                byte b = byte.Parse(hex.Substring(5, 2), System.Globalization.NumberStyles.HexNumber);
+                FullCustomBorderColorPicker.Color = Windows.UI.Color.FromArgb(255, r, g, b);
+            }
+        }
+        catch { }
+        FullBorderColorButton.Visibility = group.OverrideBorderColor ? Visibility.Visible : Visibility.Collapsed;
+
+        FullRadialShortcutBox.Text = group.Shortcut ?? "Ctrl+Shift+A";
+
+        FullTileSpacingSlider.Value = group.TileSpacing > 0 ? group.TileSpacing : 8;
+        FullTaskbarGapSlider.Value = group.TaskbarOffset;
 
         UpdateFullVisibility();
         _isUpdatingFullUI = false;
@@ -152,6 +267,15 @@ public sealed partial class GroupsPage : Page
     private void UpdateFullVisibility()
     {
         if (_currentSettingsGroup == null) return;
+
+        bool isRadial = _currentSettingsGroup.GroupType == GroupType.Radial;
+        FullRadialSettingsCard.Visibility = isRadial ? Visibility.Visible : Visibility.Collapsed;
+        FullLayoutCard.Visibility = isRadial ? Visibility.Collapsed : Visibility.Visible;
+        FullTitleLabelsCard.Visibility = isRadial ? Visibility.Collapsed : Visibility.Visible;
+        FullBehaviorCard.Visibility = isRadial ? Visibility.Collapsed : Visibility.Visible;
+
+        if (isRadial) return;
+
         bool isCompact = FullPopupStyleCombo.SelectedIndex == 1;
         FullAlignmentCombo.Visibility = isCompact ? Visibility.Visible : Visibility.Collapsed;
 
@@ -185,21 +309,41 @@ public sealed partial class GroupsPage : Page
         _currentSettingsGroup.BackdropStyle = FullPopupBackdropCombo.SelectedIndex;
         _currentSettingsGroup.CompactAlignment = FullAlignmentCombo.SelectedIndex;
         _currentSettingsGroup.AppIconStyle = FullAppIconStyleCombo.SelectedIndex;
+        _currentSettingsGroup.RunningIndicatorStyle = FullRunningIndicatorStyleCombo.SelectedIndex == 1 ? 0 : (FullRunningIndicatorStyleCombo.SelectedIndex == 2 ? 1 : -1);
         _currentSettingsGroup.ThemeOverride = FullThemeOverrideCombo.SelectedIndex;
         _currentSettingsGroup.TitleAlignment = (int)FullTitleAlignmentSlider.Value;
+        _currentSettingsGroup.TaskbarOffset = (int)Math.Round(FullTaskbarGapSlider.Value);
+        _currentSettingsGroup.TileSpacing = (int)Math.Round(FullTileSpacingSlider.Value);
+        _currentSettingsGroup.FolderIconStyle = FullFolderIconStyleCombo.SelectedIndex;
+        _currentSettingsGroup.MonochromeFolderIcon = FullMonochromeFolderIconToggle.IsOn;
+        _currentSettingsGroup.OverrideBorderColor = FullOverrideBorderColorToggle.IsOn;
+        FullBorderColorButton.Visibility = FullOverrideBorderColorToggle.IsOn ? Visibility.Visible : Visibility.Collapsed;
 
         GroupService.Instance.Save();
         UpdateFullVisibility();
-        if (_currentSettingsGroup.IsPinned) TaskbarService.PinGroup(_currentSettingsGroup);
+        if (_currentSettingsGroup.IsPinned) TaskbarService.UpdateGroupShortcut(_currentSettingsGroup);
+    }
+
+    private void FullTaskbarGapSlider_ValueChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    {
+        if (_isUpdatingFullUI || _currentSettingsGroup == null) return;
+        int val = (int)Math.Round(e.NewValue);
+        _currentSettingsGroup.TaskbarOffset = val;
+        GroupService.Instance.Save();
+    }
+
+    private void FullCustomBorderColorPicker_ColorChanged(ColorPicker sender, ColorChangedEventArgs args)
+    {
+        if (_isUpdatingFullUI || _currentSettingsGroup == null) return;
+        var c = args.NewColor;
+        _currentSettingsGroup.CustomBorderColor = $"#{c.R:X2}{c.G:X2}{c.B:X2}";
+        GroupService.Instance.Save();
     }
 
     private void FullGapSettingChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
     {
         if (_isUpdatingFullUI || _currentSettingsGroup == null) return;
-        _currentSettingsGroup.TaskbarOffset = (int)FullTaskbarOffsetSlider.Value;
-        FullTaskbarOffsetValText.Text = $"{_currentSettingsGroup.TaskbarOffset}px";
-        _currentSettingsGroup.TileSpacing = (int)FullTileSpacingSlider.Value;
-        FullTileSpacingValText.Text = $"{_currentSettingsGroup.TileSpacing}px";
+        _currentSettingsGroup.TileSpacing = (int)Math.Round(FullTileSpacingSlider.Value);
         GroupService.Instance.Save();
     }
 
@@ -215,6 +359,17 @@ public sealed partial class GroupsPage : Page
     {
         if (_currentSettingsGroup != null)
         {
+            foreach (var app in _currentSettingsGroup.Apps)
+            {
+                if (string.IsNullOrEmpty(app.IconPath) && !string.IsNullOrEmpty(app.ExePath))
+                {
+                    try
+                    {
+                        app.IconPath = IconHelper.GetOrExtractIcon(app.ExePath);
+                    }
+                    catch { }
+                }
+            }
             FullAppsListView.ItemsSource = null;
             FullAppsListView.ItemsSource = new System.Collections.ObjectModel.ObservableCollection<AppEntry>(_currentSettingsGroup.Apps);
         }
@@ -228,7 +383,103 @@ public sealed partial class GroupsPage : Page
         {
             _currentSettingsGroup.Name = newName;
             GroupService.Instance.Save();
-            if (_currentSettingsGroup.IsPinned) TaskbarService.PinGroup(_currentSettingsGroup);
+            if (_currentSettingsGroup.IsPinned) TaskbarService.UpdateGroupShortcut(_currentSettingsGroup);
+        }
+
+        if (FullPreviewTitleText != null)
+        {
+            FullPreviewTitleText.Text = string.IsNullOrWhiteSpace(newName) ? "Sample" : newName;
+            UpdateFullPreviewTitlePosition((int)FullTitleAlignmentSlider.Value, animate: false);
+        }
+    }
+
+    private void FullAddFile_Click(object sender, RoutedEventArgs e)
+    {
+        FullAddAppBtn_Click(sender, e);
+    }
+
+    private async void FullAddInstalledApp_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentSettingsGroup == null) return;
+        try
+        {
+            var searchBox = new TextBox { PlaceholderText = "Search apps...", Margin = new Thickness(0, 0, 0, 10) };
+            var loading = new ProgressRing { IsActive = true, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 20, 0, 20) };
+            var listView = new ListView
+            {
+                MaxHeight = 280,
+                SelectionMode = ListViewSelectionMode.Multiple,
+                Visibility = Visibility.Collapsed
+            };
+
+            string templateXaml = @"
+<DataTemplate xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation"">
+    <Grid Padding=""4,3"" ColumnSpacing=""10"">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width=""Auto""/>
+            <ColumnDefinition Width=""*""/>
+        </Grid.ColumnDefinitions>
+        <FontIcon Grid.Column=""0"" Glyph=""&#xE71D;"" FontSize=""14"" VerticalAlignment=""Center""/>
+        <TextBlock Grid.Column=""1"" Text=""{Binding Name}"" VerticalAlignment=""Center"" TextTrimming=""CharacterEllipsis""/>
+    </Grid>
+</DataTemplate>";
+            listView.ItemTemplate = (DataTemplate)Microsoft.UI.Xaml.Markup.XamlReader.Load(templateXaml);
+
+            var allApps = new List<AppEntry>();
+            var displayApps = new System.Collections.ObjectModel.ObservableCollection<AppEntry>();
+            listView.ItemsSource = displayApps;
+
+            searchBox.TextChanged += (_, _) =>
+            {
+                displayApps.Clear();
+                var q = searchBox.Text.Trim();
+                var filtered = string.IsNullOrEmpty(q) ? allApps : allApps.Where(a => a.Name.Contains(q, StringComparison.OrdinalIgnoreCase));
+                foreach (var a in filtered) displayApps.Add(a);
+            };
+
+            var stack = new StackPanel { Width = 360, Children = { searchBox, loading, listView } };
+            var dialog = new ContentDialog
+            {
+                Title = "Add Installed Apps",
+                Content = stack,
+                PrimaryButtonText = "Add",
+                CloseButtonText = "Cancel",
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = this.XamlRoot
+            };
+
+            _ = System.Threading.Tasks.Task.Run(() => AppDiscoveryService.GetInstalledApps()).ContinueWith(t =>
+            {
+                DispatcherQueue.TryEnqueue(() =>
+                {
+                    allApps = t.Result;
+                    foreach (var a in allApps) displayApps.Add(a);
+                    loading.IsActive = false;
+                    loading.Visibility = Visibility.Collapsed;
+                    listView.Visibility = Visibility.Visible;
+                });
+            });
+
+            if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+            {
+                foreach (var item in listView.SelectedItems.OfType<AppEntry>())
+                {
+                    _currentSettingsGroup.Apps.Add(new AppEntry
+                    {
+                        Name = item.Name,
+                        ExePath = item.ExePath,
+                        IconPath = item.IconPath,
+                        TileSize = 1
+                    });
+                }
+                GroupService.Instance.Save();
+                if (_currentSettingsGroup.IsPinned) TaskbarService.UpdateGroupShortcut(_currentSettingsGroup);
+                RefreshFullAppsList();
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error adding installed apps in full settings: {ex.Message}");
         }
     }
 
@@ -266,14 +517,18 @@ public sealed partial class GroupsPage : Page
                     return System.IO.Path.GetFileNameWithoutExtension(file.Path);
                 });
 
+                string iconPath = "";
+                try { iconPath = IconHelper.GetOrExtractIcon(file.Path); } catch { }
+
                 _currentSettingsGroup.Apps.Add(new AppEntry
                 {
                     Name = friendlyName,
                     ExePath = file.Path,
+                    IconPath = iconPath,
                     TileSize = 1
                 });
                 GroupService.Instance.Save();
-                if (_currentSettingsGroup.IsPinned) TaskbarService.PinGroup(_currentSettingsGroup);
+                if (_currentSettingsGroup.IsPinned) TaskbarService.UpdateGroupShortcut(_currentSettingsGroup);
                 RefreshFullAppsList();
             }
         }
@@ -292,7 +547,7 @@ public sealed partial class GroupsPage : Page
             _currentSettingsGroup.Apps.RemoveAt(idx);
             _currentSettingsGroup.Apps.Insert(idx - 1, app);
             GroupService.Instance.Save();
-            if (_currentSettingsGroup.IsPinned) TaskbarService.PinGroup(_currentSettingsGroup);
+            if (_currentSettingsGroup.IsPinned) TaskbarService.UpdateGroupShortcut(_currentSettingsGroup);
             RefreshFullAppsList();
         }
     }
@@ -306,7 +561,7 @@ public sealed partial class GroupsPage : Page
             _currentSettingsGroup.Apps.RemoveAt(idx);
             _currentSettingsGroup.Apps.Insert(idx + 1, app);
             GroupService.Instance.Save();
-            if (_currentSettingsGroup.IsPinned) TaskbarService.PinGroup(_currentSettingsGroup);
+            if (_currentSettingsGroup.IsPinned) TaskbarService.UpdateGroupShortcut(_currentSettingsGroup);
             RefreshFullAppsList();
         }
     }
@@ -314,9 +569,8 @@ public sealed partial class GroupsPage : Page
     private void FullAppCycleSize_Click(object sender, RoutedEventArgs e)
     {
         if (_currentSettingsGroup == null || sender is not Button btn || btn.Tag is not AppEntry app) return;
-        app.TileSize = (app.TileSize % 3) + 1;
+        app.TileSize = (app.TileSize % 4) + 1;
         GroupService.Instance.Save();
-        if (_currentSettingsGroup.IsPinned) TaskbarService.PinGroup(_currentSettingsGroup);
         RefreshFullAppsList();
     }
 
@@ -325,7 +579,7 @@ public sealed partial class GroupsPage : Page
         if (_currentSettingsGroup == null || sender is not Button btn || btn.Tag is not AppEntry app) return;
         _currentSettingsGroup.Apps.Remove(app);
         GroupService.Instance.Save();
-        if (_currentSettingsGroup.IsPinned) TaskbarService.PinGroup(_currentSettingsGroup);
+        if (_currentSettingsGroup.IsPinned) TaskbarService.UpdateGroupShortcut(_currentSettingsGroup);
         RefreshFullAppsList();
     }
 
@@ -351,149 +605,290 @@ public sealed partial class GroupsPage : Page
         }
     }
 
+    private void FullRadialShortcutBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_isUpdatingFullUI || _currentSettingsGroup == null) return;
+        _currentSettingsGroup.Shortcut = FullRadialShortcutBox.Text.Trim();
+        GroupService.Instance.Save();
+        HotkeyService.Instance.UpdateAllHotkeys();
+    }
+
+    private void FullTestRadialBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentSettingsGroup == null) return;
+        RadialMenuManager.Show(_currentSettingsGroup);
+    }
+
+    private async void FullCustomIconButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentSettingsGroup == null) return;
+
+        var picker = new Windows.Storage.Pickers.FileOpenPicker();
+        var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(App.MainWindowInstance);
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+
+        picker.ViewMode = Windows.Storage.Pickers.PickerViewMode.Thumbnail;
+        picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.PicturesLibrary;
+        picker.FileTypeFilter.Add(".png");
+        picker.FileTypeFilter.Add(".jpg");
+        picker.FileTypeFilter.Add(".jpeg");
+        picker.FileTypeFilter.Add(".ico");
+
+        var file = await picker.PickSingleFileAsync();
+        if (file != null)
+        {
+            _currentSettingsGroup.CustomIconPath = file.Path;
+            FullClearCustomIconButton.Visibility = Visibility.Visible;
+            if (_currentSettingsGroup.IsPinned) TaskbarService.UpdateGroupShortcut(_currentSettingsGroup);
+            GroupService.Instance.Save();
+        }
+    }
+
+    private void FullClearCustomIconButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentSettingsGroup == null) return;
+        _currentSettingsGroup.CustomIconPath = string.Empty;
+        FullClearCustomIconButton.Visibility = Visibility.Collapsed;
+        if (_currentSettingsGroup.IsPinned) TaskbarService.UpdateGroupShortcut(_currentSettingsGroup);
+        GroupService.Instance.Save();
+    }
+
     private void RefreshGroups()
     {
         var groups = GroupService.Instance.Groups;
         EmptyState.Visibility = groups.Count == 0
             ? Visibility.Visible
             : Visibility.Collapsed;
+
+        bool useNiches = SettingsService.Current.UseNichesTerminology;
+        PageTitleText.Text = useNiches ? "Niches" : "Groups";
+        PageSubtitleText.Text = useNiches ? "Create and manage your niches." : "Create and manage your app groups.";
+        EmptyStateTitleText.Text = useNiches ? "No niches yet" : "No groups yet";
+        EmptyStateSubtitleText.Text = useNiches ? "Click the 'New niche' button below to create your first niche." : "Click the 'New group' button below to create your first group.";
+        AddGroupButtonText.Text = useNiches ? "New niche" : "New group";
+        ToolTipService.SetToolTip(AddGroupButton, useNiches ? "Create a new niche" : "Create a new group");
+        FlyoutHeaderTitle.Text = useNiches ? "Create new niche" : "Create new group";
+
+        ApplyLayoutForCurrentStyle();
     }
 
-    private async void AddGroupButton_Click(object sender, RoutedEventArgs e)
+    private bool _isOpeningDialog = false;
+
+    private async Task ShowContentDialogSafely(ContentDialog dialog)
     {
-        // ── Step 1: ask Apps or Files? ────────────────────────────────────────
-        var typeDialog = new ContentDialog
+        if (_isOpeningDialog) return;
+        _isOpeningDialog = true;
+        try
         {
-            Title         = "What kind of group?",
-            CloseButtonText = "Cancel",
-            XamlRoot      = XamlRoot
+            dialog.XamlRoot = this.XamlRoot;
+            for (int i = 0; i < 5; i++)
+            {
+                try
+                {
+                    await dialog.ShowAsync();
+                    break;
+                }
+                catch (System.Runtime.InteropServices.COMException ex) when ((uint)ex.HResult == 0x80000019)
+                {
+                    // If another dialog was closing, wait a moment and retry
+                    await System.Threading.Tasks.Task.Delay(150);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[GroupsPage] Dialog error: {ex}");
+        }
+        finally
+        {
+            _isOpeningDialog = false;
+        }
+    }
+
+    private async void NewAppGroupBtn_Click(object sender, RoutedEventArgs e)
+    {
+        NewGroupFlyout?.Hide();
+        var appDialog = new CreateGroupDialog { XamlRoot = this.XamlRoot };
+        await ShowContentDialogSafely(appDialog);
+        if (appDialog.ResultGroup != null)
+            GroupService.Instance.AddGroup(appDialog.ResultGroup);
+    }
+
+    private async void NewFileGroupBtn_Click(object sender, RoutedEventArgs e)
+    {
+        NewGroupFlyout?.Hide();
+        var fileDialog = new CreateFileGroupDialog { XamlRoot = this.XamlRoot };
+        fileDialog.WithGeneratedTemplate();
+        await ShowContentDialogSafely(fileDialog);
+        if (fileDialog.ResultGroup != null)
+            GroupService.Instance.AddGroup(fileDialog.ResultGroup);
+    }
+
+    private async void NewRadialGroupBtn_Click(object sender, RoutedEventArgs e)
+    {
+        NewGroupFlyout?.Hide();
+        var radialDialog = new CreateGroupDialog
+        {
+            XamlRoot = this.XamlRoot,
+            TargetGroupType = GroupType.Radial
+        };
+        await ShowContentDialogSafely(radialDialog);
+        if (radialDialog.ResultGroup != null)
+        {
+            GroupService.Instance.AddGroup(radialDialog.ResultGroup);
+            HotkeyService.Instance.UpdateAllHotkeys();
+        }
+    }
+
+    private void AddGroupButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            NewGroupFlyout?.ShowAt(AddGroupButton);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[GroupsPage] AddGroupButton_Click error: {ex}");
+        }
+    }
+
+    // ─── Fullscreen Title Alignment Preview ──────────────────────────────────────
+
+    private DispatcherTimer? _fullPreviewHideTimer;
+    private bool _fullPreviewVisible = false;
+    private Storyboard? _fullPreviewOpacitySb;
+    private const double FullPreviewContainerFullHeight = 48;
+
+    private void SetupFullTitleAlignmentPreview()
+    {
+        if (FullPreviewTitleHost != null)
+            FullPreviewTitleHost.SizeChanged += (s, e) => UpdateFullPreviewTitlePosition((int)FullTitleAlignmentSlider.Value, animate: false);
+
+        if (FullTitleAlignmentSlider != null)
+        {
+            FullTitleAlignmentSlider.AddHandler(UIElement.PointerPressedEvent, new PointerEventHandler((s, e) => ShowFullPreview()), true);
+        }
+
+        _fullPreviewHideTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1300) };
+        _fullPreviewHideTimer.Tick += (s, e) =>
+        {
+            _fullPreviewHideTimer!.Stop();
+            FadeOutFullPreview();
+        };
+    }
+
+    private void ShowFullPreview()
+    {
+        // Suppressed per user request
+    }
+
+    private void FadeOutFullPreview()
+    {
+        if (FullTitlePreviewHost == null || FullTitlePreviewContainer == null || !_fullPreviewVisible) return;
+
+        _fullPreviewOpacitySb?.Stop();
+
+        var opacityAnim = new Microsoft.UI.Xaml.Media.Animation.DoubleAnimation
+        {
+            From = FullTitlePreviewHost.Opacity,
+            To = 0.0,
+            Duration = new Duration(TimeSpan.FromMilliseconds(160)),
+            EasingFunction = new Microsoft.UI.Xaml.Media.Animation.CubicEase { EasingMode = Microsoft.UI.Xaml.Media.Animation.EasingMode.EaseIn }
+        };
+        _fullPreviewOpacitySb = new Storyboard();
+        Storyboard.SetTarget(opacityAnim, FullTitlePreviewHost);
+        Storyboard.SetTargetProperty(opacityAnim, "Opacity");
+        _fullPreviewOpacitySb.Children.Add(opacityAnim);
+        _fullPreviewOpacitySb.Completed += (s, e) =>
+        {
+            AnimateFullContainerHeight(FullTitlePreviewContainer.Height, 0, 200, Microsoft.UI.Xaml.Media.Animation.EasingMode.EaseInOut, () =>
+            {
+                _fullPreviewVisible = false;
+            });
+        };
+        _fullPreviewOpacitySb.Begin();
+    }
+
+    private DispatcherTimer? _fullHeightAnimTimer;
+    private void AnimateFullContainerHeight(double from, double to, int durationMs, Microsoft.UI.Xaml.Media.Animation.EasingMode easing, Action? onComplete)
+    {
+        _fullHeightAnimTimer?.Stop();
+        if (Math.Abs(from - to) < 0.5)
+        {
+            FullTitlePreviewContainer.Height = to;
+            onComplete?.Invoke();
+            return;
+        }
+
+        FullTitlePreviewContainer.Height = from;
+        double elapsed = 0;
+        double interval = 1000.0 / 60.0;
+        var ease = new Microsoft.UI.Xaml.Media.Animation.CubicEase { EasingMode = easing };
+
+        _fullHeightAnimTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(interval) };
+        _fullHeightAnimTimer.Tick += (s, e) =>
+        {
+            elapsed += interval;
+            double progress = Math.Min(1.0, elapsed / durationMs);
+            double easedProgress = ease.Ease(progress);
+            FullTitlePreviewContainer.Height = from + (to - from) * easedProgress;
+
+            if (progress >= 1.0)
+            {
+                _fullHeightAnimTimer!.Stop();
+                FullTitlePreviewContainer.Height = to;
+                onComplete?.Invoke();
+            }
+        };
+        _fullHeightAnimTimer.Start();
+    }
+
+    private void UpdateFullPreviewTitlePosition(int align, bool animate = true)
+    {
+        if (FullPreviewTitleHost == null || FullPreviewTitleText == null || FullPreviewTitleTransform == null) return;
+
+        double hostWidth = FullPreviewTitleHost.ActualWidth > 0 ? FullPreviewTitleHost.ActualWidth : 172;
+        double textWidth = FullPreviewTitleText.ActualWidth > 0 ? FullPreviewTitleText.ActualWidth : 48;
+
+        double targetX = align switch
+        {
+            0 => 0,
+            1 => Math.Max(0, (hostWidth - textWidth) / 2.0),
+            2 => Math.Max(0, hostWidth - textWidth),
+            _ => 0
         };
 
-        var appsBtn = new Button
+        if (animate && Math.Abs(FullPreviewTitleTransform.X - targetX) > 0.5)
         {
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            HorizontalContentAlignment = HorizontalAlignment.Stretch,
-            Padding = new Thickness(16, 16, 16, 16),
-            CornerRadius = new Microsoft.UI.Xaml.CornerRadius(8),
-            Background = new SolidColorBrush(Windows.UI.Color.FromArgb(15, 255, 255, 255)),
-            BorderThickness = new Thickness(1),
-            BorderBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(10, 255, 255, 255)),
-            Margin = new Thickness(0, 0, 0, 8)
-        };
-        var filesBtn = new Button
-        {
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            HorizontalContentAlignment = HorizontalAlignment.Stretch,
-            Padding = new Thickness(16, 16, 16, 16),
-            CornerRadius = new Microsoft.UI.Xaml.CornerRadius(8),
-            Background = new SolidColorBrush(Windows.UI.Color.FromArgb(15, 255, 255, 255)),
-            BorderThickness = new Thickness(1),
-            BorderBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(10, 255, 255, 255))
-        };
-
-        // Apps card content
-        var appsIcon = new FontIcon { Glyph = "\uECAA", FontSize = 32, VerticalAlignment = VerticalAlignment.Center, RenderTransformOrigin = new Windows.Foundation.Point(0.5, 0.5), RenderTransform = new Microsoft.UI.Xaml.Media.RotateTransform() };
-        var appsTextPanel = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(16, 0, 0, 0) };
-        appsTextPanel.Children.Add(new TextBlock { Text = "Apps", FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, FontSize = 16 });
-        appsTextPanel.Children.Add(new TextBlock { Text = "Launch apps from a popup", FontSize = 12, Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"] });
-        var appsGrid = new Grid();
-        appsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        appsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        Grid.SetColumn(appsIcon, 0); Grid.SetColumn(appsTextPanel, 1);
-        appsGrid.Children.Add(appsIcon); appsGrid.Children.Add(appsTextPanel);
-        appsBtn.Content = appsGrid;
-
-        // Apps animation
-        appsBtn.PointerEntered += (_, _) =>
-        {
-            var sb = new Microsoft.UI.Xaml.Media.Animation.Storyboard();
-            var anim = new Microsoft.UI.Xaml.Media.Animation.DoubleAnimationUsingKeyFrames();
-            Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTarget(anim, appsIcon.RenderTransform);
-            Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTargetProperty(anim, "Angle");
-            anim.KeyFrames.Add(new Microsoft.UI.Xaml.Media.Animation.EasingDoubleKeyFrame { KeyTime = TimeSpan.FromMilliseconds(100), Value = -15 });
-            anim.KeyFrames.Add(new Microsoft.UI.Xaml.Media.Animation.EasingDoubleKeyFrame { KeyTime = TimeSpan.FromMilliseconds(200), Value = 15 });
-            anim.KeyFrames.Add(new Microsoft.UI.Xaml.Media.Animation.EasingDoubleKeyFrame { KeyTime = TimeSpan.FromMilliseconds(300), Value = 0 });
+            var anim = new Microsoft.UI.Xaml.Media.Animation.DoubleAnimation
+            {
+                To = targetX,
+                Duration = new Duration(TimeSpan.FromMilliseconds(200)),
+                EasingFunction = new Microsoft.UI.Xaml.Media.Animation.CubicEase { EasingMode = Microsoft.UI.Xaml.Media.Animation.EasingMode.EaseOut }
+            };
+            var sb = new Storyboard();
+            Storyboard.SetTarget(anim, FullPreviewTitleTransform);
+            Storyboard.SetTargetProperty(anim, "X");
             sb.Children.Add(anim);
             sb.Begin();
-        };
-        appsBtn.PointerExited += (_, _) =>
-        {
-            if (appsIcon.RenderTransform is Microsoft.UI.Xaml.Media.RotateTransform rt) rt.Angle = 0;
-        };
-
-        // Files card content
-        var filesIcon = new FontIcon { Glyph = "\uE8B7", FontSize = 32, VerticalAlignment = VerticalAlignment.Center };
-        var filesTransformGroup = new Microsoft.UI.Xaml.Media.TransformGroup();
-        filesTransformGroup.Children.Add(new Microsoft.UI.Xaml.Media.RotateTransform());
-        filesTransformGroup.Children.Add(new Microsoft.UI.Xaml.Media.TranslateTransform());
-        filesIcon.RenderTransformOrigin = new Windows.Foundation.Point(0.5, 0.5);
-        filesIcon.RenderTransform = filesTransformGroup;
-
-        var filesTextPanel = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(16, 0, 0, 0) };
-        var filesTitleRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        filesTitleRow.Children.Add(new TextBlock { Text = "Files", FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, FontSize = 16 });
-        filesTitleRow.Children.Add(new Border { CornerRadius = new Microsoft.UI.Xaml.CornerRadius(4), Background = new SolidColorBrush(Windows.UI.Color.FromArgb(40, 255, 180, 0)), Padding = new Thickness(6, 2, 6, 2), VerticalAlignment = VerticalAlignment.Center, Child = new TextBlock { Text = "Experimental", FontSize = 10, Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 255, 200, 50)) } });
-        filesTextPanel.Children.Add(filesTitleRow);
-        filesTextPanel.Children.Add(new TextBlock { Text = "Open files with their default apps", FontSize = 12, Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"] });
-        var filesGrid = new Grid();
-        filesGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        filesGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        Grid.SetColumn(filesIcon, 0); Grid.SetColumn(filesTextPanel, 1);
-        filesGrid.Children.Add(filesIcon); filesGrid.Children.Add(filesTextPanel);
-        filesBtn.Content = filesGrid;
-
-        // Files animation
-        filesBtn.PointerEntered += (_, _) =>
-        {
-            filesIcon.Glyph = "\uE838"; // open folder
-            var sb = new Microsoft.UI.Xaml.Media.Animation.Storyboard();
-            var ease = new Microsoft.UI.Xaml.Media.Animation.CubicEase { EasingMode = Microsoft.UI.Xaml.Media.Animation.EasingMode.EaseOut };
-            var rot = new Microsoft.UI.Xaml.Media.Animation.DoubleAnimation { To = -10, Duration = new Duration(TimeSpan.FromMilliseconds(150)), AutoReverse = true, EasingFunction = ease };
-            var trans = new Microsoft.UI.Xaml.Media.Animation.DoubleAnimation { To = -4, Duration = new Duration(TimeSpan.FromMilliseconds(150)), AutoReverse = true, EasingFunction = ease };
-            Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTarget(rot, filesTransformGroup.Children[0]);
-            Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTargetProperty(rot, "Angle");
-            Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTarget(trans, filesTransformGroup.Children[1]);
-            Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTargetProperty(trans, "Y");
-            sb.Children.Add(rot); sb.Children.Add(trans);
-            sb.Begin();
-        };
-        filesBtn.PointerExited += (_, _) =>
-        {
-            filesIcon.Glyph = "\uE8B7"; // normal folder
-            if (filesTransformGroup.Children[0] is Microsoft.UI.Xaml.Media.RotateTransform rt) rt.Angle = 0;
-            if (filesTransformGroup.Children[1] is Microsoft.UI.Xaml.Media.TranslateTransform tt) tt.Y = 0;
-        };
-
-        var chosen = GroupType.Apps;
-        bool buttonClicked = false;
-        appsBtn.Click  += (_, _) => { chosen = GroupType.Apps;  buttonClicked = true; typeDialog.Hide(); };
-        filesBtn.Click += (_, _) => { chosen = GroupType.Files; buttonClicked = true; typeDialog.Hide(); };
-
-        typeDialog.Content = new StackPanel
-        {
-            Spacing = 12,
-            Width   = 320,
-            Children = { appsBtn, filesBtn }
-        };
-
-        await typeDialog.ShowAsync();
-        if (!buttonClicked) return; // user hit Cancel
-
-        // ── Step 2: open the appropriate creation dialog ──────────────────────
-        if (chosen == GroupType.Files)
-        {
-            var fileDialog = new CreateFileGroupDialog { XamlRoot = XamlRoot };
-            fileDialog.WithGeneratedTemplate();
-            await fileDialog.ShowAsync();
-            if (fileDialog.ResultGroup != null)
-                GroupService.Instance.AddGroup(fileDialog.ResultGroup);
         }
         else
         {
-            var appDialog = new CreateGroupDialog { XamlRoot = XamlRoot };
-            var result = await appDialog.ShowAsync();
-            if (appDialog.ResultGroup != null)
-                GroupService.Instance.AddGroup(appDialog.ResultGroup);
+            FullPreviewTitleTransform.X = targetX;
         }
+    }
+
+    private void FullTitleAlignmentSlider_ValueChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    {
+        if (_isUpdatingFullUI || _currentSettingsGroup == null) return;
+        int align = (int)Math.Round(e.NewValue);
+        _currentSettingsGroup.TitleAlignment = align;
+        GroupService.Instance.Save();
+
+        ShowFullPreview();
+        _fullPreviewHideTimer?.Stop();
+        _fullPreviewHideTimer?.Start();
+
+        UpdateFullPreviewTitlePosition(align);
     }
 }

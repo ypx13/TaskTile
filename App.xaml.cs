@@ -19,53 +19,97 @@ public partial class App : Application
 
     public App()
     {
+        AppDomain.CurrentDomain.ProcessExit += (s, e) => {
+            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] ProcessExit triggered!");
+        };
+        AppDomain.CurrentDomain.UnhandledException += (s, e) => {
+            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] UnhandledException: {e.ExceptionObject}");
+        };
         this.InitializeComponent();
         this.UnhandledException += App_UnhandledException;
+        try
+        {
+            SettingsService.Load();
+            ApplyCubeKitGlowUI(false);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[App] Init error: {ex}");
+        }
+    }
+
+    public static void ApplyCubeKitGlowUI(bool enable)
+    {
+        // Cancelled per user request: pure WinUI 3 / Fluent UI 2 always
     }
 
     private void App_UnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
     {
-        try
-        {
-            System.IO.File.WriteAllText(
-                System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.Desktop), "tasktile_crash.txt"),
-                e.Exception.ToString());
-        } catch { }
+        System.Diagnostics.Debug.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] XAML UnhandledException: {e.Exception}");
+        e.Handled = true;
     }
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
+        SettingsService.Load();
         var cmdArgs = Environment.GetCommandLineArgs();
         bool isPopup = false;
         string? groupId = null;
-        for(int i=0; i<cmdArgs.Length; i++) {
-            if (cmdArgs[i] == "--group" && i+1 < cmdArgs.Length) {
+        string? action = null;
+        for (int i = 0; i < cmdArgs.Length; i++)
+        {
+            if (cmdArgs[i] == "--group" && i + 1 < cmdArgs.Length)
+            {
                 isPopup = true;
-                groupId = cmdArgs[i+1];
-                break;
+                groupId = cmdArgs[i + 1];
+            }
+            else if (cmdArgs[i] == "--edit")
+            {
+                action = "edit";
+            }
+            else if (cmdArgs[i] == "--parent-settings" || cmdArgs[i] == "--settings")
+            {
+                action = "parent-settings";
+            }
+            else if (cmdArgs[i] == "--rename")
+            {
+                action = "rename";
             }
         }
 
         if (isPopup && Guid.TryParse(groupId, out var parsedGuid))
         {
-            try
+            // Parent settings belong to the manager window (AUMID "TaskTile"), not the pin.
+            if (action == "parent-settings")
             {
-                using (var client = new NamedPipeClientStream(".", "TaskTilePipe", PipeDirection.Out, PipeOptions.Asynchronous))
+                try
                 {
-                    client.Connect(100);
-                    using (var writer = new StreamWriter(client))
+                    using (var client = new NamedPipeClientStream(".", "TaskTilePipe", PipeDirection.Out, PipeOptions.Asynchronous))
                     {
-                        writer.WriteLine(groupId);
-                        writer.Flush();
+                        client.Connect(150);
+                        using (var writer = new StreamWriter(client))
+                        {
+                            writer.WriteLine($"SETTINGS_GROUP:{groupId}");
+                            writer.Flush();
+                        }
                     }
+                    Environment.Exit(0);
+                    return;
                 }
-                Environment.Exit(0);
-                return;
+                catch { }
             }
-            catch
+            else
             {
-                // Fallback: If no server is running, just launch directly
-                var w = new TaskTile.Popups.PopupWindow(parsedGuid.ToString());
+                // Stay in this process so the pin's AUMID stays bound on 25H2.
+                var group = GroupService.Instance.Groups.FirstOrDefault(g => g.Id == parsedGuid);
+                if (group != null)
+                    JumpListService.UpdateGroupJumpList(group);
+                if (group != null && group.GroupType == Models.GroupType.Radial)
+                {
+                    RadialMenuManager.Show(group);
+                    return;
+                }
+                var w = new TaskTile.Popups.PopupWindow(parsedGuid.ToString(), action);
                 w.Activate();
                 return;
             }
@@ -107,10 +151,42 @@ public partial class App : Application
             SettingsService.Save();
         }
 
+        if (s.UsePinToTaskbarIntent)
+        {
+            TaskbarService.WarmupBridge();
+        }
+
+        bool isBackground = cmdArgs.Contains("--background");
+
         // Launch main window
         var mw = new MainWindow();
         MainWindowInstance = mw;
-        mw.Activate();
+        if (!isBackground)
+        {
+            mw.Activate();
+        }
+        else
+        {
+            mw.Activate();
+            mw.AppWindow.Hide();
+        }
+
+        // Start background Windows Settings card injection monitoring
+        SettingsCardService.StartMonitoring();
+
+        // Initialize Live Notification Badge service
+        NotificationBadgeService.Initialize();
+
+        // Register Windows Jump Lists for all app groups
+        JumpListService.RegisterAllJumpLists();
+
+        if (action == "parent-settings" && !string.IsNullOrEmpty(groupId))
+        {
+            mw.DispatcherQueue.TryEnqueue(() =>
+            {
+                mw.OpenGroupParentSettings(groupId);
+            });
+        }
 
         // Run bar detection after window is ready (async, non-blocking)
         mw.DispatcherQueue.TryEnqueue(async () =>

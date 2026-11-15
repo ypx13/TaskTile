@@ -1,22 +1,51 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using TaskTile.Models;
 using TaskTile.Services;
-using System.Linq;
-using System.Collections.ObjectModel;
+using TaskTile.Popups;
 using System;
-using System.Threading.Tasks;
+using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace TaskTile.Controls;
 
 public sealed partial class GroupCard : UserControl
 {
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    static extern bool ClientToScreen(IntPtr hWnd, ref POINT lpPoint);
+
+    [StructLayout(LayoutKind.Sequential)]
+    struct POINT
+    {
+        public int X;
+        public int Y;
+    }
+
     private AppGroup? _group;
     private bool _isUpdatingUI = false;
 
     public static event Action<GroupCard, AppGroup>? OpenFullSettingsRequested;
+    public static event Action? EditModeRequested;
+
+    private static readonly List<GroupCard> _activeCards = new();
+    private static bool _isGlobalEditMode = false;
+    private bool _isEditMode = false;
+    private DispatcherTimer? _holdTimer;
+    private Windows.Foundation.Point _pressPoint;
+
+    public static void SetGlobalEditMode(bool enable)
+    {
+        _isGlobalEditMode = enable;
+        foreach (var card in _activeCards.ToList())
+        {
+            card.SetEditMode(enable);
+        }
+    }
 
     public static readonly DependencyProperty GroupDataProperty =
         DependencyProperty.Register(nameof(GroupData), typeof(AppGroup), typeof(GroupCard),
@@ -31,9 +60,75 @@ public sealed partial class GroupCard : UserControl
     public GroupCard()
     {
         this.InitializeComponent();
-        if (SettingsButton?.Flyout is Flyout flyout)
+        this.Loaded += (s, e) =>
         {
-            flyout.Closed += GroupSettingsFlyout_Closed;
+            if (!_activeCards.Contains(this)) _activeCards.Add(this);
+            if (_isGlobalEditMode)
+            {
+                this.DispatcherQueue?.TryEnqueue(() => SetEditMode(true));
+            }
+            if (_group != null)
+            {
+                int style = SettingsService.Current.GroupCardStyle;
+                DefaultLayoutRoot.Visibility = (style == 0) ? Visibility.Visible : Visibility.Collapsed;
+                VisitorIdLayoutRoot.Visibility = (style == 1) ? Visibility.Visible : Visibility.Collapsed;
+                SuperCompactLayoutRoot.Visibility = (style == 2) ? Visibility.Visible : Visibility.Collapsed;
+
+                if (style == 2) CardBorder.Padding = new Thickness(14, 8, 14, 8);
+                else if (style == 1) CardBorder.Padding = new Thickness(14, 12, 14, 12);
+                else CardBorder.Padding = new Thickness(16);
+            }
+            TaskbarService.GroupPinChanged -= OnGroupPinChanged;
+            TaskbarService.GroupPinChanged += OnGroupPinChanged;
+            UpdateSquarePlate(CardBorder.ActualWidth);
+        };
+        this.Unloaded += (s, e) =>
+        {
+            TaskbarService.GroupPinChanged -= OnGroupPinChanged;
+            _activeCards.Remove(this);
+            _holdTimer?.Stop();
+        };
+        CardBorder.SizeChanged += CardBorder_SizeChanged;
+    }
+
+    private void OnGroupPinChanged(AppGroup group)
+    {
+        if (_group?.Id == group.Id)
+        {
+            this.DispatcherQueue?.TryEnqueue(() =>
+            {
+                UpdatePinState(group.IsPinned);
+            });
+        }
+    }
+
+    private void UpdateSquarePlate(double cardWidth)
+    {
+        if (VisitorIconPlate != null && cardWidth > 40)
+        {
+            double padding = CardBorder.Padding.Left + CardBorder.Padding.Right;
+            double avail = Math.Max(cardWidth - padding, 40);
+            double size = Math.Min(avail, 114);
+            VisitorIconPlate.Width = size;
+            VisitorIconPlate.Height = size;
+        }
+    }
+
+    private void CardBorder_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (e.NewSize.Width > 0 && e.NewSize.Height > 0)
+        {
+            UpdateSquarePlate(e.NewSize.Width);
+            try
+            {
+                var visual = Microsoft.UI.Xaml.Hosting.ElementCompositionPreview.GetElementVisual(CardBorder);
+                visual.CenterPoint = new System.Numerics.Vector3((float)e.NewSize.Width / 2f, (float)e.NewSize.Height / 2f, 0f);
+                if (_isEditMode)
+                {
+                    ApplyShakeAnimation(visual);
+                }
+            }
+            catch { }
         }
     }
 
@@ -42,140 +137,286 @@ public sealed partial class GroupCard : UserControl
         if (d is GroupCard card && e.NewValue is AppGroup group)
         {
             card.Populate(group);
+            if (_isGlobalEditMode)
+            {
+                card.DispatcherQueue?.TryEnqueue(() => card.SetEditMode(true));
+            }
         }
     }
 
-    private void Populate(AppGroup group)
+    public void Populate(AppGroup group)
     {
         _group = group;
         _isUpdatingUI = true;
 
-        GroupNameText.Text = string.IsNullOrEmpty(group.Name) ? "Group" : group.Name;
+        int style = SettingsService.Current.GroupCardStyle;
+        DefaultLayoutRoot.Visibility = (style == 0) ? Visibility.Visible : Visibility.Collapsed;
+        VisitorIdLayoutRoot.Visibility = (style == 1) ? Visibility.Visible : Visibility.Collapsed;
+        SuperCompactLayoutRoot.Visibility = (style == 2) ? Visibility.Visible : Visibility.Collapsed;
+
+        if (style == 2) CardBorder.Padding = new Thickness(14, 8, 14, 8);
+        else if (style == 1) CardBorder.Padding = new Thickness(14, 12, 14, 12);
+        else CardBorder.Padding = new Thickness(16);
+
+        var name = string.IsNullOrEmpty(group.Name) ? "Group" : group.Name;
+        GroupNameText.Text = name;
+        VisitorGroupNameText.Text = name;
+        SuperCompactGroupNameText.Text = name;
+
+        bool useNiches = SettingsService.Current.UseNichesTerminology;
+        RenameMenuItem.Text = useNiches ? "Rename Niche" : "Rename Group";
+        DeleteMenuItem.Text = useNiches ? "Delete Niche" : "Delete Group";
+        ToolTipService.SetToolTip(SettingsButton, useNiches ? "Niche settings" : "Group settings");
+        ToolTipService.SetToolTip(VisitorSettingsButton, useNiches ? "Niche settings" : "Group settings");
+        ToolTipService.SetToolTip(SuperCompactSettingsButton, useNiches ? "Niche settings" : "Group settings");
+        ToolTipService.SetToolTip(DeleteButton, useNiches ? "Delete niche" : "Delete group");
+        ToolTipService.SetToolTip(VisitorDeleteButton, useNiches ? "Delete niche" : "Delete group");
+        ToolTipService.SetToolTip(SuperCompactDeleteButton, useNiches ? "Delete niche" : "Delete group");
         
+        string countText;
+        string glyph;
         if (group.GroupType == GroupType.Files)
         {
-            AppCountText.Text = group.IsDynamicFolder ? "Dynamic folder" : (group.Apps.Count == 1 ? "1 file" : $"{group.Apps.Count} files");
-            PlaceholderIcon.Glyph = group.IsDynamicFolder ? "\uE8B7" : "\uE8A5";
+            countText = group.IsDynamicFolder ? "Dynamic folder" : (group.Apps.Count == 1 ? "1 file" : $"{group.Apps.Count} files");
+            glyph = group.IsDynamicFolder ? "\uE8B7" : "\uE8A5";
+        }
+        else if (group.GroupType == GroupType.Radial)
+        {
+            countText = group.Apps.Count == 1 ? "1 app" : $"{group.Apps.Count} apps";
+            glyph = "\uEE94";
         }
         else
         {
-            AppCountText.Text = group.Apps.Count == 1 ? "1 app" : $"{group.Apps.Count} apps";
-            PlaceholderIcon.Glyph = "\uF168";
+            countText = group.Apps.Count == 1 ? "1 app" : $"{group.Apps.Count} apps";
+            glyph = "\uF168";
         }
+        AppCountText.Text = countText;
+        VisitorAppCountText.Text = countText;
+        SuperCompactAppCountText.Text = countText;
+        PlaceholderIcon.Glyph = glyph;
+        VisitorPlaceholderIcon.Glyph = glyph;
+        SuperCompactPlaceholderIcon.Glyph = glyph;
+
+        bool isMono = group.MonochromeFolderIcon;
 
         if (!string.IsNullOrEmpty(group.CustomIconPath) && System.IO.File.Exists(group.CustomIconPath))
         {
-            try { GroupIconImage.Source = new BitmapImage(new Uri(group.CustomIconPath)); } catch {}
+            try
+            {
+                string iconPath = isMono
+                    ? IconHelper.GetOrExtractMonochromeIcon(group.CustomIconPath)
+                    : group.CustomIconPath;
+                var bmp = new BitmapImage(new Uri(iconPath));
+                GroupIconImage.Source = bmp;
+                VisitorSingleImage.Source = bmp;
+                SuperCompactSingleImage.Source = bmp;
+            } catch {}
             GroupIconImage.Visibility = Visibility.Visible;
+            VisitorSingleImage.Visibility = Visibility.Visible;
+            SuperCompactSingleImage.Visibility = Visibility.Visible;
+            VisitorGridIcons.Visibility = Visibility.Collapsed;
+            SuperCompactGridIcons.Visibility = Visibility.Collapsed;
             PlaceholderIcon.Visibility = Visibility.Collapsed;
-            ClearCustomIconButton.Visibility = Visibility.Visible;
+            VisitorPlaceholderIcon.Visibility = Visibility.Collapsed;
+            SuperCompactPlaceholderIcon.Visibility = Visibility.Collapsed;
         }
         else if (group.Apps.Count > 0 || (group.IsDynamicFolder && !string.IsNullOrEmpty(group.DynamicFolderPath) && System.IO.Directory.Exists(group.DynamicFolderPath)))
         {
-            ClearCustomIconButton.Visibility = Visibility.Collapsed;
             var dispatcher = this.DispatcherQueue;
             _ = System.Threading.Tasks.Task.Run(() =>
             {
+                var paths = new List<string>();
+                if (group.IsDynamicFolder && !string.IsNullOrEmpty(group.DynamicFolderPath) && System.IO.Directory.Exists(group.DynamicFolderPath))
+                {
+                    paths.AddRange(System.IO.Directory.GetFileSystemEntries(group.DynamicFolderPath)
+                        .Where(f => (new System.IO.FileInfo(f).Attributes & (System.IO.FileAttributes.Hidden | System.IO.FileAttributes.System)) == 0)
+                        .Take(4));
+                }
+                else
+                {
+                    paths.AddRange(group.Apps.Take(4).Select(a => a.ExePath));
+                }
+
+                var extractedPaths = new List<string>();
+                foreach (var p in paths)
+                {
+                    string ep = isMono
+                        ? IconHelper.GetOrExtractMonochromeIcon(p)
+                        : IconHelper.GetOrExtractIcon(p);
+                    if (!string.IsNullOrEmpty(ep) && System.IO.File.Exists(ep))
+                    {
+                        extractedPaths.Add(ep);
+                    }
+                }
+
                 var iconPath = TaskbarService.GenerateGroupIcon(group, out string? pngPath);
                 string? previewPath = !string.IsNullOrEmpty(pngPath) && System.IO.File.Exists(pngPath) ? pngPath : iconPath;
-                if (!string.IsNullOrEmpty(previewPath) && System.IO.File.Exists(previewPath))
+
+                dispatcher?.TryEnqueue(() =>
                 {
-                    dispatcher?.TryEnqueue(() =>
+                    try
                     {
-                        try
+                        PlaceholderIcon.Visibility = Visibility.Collapsed;
+                        VisitorPlaceholderIcon.Visibility = Visibility.Collapsed;
+                        SuperCompactPlaceholderIcon.Visibility = Visibility.Collapsed;
+
+                        // Default layout icon
+                        if (extractedPaths.Count == 1)
+                        {
+                            GroupIconImage.Source = new BitmapImage(new Uri(extractedPaths[0]));
+                            GroupIconImage.Visibility = Visibility.Visible;
+                        }
+                        else if (!string.IsNullOrEmpty(previewPath) && System.IO.File.Exists(previewPath))
                         {
                             GroupIconImage.Source = new BitmapImage(new Uri(previewPath));
                             GroupIconImage.Visibility = Visibility.Visible;
-                            PlaceholderIcon.Visibility = Visibility.Collapsed;
                         }
-                        catch { }
-                    });
-                }
+
+                        // Visitor ID layout: clean native high-res icons (no black bg or borders)
+                        if (extractedPaths.Count == 1)
+                        {
+                            VisitorSingleImage.Source = new BitmapImage(new Uri(extractedPaths[0]));
+                            VisitorSingleImage.Visibility = Visibility.Visible;
+                            VisitorGridIcons.Visibility = Visibility.Collapsed;
+                        }
+                        else if (extractedPaths.Count > 1)
+                        {
+                            VisitorSingleImage.Visibility = Visibility.Collapsed;
+                            VisitorGridIcons.Visibility = Visibility.Visible;
+
+                            Image[] slots = { VisitorIcon0, VisitorIcon1, VisitorIcon2, VisitorIcon3 };
+                            for (int i = 0; i < slots.Length; i++)
+                            {
+                                if (i < extractedPaths.Count)
+                                {
+                                    slots[i].Source = new BitmapImage(new Uri(extractedPaths[i]));
+                                    slots[i].Visibility = Visibility.Visible;
+                                }
+                                else
+                                {
+                                    slots[i].Source = null;
+                                    slots[i].Visibility = Visibility.Collapsed;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            VisitorSingleImage.Visibility = Visibility.Collapsed;
+                            VisitorGridIcons.Visibility = Visibility.Collapsed;
+                            VisitorPlaceholderIcon.Visibility = Visibility.Visible;
+                        }
+
+                        // Super Compact layout:
+                        if (extractedPaths.Count == 1)
+                        {
+                            SuperCompactSingleImage.Source = new BitmapImage(new Uri(extractedPaths[0]));
+                            SuperCompactSingleImage.Visibility = Visibility.Visible;
+                            SuperCompactGridIcons.Visibility = Visibility.Collapsed;
+                        }
+                        else if (extractedPaths.Count > 1)
+                        {
+                            SuperCompactSingleImage.Visibility = Visibility.Collapsed;
+                            SuperCompactGridIcons.Visibility = Visibility.Visible;
+
+                            Image[] scSlots = { SuperCompactIcon0, SuperCompactIcon1, SuperCompactIcon2, SuperCompactIcon3 };
+                            for (int i = 0; i < scSlots.Length; i++)
+                            {
+                                if (i < extractedPaths.Count)
+                                {
+                                    scSlots[i].Source = new BitmapImage(new Uri(extractedPaths[i]));
+                                    scSlots[i].Visibility = Visibility.Visible;
+                                }
+                                else
+                                {
+                                    scSlots[i].Source = null;
+                                    scSlots[i].Visibility = Visibility.Collapsed;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            SuperCompactSingleImage.Visibility = Visibility.Collapsed;
+                            SuperCompactGridIcons.Visibility = Visibility.Collapsed;
+                            SuperCompactPlaceholderIcon.Visibility = Visibility.Visible;
+                        }
+                    }
+                    catch { }
+                });
             });
         }
         else
         {
-            ClearCustomIconButton.Visibility = Visibility.Collapsed;
             GroupIconImage.Source = null;
+            VisitorSingleImage.Source = null;
+            SuperCompactSingleImage.Source = null;
             GroupIconImage.Visibility = Visibility.Collapsed;
+            VisitorSingleImage.Visibility = Visibility.Collapsed;
+            SuperCompactSingleImage.Visibility = Visibility.Collapsed;
+            VisitorGridIcons.Visibility = Visibility.Collapsed;
+            SuperCompactGridIcons.Visibility = Visibility.Collapsed;
             PlaceholderIcon.Visibility = Visibility.Visible;
+            VisitorPlaceholderIcon.Visibility = Visibility.Visible;
+            SuperCompactPlaceholderIcon.Visibility = Visibility.Visible;
         }
 
         UpdatePinState(group.IsPinned);
 
-        // Load settings
-        PopupStyleCombo.SelectedIndex = group.PopupStyle;
-        HideNameToggle.IsOn = group.HideName;
-        HideAppLabelsToggle.IsOn = group.HideAppLabels;
-        MarqueeAppLabelsToggle.IsOn = group.MarqueeAppLabels;
-        ScrollAppLabelsToggle.IsOn = group.ScrollAppLabels;
-        ShowCardLabelsToggle.IsOn = group.ShowCardLabels;
-        OverrideLaunchSideToggle.IsOn = group.OverrideLaunchSide;
-        LaunchPositionCombo.SelectedIndex = group.GroupLaunchSide;
-        OverrideBorderColorToggle.IsOn = group.OverrideBorderColor;
-        try {
-            string hex = group.CustomBorderColor;
-            if (!string.IsNullOrEmpty(hex) && hex.Length >= 7) {
-                byte r = byte.Parse(hex.Substring(1, 2), System.Globalization.NumberStyles.HexNumber);
-                byte g = byte.Parse(hex.Substring(3, 2), System.Globalization.NumberStyles.HexNumber);
-                byte b = byte.Parse(hex.Substring(5, 2), System.Globalization.NumberStyles.HexNumber);
-                CustomBorderColorPicker.Color = Windows.UI.Color.FromArgb(255, r, g, b);
-            }
-        } catch {}
-        DisableAnimationToggle.IsOn = group.DisableAnimation;
-        DisableFloatToggle.IsOn = group.DisableFloat;
-        DisableRoundedCornersToggle.IsOn = group.DisableRoundedCorners;
-        DisableAutoHideToggle.IsOn = group.DisableAutoHide;
-        MakeMainFocusToggle.IsOn = group.MakeMainFocus;
-        KeepOpenToggle.IsOn = group.KeepOpen;
-        DesktopModeToggle.IsOn = group.IsDesktopMode;
-        PopupBackdropCombo.SelectedIndex = group.BackdropStyle;
-        FolderIconStyleCombo.SelectedIndex = group.AppIconStyle;
-        AlignmentCombo.SelectedIndex = group.CompactAlignment;
-        MonochromeFolderIconToggle.IsOn = group.MonochromeFolderIcon;
-        AppIconStyleCombo.SelectedIndex = group.AppIconStyle;
-        ThemeOverrideCombo.SelectedIndex = group.ThemeOverride;
-        TitleAlignmentSlider.Value = group.TitleAlignment;
-        TaskbarOffsetSlider.Value = group.TaskbarOffset;
-        TaskbarOffsetValText.Text = $"{group.TaskbarOffset}px";
-        TileSpacingSlider.Value = group.TileSpacing;
-        TileSpacingValText.Text = $"{group.TileSpacing}px";
-        ColumnsBox.Value = group.GridColumns;
-        RowsBox.Value = group.GridRows;
+        // Populate Mini Quick Settings Flyout controls
+        QuickSettingsTitleText.Text = SettingsService.Current.UseNichesTerminology ? "Niche Settings" : "Group Settings";
+
+        if (group.GroupType == GroupType.Radial)
+        {
+            string appLabel = group.Apps.Count == 1 ? "1 app" : $"{group.Apps.Count} apps";
+            AppCountText.Text = VisitorAppCountText.Text = SuperCompactAppCountText.Text = $"{appLabel} • Shortcut: {group.Shortcut}";
+            StandardQuickSettingsPanel.Visibility = Visibility.Collapsed;
+            RadialQuickSettingsPanel.Visibility = Visibility.Visible;
+            RadialShortcutBox.Text = group.Shortcut ?? "Ctrl+Shift+A";
+        }
+        else
+        {
+            StandardQuickSettingsPanel.Visibility = Visibility.Visible;
+            RadialQuickSettingsPanel.Visibility = Visibility.Collapsed;
+
+            PopupStyleCombo.SelectedIndex = Math.Clamp(group.PopupStyle, 0, 4);
+            PopupBackdropCombo.SelectedIndex = Math.Clamp(group.BackdropStyle, 0, 3);
+            PopupThemeCombo.SelectedIndex = Math.Clamp(group.ThemeOverride, 0, 2);
+            HideNameToggle.IsOn = group.HideName;
+            HideAppLabelsToggle.IsOn = group.HideAppLabels;
+            MiniTaskbarGapSlider.Value = group.TaskbarOffset;
+            int titleAlign = group.TitleAlignment < 0 ? SettingsService.Current.TitleAlignment : group.TitleAlignment;
+            MiniTitleAlignmentSlider.Value = Math.Clamp(titleAlign, 0, 2);
+        }
 
         _isUpdatingUI = false;
-        UpdateVisibility();
-    }
-
-    private void Card_PointerEntered(object sender, PointerRoutedEventArgs e)
-    {
-        VisualStateManager.GoToState(this, "PointerOver", true);
-        HoverIn.Begin();
-    }
-
-    private void Card_PointerExited(object sender, PointerRoutedEventArgs e)
-    {
-        VisualStateManager.GoToState(this, "Normal", true);
-        HoverOut.Begin();
     }
 
     private void UpdatePinState(bool isPinned)
     {
+        if (_group?.GroupType == GroupType.Radial)
+        {
+            PinButton.Visibility = VisitorPinButton.Visibility = SuperCompactPinButton.Visibility = Visibility.Collapsed;
+            SettingsButton.Visibility = VisitorSettingsButton.Visibility = SuperCompactSettingsButton.Visibility = Visibility.Visible;
+            DeleteButton.Visibility = VisitorDeleteButton.Visibility = SuperCompactDeleteButton.Visibility = Visibility.Visible;
+            return;
+        }
+
+        PinButton.Visibility = VisitorPinButton.Visibility = SuperCompactPinButton.Visibility = Visibility.Visible;
+        var accentStyle = (Style)Application.Current.Resources["AccentButtonStyle"];
         if (isPinned)
         {
-            PinIcon.Glyph = "\uE77A"; // Unpin
-            PinText.Text = "Remove Shortcut";
-            PinButton.Style = (Style)Application.Current.Resources["AccentButtonStyle"];
-            SettingsButton.Visibility = Visibility.Visible;
-            DeleteButton.Visibility = Visibility.Visible;
+            PinIcon.Glyph = VisitorPinIcon.Glyph = SuperCompactPinIcon.Glyph = "\uE77A"; // Unpin
+            PinText.Text = VisitorPinText.Text = SuperCompactPinText.Text = "Unpin";
+            PinButton.Style = VisitorPinButton.Style = SuperCompactPinButton.Style = accentStyle;
+            SettingsButton.Visibility = VisitorSettingsButton.Visibility = SuperCompactSettingsButton.Visibility = Visibility.Visible;
+            DeleteButton.Visibility = VisitorDeleteButton.Visibility = SuperCompactDeleteButton.Visibility = Visibility.Visible;
         }
         else
         {
-            PinIcon.Glyph = "\uE718"; // Pin
-            PinText.Text = "Desktop Shortcut";
-            PinButton.Style = null; // default style
-            SettingsButton.Visibility = Visibility.Visible;
-            DeleteButton.Visibility = Visibility.Visible;
+            PinIcon.Glyph = VisitorPinIcon.Glyph = SuperCompactPinIcon.Glyph = "\uE718"; // Pin
+            PinText.Text = VisitorPinText.Text = SuperCompactPinText.Text = "Pin";
+            PinButton.Style = VisitorPinButton.Style = SuperCompactPinButton.Style = null; // default style
+            SettingsButton.Visibility = VisitorSettingsButton.Visibility = SuperCompactSettingsButton.Visibility = Visibility.Visible;
+            DeleteButton.Visibility = VisitorDeleteButton.Visibility = SuperCompactDeleteButton.Visibility = Visibility.Visible;
             Grid.SetColumnSpan(PinButton, 1);
         }
     }
@@ -183,26 +424,22 @@ public sealed partial class GroupCard : UserControl
     private void PinButton_Click(object sender, RoutedEventArgs e)
     {
         if (_group == null) return;
-        _group.IsPinned = !_group.IsPinned;
         if (_group.IsPinned)
-            TaskbarService.PinGroup(_group);
-        else
             TaskbarService.UnpinGroup(_group);
-        UpdatePinState(_group.IsPinned);
-        GroupService.Instance.Save();
-        UpdateVisibility();
+        else
+            TaskbarService.PinGroup(_group);
     }
-
-
 
     private async void DeleteButton_Click(object sender, RoutedEventArgs e)
     {
         if (_group == null) return;
         
+        bool useNiches = SettingsService.Current.UseNichesTerminology;
+        string entity = useNiches ? "Niche" : "Group";
         var dialog = new ContentDialog
         {
-            Title = "Delete Group?",
-            Content = $"Are you sure you want to delete '{_group.Name}'?\n\nIf you have pinned this group to the Taskbar, you must unpin it manually by right-clicking it.",
+            Title = $"Delete {entity}?",
+            Content = $"Are you sure you want to delete '{_group.Name}'?\n\nIf you have pinned this {entity.ToLower()} to the Taskbar, you must unpin it manually by right-clicking it.",
             PrimaryButtonText = "Delete",
             CloseButtonText = "Cancel",
             DefaultButton = ContentDialogButton.Close,
@@ -213,147 +450,550 @@ public sealed partial class GroupCard : UserControl
         {
             if (_group.IsPinned) TaskbarService.UnpinGroup(_group);
             GroupService.Instance.RemoveGroup(_group.Id);
+            HotkeyService.Instance.UpdateAllHotkeys();
         }
+    }
+
+    private void SettingsButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_group == null) return;
+        if (sender is FrameworkElement fe)
+            SettingsFlyout.ShowAt(fe);
+        else
+            SettingsFlyout.ShowAt(SettingsButton);
+    }
+
+    private void CloseMiniSettingsBtn_Click(object sender, RoutedEventArgs e)
+    {
+        SettingsFlyout.Hide();
+    }
+
+    private void FullscreenSettingsBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (_group == null) return;
+        SettingsFlyout.Hide();
+        OpenFullSettingsRequested?.Invoke(this, _group);
     }
 
     private void SettingChanged(object sender, RoutedEventArgs e)
     {
         if (_isUpdatingUI || _group == null) return;
 
-        _group.PopupStyle = PopupStyleCombo.SelectedIndex;
-        _group.HideName = HideNameToggle.IsOn;
-        _group.HideAppLabels = HideAppLabelsToggle.IsOn;
-        _group.MarqueeAppLabels = MarqueeAppLabelsToggle.IsOn;
-        _group.ScrollAppLabels = ScrollAppLabelsToggle.IsOn;
-        _group.ShowCardLabels = ShowCardLabelsToggle.IsOn;
-        _group.OverrideLaunchSide = OverrideLaunchSideToggle.IsOn;
-        _group.OverrideBorderColor = OverrideBorderColorToggle.IsOn;
-        _group.GroupLaunchSide = LaunchPositionCombo.SelectedIndex;
-        _group.DisableAnimation = DisableAnimationToggle.IsOn;
-        _group.DisableFloat = DisableFloatToggle.IsOn;
-        _group.DisableRoundedCorners = DisableRoundedCornersToggle.IsOn;
-        _group.DisableAutoHide = DisableAutoHideToggle.IsOn;
-        _group.MakeMainFocus = MakeMainFocusToggle.IsOn;
-        _group.KeepOpen = KeepOpenToggle.IsOn;
-        _group.IsDesktopMode = DesktopModeToggle.IsOn;
-        _group.BackdropStyle = PopupBackdropCombo.SelectedIndex;
-        _group.FolderIconStyle = FolderIconStyleCombo.SelectedIndex;
-        _group.CompactAlignment = AlignmentCombo.SelectedIndex;
-        _group.MonochromeFolderIcon = MonochromeFolderIconToggle.IsOn;
-        _group.AppIconStyle = AppIconStyleCombo.SelectedIndex;
-        _group.ThemeOverride = ThemeOverrideCombo.SelectedIndex;
-        _group.TitleAlignment = (int)TitleAlignmentSlider.Value;
-
-        GroupService.Instance.Save();
-        UpdateVisibility();
-
-        if (_group.IsPinned)
-            TaskbarService.PinGroup(_group); // update pin with new settings if needed
-    }
-
-    private void NumberBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
-    {
-        if (_isUpdatingUI || _group == null) return;
-        
-        if (sender == ColumnsBox) _group.GridColumns = (int)Math.Max(0, Math.Min(10, args.NewValue));
-        else if (sender == RowsBox) _group.GridRows = (int)Math.Max(0, Math.Min(10, args.NewValue));
-        
-        GroupService.Instance.Save();
-        UpdateVisibility();
-    }
-
-    private async void CustomIconButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (_group == null) return;
-
-        var picker = new Windows.Storage.Pickers.FileOpenPicker();
-        var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(App.MainWindowInstance);
-        WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
-
-        picker.ViewMode = Windows.Storage.Pickers.PickerViewMode.Thumbnail;
-        picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.PicturesLibrary;
-        picker.FileTypeFilter.Add(".png");
-        picker.FileTypeFilter.Add(".jpg");
-        picker.FileTypeFilter.Add(".jpeg");
-        picker.FileTypeFilter.Add(".ico");
-
-        var file = await picker.PickSingleFileAsync();
-        if (file != null)
+        if (_group.GroupType != GroupType.Radial)
         {
-            _group.CustomIconPath = file.Path;
-            ClearCustomIconButton.Visibility = Visibility.Visible;
-            if (_group.IsPinned) TaskbarService.PinGroup(_group);
-            Populate(_group);
-            GroupService.Instance.Save();
-        }
-    }
+            if (PopupStyleCombo.SelectedIndex >= 0)
+                _group.PopupStyle = PopupStyleCombo.SelectedIndex;
+            if (PopupBackdropCombo.SelectedIndex >= 0)
+                _group.BackdropStyle = PopupBackdropCombo.SelectedIndex;
+            if (PopupThemeCombo.SelectedIndex >= 0)
+                _group.ThemeOverride = PopupThemeCombo.SelectedIndex;
 
-    private void ClearCustomIconButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (_group == null) return;
-        _group.CustomIconPath = string.Empty;
-        ClearCustomIconButton.Visibility = Visibility.Collapsed;
-        if (_group.IsPinned) TaskbarService.PinGroup(_group);
+            _group.HideName = HideNameToggle.IsOn;
+            _group.HideAppLabels = HideAppLabelsToggle.IsOn;
+        }
+
+        GroupService.Instance.Save();
+
         Populate(_group);
+    }
+
+    private void MiniTaskbarGapSlider_ValueChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    {
+        if (_isUpdatingUI || _group == null) return;
+        int val = (int)Math.Round(e.NewValue);
+        _group.TaskbarOffset = val;
         GroupService.Instance.Save();
     }
 
-    private void UpdateVisibility()
+    private void MiniTitleAlignmentSlider_ValueChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    {
+        if (_isUpdatingUI || _group == null) return;
+        int val = (int)Math.Round(e.NewValue);
+        _group.TitleAlignment = val;
+        GroupService.Instance.Save();
+    }
+
+    private void RadialShortcutBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_isUpdatingUI || _group == null) return;
+        _group.Shortcut = RadialShortcutBox.Text.Trim();
+        GroupService.Instance.Save();
+        HotkeyService.Instance.UpdateAllHotkeys();
+        AppCountText.Text = $"{_group.Apps.Count} apps • Shortcut: {_group.Shortcut}";
+    }
+
+    private void TestRadialBtn_Click(object sender, RoutedEventArgs e)
     {
         if (_group == null) return;
-        bool isClassic = _group.PopupStyle == 0;
-        bool isModern = _group.PopupStyle == 2;
-        bool showOverrides = (isClassic || isModern);
+        SettingsFlyout.Hide();
+        RadialMenuManager.Show(_group);
+    }
 
-        OverrideLaunchSideToggle.Visibility = showOverrides ? Visibility.Visible : Visibility.Collapsed;
+    private static GroupCard? _activeRenamingCard;
 
-        if (showOverrides && OverrideLaunchSideToggle.IsOn) {
-            LaunchPositionCombo.Visibility = Visibility.Visible;
-            MakeMainFocusToggle.Visibility = LaunchPositionCombo.SelectedIndex == 4 ? Visibility.Visible : Visibility.Collapsed;
-        } else {
-            LaunchPositionCombo.Visibility = Visibility.Collapsed;
-            MakeMainFocusToggle.Visibility = Visibility.Collapsed;
+    public static void CommitActiveRename()
+    {
+        if (_activeRenamingCard != null)
+        {
+            var card = _activeRenamingCard;
+            _activeRenamingCard = null;
+            card.CommitAnyInlineRename();
+        }
+    }
+
+    public void CommitAnyInlineRename()
+    {
+        if (GroupNameEditBox.Visibility == Visibility.Visible)
+            CommitInlineRename();
+        if (VisitorGroupNameEditBox.Visibility == Visibility.Visible)
+            CommitVisitorInlineRename();
+        if (SuperCompactGroupNameEditBox.Visibility == Visibility.Visible)
+            CommitSuperCompactInlineRename();
+    }
+
+    private void EditBox_PointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        e.Handled = true;
+        _holdTimer?.Stop();
+    }
+
+    private void GroupNameText_PointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        e.Handled = true;
+        _holdTimer?.Stop();
+        BeginInlineRename();
+    }
+
+    private void RenameContext_Click(object sender, RoutedEventArgs e)
+    {
+        int style = SettingsService.Current.GroupCardStyle;
+        if (style == 2)
+            BeginSuperCompactInlineRename();
+        else if (style == 1)
+            BeginVisitorInlineRename();
+        else
+            BeginInlineRename();
+    }
+
+    private void BeginInlineRename()
+    {
+        if (_group == null) return;
+        CommitActiveRename();
+        _activeRenamingCard = this;
+        _holdTimer?.Stop();
+        GroupNameText.Visibility = Visibility.Collapsed;
+        GroupNameEditBox.Visibility = Visibility.Visible;
+        GroupNameEditBox.Text = _group.Name;
+        GroupNameEditBox.SelectAll();
+        GroupNameEditBox.Focus(FocusState.Programmatic);
+    }
+
+    private void CommitInlineRename()
+    {
+        if (_group == null || GroupNameEditBox.Visibility != Visibility.Visible) return;
+        var newName = GroupNameEditBox.Text?.Trim();
+        if (!string.IsNullOrWhiteSpace(newName))
+        {
+            _group.Name = newName;
+            GroupNameText.Text = VisitorGroupNameText.Text = SuperCompactGroupNameText.Text = string.IsNullOrEmpty(_group.Name) ? "Group" : _group.Name;
+            GroupService.Instance.Save();
+            if (_group.IsPinned) TaskbarService.UpdateGroupShortcut(_group);
+        }
+        GroupNameEditBox.Visibility = Visibility.Collapsed;
+        GroupNameText.Visibility = Visibility.Visible;
+        if (_activeRenamingCard == this) _activeRenamingCard = null;
+    }
+
+    private void CancelInlineRename()
+    {
+        GroupNameEditBox.Visibility = Visibility.Collapsed;
+        GroupNameText.Visibility = Visibility.Visible;
+        if (_activeRenamingCard == this) _activeRenamingCard = null;
+    }
+
+    private void GroupNameEditBox_KeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key == Windows.System.VirtualKey.Enter)
+        {
+            CommitInlineRename();
+            e.Handled = true;
+        }
+        else if (e.Key == Windows.System.VirtualKey.Escape)
+        {
+            CancelInlineRename();
+            e.Handled = true;
+        }
+    }
+
+    private void GroupNameEditBox_LostFocus(object sender, RoutedEventArgs e)
+    {
+        CommitInlineRename();
+    }
+
+    private void VisitorGroupNameText_PointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        e.Handled = true;
+        _holdTimer?.Stop();
+        BeginVisitorInlineRename();
+    }
+
+    private void BeginVisitorInlineRename()
+    {
+        if (_group == null) return;
+        CommitActiveRename();
+        _activeRenamingCard = this;
+        _holdTimer?.Stop();
+        VisitorGroupNameText.Visibility = Visibility.Collapsed;
+        VisitorGroupNameEditBox.Visibility = Visibility.Visible;
+        VisitorGroupNameEditBox.Text = _group.Name;
+        VisitorGroupNameEditBox.SelectAll();
+        VisitorGroupNameEditBox.Focus(FocusState.Programmatic);
+    }
+
+    private void CommitVisitorInlineRename()
+    {
+        if (_group == null || VisitorGroupNameEditBox.Visibility != Visibility.Visible) return;
+        var newName = VisitorGroupNameEditBox.Text?.Trim();
+        if (!string.IsNullOrWhiteSpace(newName))
+        {
+            _group.Name = newName;
+            GroupNameText.Text = VisitorGroupNameText.Text = SuperCompactGroupNameText.Text = string.IsNullOrEmpty(_group.Name) ? "Group" : _group.Name;
+            GroupService.Instance.Save();
+            if (_group.IsPinned) TaskbarService.UpdateGroupShortcut(_group);
+        }
+        VisitorGroupNameEditBox.Visibility = Visibility.Collapsed;
+        VisitorGroupNameText.Visibility = Visibility.Visible;
+        if (_activeRenamingCard == this) _activeRenamingCard = null;
+    }
+
+    private void CancelVisitorInlineRename()
+    {
+        VisitorGroupNameEditBox.Visibility = Visibility.Collapsed;
+        VisitorGroupNameText.Visibility = Visibility.Visible;
+        if (_activeRenamingCard == this) _activeRenamingCard = null;
+    }
+
+    private void VisitorGroupNameEditBox_KeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key == Windows.System.VirtualKey.Enter)
+        {
+            CommitVisitorInlineRename();
+            e.Handled = true;
+        }
+        else if (e.Key == Windows.System.VirtualKey.Escape)
+        {
+            CancelVisitorInlineRename();
+            e.Handled = true;
+        }
+    }
+
+    private void VisitorGroupNameEditBox_LostFocus(object sender, RoutedEventArgs e)
+    {
+        CommitVisitorInlineRename();
+    }
+
+    private void SuperCompactGroupNameText_PointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        e.Handled = true;
+        _holdTimer?.Stop();
+        BeginSuperCompactInlineRename();
+    }
+
+    private void BeginSuperCompactInlineRename()
+    {
+        if (_group == null) return;
+        CommitActiveRename();
+        _activeRenamingCard = this;
+        _holdTimer?.Stop();
+        SuperCompactGroupNameText.Visibility = Visibility.Collapsed;
+        SuperCompactGroupNameEditBox.Visibility = Visibility.Visible;
+        SuperCompactGroupNameEditBox.Text = _group.Name;
+        SuperCompactGroupNameEditBox.SelectAll();
+        SuperCompactGroupNameEditBox.Focus(FocusState.Programmatic);
+    }
+
+    private void CommitSuperCompactInlineRename()
+    {
+        if (_group == null || SuperCompactGroupNameEditBox.Visibility != Visibility.Visible) return;
+        var newName = SuperCompactGroupNameEditBox.Text?.Trim();
+        if (!string.IsNullOrWhiteSpace(newName))
+        {
+            _group.Name = newName;
+            GroupNameText.Text = VisitorGroupNameText.Text = SuperCompactGroupNameText.Text = string.IsNullOrEmpty(_group.Name) ? "Group" : _group.Name;
+            GroupService.Instance.Save();
+            if (_group.IsPinned) TaskbarService.UpdateGroupShortcut(_group);
+        }
+        SuperCompactGroupNameEditBox.Visibility = Visibility.Collapsed;
+        SuperCompactGroupNameText.Visibility = Visibility.Visible;
+        if (_activeRenamingCard == this) _activeRenamingCard = null;
+    }
+
+    private void CancelSuperCompactInlineRename()
+    {
+        SuperCompactGroupNameEditBox.Visibility = Visibility.Collapsed;
+        SuperCompactGroupNameText.Visibility = Visibility.Visible;
+        if (_activeRenamingCard == this) _activeRenamingCard = null;
+    }
+
+    private void SuperCompactGroupNameEditBox_KeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key == Windows.System.VirtualKey.Enter)
+        {
+            CommitSuperCompactInlineRename();
+            e.Handled = true;
+        }
+        else if (e.Key == Windows.System.VirtualKey.Escape)
+        {
+            CancelSuperCompactInlineRename();
+            e.Handled = true;
+        }
+    }
+
+    private void SuperCompactGroupNameEditBox_LostFocus(object sender, RoutedEventArgs e)
+    {
+        CommitSuperCompactInlineRename();
+    }
+
+    private void VisitorIconPlate_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (e.NewSize.Width > 0 && Math.Abs(VisitorIconPlate.Height - e.NewSize.Width) > 1)
+        {
+            VisitorIconPlate.Height = e.NewSize.Width;
+        }
+    }
+
+    private void ApplyShakeAnimation(Microsoft.UI.Composition.Visual visual)
+    {
+        var comp = visual.Compositor;
+        float w = (float)CardBorder.ActualWidth;
+        float h = (float)CardBorder.ActualHeight;
+        if (w > 0 && h > 0)
+        {
+            visual.CenterPoint = new System.Numerics.Vector3(w / 2f, h / 2f, 0f);
         }
 
-        // Border color override is hidden for now
-        BorderColorButton.Visibility = OverrideBorderColorToggle.IsOn ? Visibility.Visible : Visibility.Collapsed;
+        var ease = comp.CreateCubicBezierEasingFunction(new System.Numerics.Vector2(0.42f, 0f), new System.Numerics.Vector2(0.58f, 1f));
+        var shakeAnim = comp.CreateScalarKeyFrameAnimation();
+        shakeAnim.InsertKeyFrame(0.00f, 0f);
+        shakeAnim.InsertKeyFrame(0.25f, -1.25f, ease);
+        shakeAnim.InsertKeyFrame(0.50f, 0f, ease);
+        shakeAnim.InsertKeyFrame(0.75f, 1.25f, ease);
+        shakeAnim.InsertKeyFrame(1.00f, 0f, ease);
+        shakeAnim.Duration = TimeSpan.FromMilliseconds(220 + (Math.Abs(this.GetHashCode()) % 40));
+        shakeAnim.IterationBehavior = Microsoft.UI.Composition.AnimationIterationBehavior.Forever;
+        visual.StartAnimation("RotationAngleInDegrees", shakeAnim);
     }
 
-    private void CustomBorderColorPicker_ColorChanged(Microsoft.UI.Xaml.Controls.ColorPicker sender, Microsoft.UI.Xaml.Controls.ColorChangedEventArgs args)
+    public void PlayRadialSquishSquash(UIElement? element)
     {
-        if (_isUpdatingUI || _group == null) return;
-        var c = args.NewColor;
-        _group.CustomBorderColor = $"#{c.R:X2}{c.G:X2}{c.B:X2}";
-        GroupService.Instance.Save();
+        if (element == null) return;
+        try
+        {
+            var visual = Microsoft.UI.Xaml.Hosting.ElementCompositionPreview.GetElementVisual(element);
+            var comp = visual.Compositor;
+            float w = (float)element.ActualSize.X;
+            float h = (float)element.ActualSize.Y;
+            if (w <= 0) w = 32f;
+            if (h <= 0) h = 32f;
+            visual.CenterPoint = new System.Numerics.Vector3(w / 2f, h / 2f, 0f);
+
+            var ease = comp.CreateCubicBezierEasingFunction(new System.Numerics.Vector2(0.3f, 0.0f), new System.Numerics.Vector2(0.2f, 1.0f));
+
+            var squish = comp.CreateVector3KeyFrameAnimation();
+            squish.InsertKeyFrame(0.00f, new System.Numerics.Vector3(1.00f, 1.00f, 1.0f));
+            squish.InsertKeyFrame(0.25f, new System.Numerics.Vector3(1.22f, 0.78f, 1.0f), ease); // squish
+            squish.InsertKeyFrame(0.55f, new System.Numerics.Vector3(0.85f, 1.18f, 1.0f), ease); // stretch
+            squish.InsertKeyFrame(0.80f, new System.Numerics.Vector3(1.04f, 0.96f, 1.0f), ease); // rebound
+            squish.InsertKeyFrame(1.00f, new System.Numerics.Vector3(1.00f, 1.00f, 1.0f), ease); // settle
+            squish.Duration = TimeSpan.FromMilliseconds(380);
+            visual.StartAnimation("Scale", squish);
+        }
+        catch { }
     }
 
-    private void GapSettingChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    public void SetEditMode(bool enable)
     {
-        if (_isUpdatingUI || _group == null) return;
-        _group.TaskbarOffset = (int)TaskbarOffsetSlider.Value;
-        TaskbarOffsetValText.Text = $"{_group.TaskbarOffset}px";
-        _group.TileSpacing = (int)TileSpacingSlider.Value;
-        TileSpacingValText.Text = $"{_group.TileSpacing}px";
-        GroupService.Instance.Save();
+        _isEditMode = enable;
+        CardBorder.CanDrag = enable;
+
+        try
+        {
+            var visual = Microsoft.UI.Xaml.Hosting.ElementCompositionPreview.GetElementVisual(CardBorder);
+            var comp = visual.Compositor;
+
+            if (enable)
+            {
+                float w = (float)CardBorder.ActualWidth;
+                float h = (float)CardBorder.ActualHeight;
+                if (w > 0 && h > 0)
+                {
+                    visual.CenterPoint = new System.Numerics.Vector3(w / 2f, h / 2f, 0f);
+                }
+
+                // Stop any previous rotation before starting bounce
+                visual.StopAnimation("RotationAngleInDegrees");
+                visual.RotationAngleInDegrees = 0f;
+
+                // 1. Bounce animation FIRST (shrink -> spring pop -> settle)
+                var batch = comp.CreateScopedBatch(Microsoft.UI.Composition.CompositionBatchTypes.Animation);
+
+                var easeOut = comp.CreateCubicBezierEasingFunction(new System.Numerics.Vector2(0.1f, 0.9f), new System.Numerics.Vector2(0.2f, 1.0f));
+                var easeIn = comp.CreateCubicBezierEasingFunction(new System.Numerics.Vector2(0.4f, 0.0f), new System.Numerics.Vector2(0.6f, 1.0f));
+
+                var scaleAnim = comp.CreateVector3KeyFrameAnimation();
+                scaleAnim.InsertKeyFrame(0.00f, new System.Numerics.Vector3(1.00f, 1.00f, 1f));
+                scaleAnim.InsertKeyFrame(0.28f, new System.Numerics.Vector3(0.90f, 0.90f, 1f), easeIn); // shrink in anticipation
+                scaleAnim.InsertKeyFrame(0.65f, new System.Numerics.Vector3(1.06f, 1.06f, 1f), easeOut); // spring pop
+                scaleAnim.InsertKeyFrame(0.85f, new System.Numerics.Vector3(0.98f, 0.98f, 1f)); // slight rebound
+                scaleAnim.InsertKeyFrame(1.00f, new System.Numerics.Vector3(1.00f, 1.00f, 1f)); // settle
+                scaleAnim.Duration = TimeSpan.FromMilliseconds(330);
+                visual.StartAnimation("Scale", scaleAnim);
+
+                // 2. Only start shaking AFTER the bounce settles!
+                batch.Completed += (s, ev) =>
+                {
+                    if (_isEditMode)
+                    {
+                        ApplyShakeAnimation(visual);
+                    }
+                };
+                batch.End();
+            }
+            else
+            {
+                visual.StopAnimation("RotationAngleInDegrees");
+                visual.RotationAngleInDegrees = 0f;
+
+                var restoreAnim = comp.CreateVector3KeyFrameAnimation();
+                restoreAnim.InsertKeyFrame(1.0f, new System.Numerics.Vector3(1f, 1f, 1f));
+                restoreAnim.Duration = TimeSpan.FromMilliseconds(150);
+                visual.StartAnimation("Scale", restoreAnim);
+            }
+        }
+        catch { }
     }
 
-    private void SettingsButton_Click(object sender, RoutedEventArgs e)
+    private void CardBorder_PointerEntered(object sender, PointerRoutedEventArgs e)
     {
-        if (_group == null) return;
-        SettingsButton.Flyout?.Hide();
-        OpenFullSettingsRequested?.Invoke(this, _group);
+        if (_group?.GroupType == GroupType.Radial)
+        {
+            PlayRadialSquishSquash(VisitorPlaceholderIcon);
+            PlayRadialSquishSquash(PlaceholderIcon);
+            PlayRadialSquishSquash(SuperCompactPlaceholderIcon);
+        }
     }
 
-    private void FullscreenSettingsBtn_Click(object sender, RoutedEventArgs e)
+    private void CardBorder_PointerPressed(object sender, PointerRoutedEventArgs e)
     {
-        if (_group == null) return;
-        SettingsButton.Flyout?.Hide();
-        OpenFullSettingsRequested?.Invoke(this, _group);
+        if (_group?.GroupType == GroupType.Radial)
+        {
+            PlayRadialSquishSquash(VisitorPlaceholderIcon);
+            PlayRadialSquishSquash(PlaceholderIcon);
+            PlayRadialSquishSquash(SuperCompactPlaceholderIcon);
+        }
+
+        if (_activeRenamingCard != null)
+        {
+            CommitActiveRename();
+            _holdTimer?.Stop();
+            e.Handled = true;
+            return;
+        }
+
+        if (_isEditMode) return;
+        _pressPoint = e.GetCurrentPoint(CardBorder).Position;
+        _holdTimer?.Stop();
+        _holdTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(450) };
+        _holdTimer.Tick += (s, ev) =>
+        {
+            _holdTimer.Stop();
+            EditModeRequested?.Invoke();
+        };
+        _holdTimer.Start();
     }
 
-    private void GroupSettingsFlyout_Closed(object sender, object e)
+    private void CardBorder_PointerReleased(object sender, PointerRoutedEventArgs e)
     {
-        FullscreenSettingsIcon.Glyph = "\uE740";
-        ToolTipService.SetToolTip(FullscreenSettingsBtn, "Open full settings tab");
+        _holdTimer?.Stop();
+        if (_isEditMode)
+        {
+            DispatcherQueue?.TryEnqueue(() =>
+            {
+                try
+                {
+                    var visual = Microsoft.UI.Xaml.Hosting.ElementCompositionPreview.GetElementVisual(CardBorder);
+                    ApplyShakeAnimation(visual);
+                }
+                catch { }
+            });
+        }
+    }
+
+    private void CardBorder_PointerCanceled(object sender, PointerRoutedEventArgs e)
+    {
+        _holdTimer?.Stop();
+    }
+
+    private void CardBorder_PointerMoved(object sender, PointerRoutedEventArgs e)
+    {
+        if (_holdTimer != null && _holdTimer.IsEnabled)
+        {
+            var cur = e.GetCurrentPoint(CardBorder).Position;
+            if (Math.Abs(cur.X - _pressPoint.X) > 10 || Math.Abs(cur.Y - _pressPoint.Y) > 10)
+            {
+                _holdTimer.Stop();
+            }
+        }
+    }
+
+    private void CardBorder_DragStarting(UIElement sender, DragStartingEventArgs args)
+    {
+        if (_group == null || !_isEditMode)
+        {
+            args.Cancel = true;
+            return;
+        }
+        args.Data.SetText(_group.Id.ToString());
+        args.Data.RequestedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Move;
+    }
+
+    private void CardBorder_DragOver(object sender, DragEventArgs e)
+    {
+        if (_isEditMode)
+        {
+            e.AcceptedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Move;
+        }
+    }
+
+    private async void CardBorder_Drop(object sender, DragEventArgs e)
+    {
+        if (!_isEditMode || _group == null) return;
+        try
+        {
+            if (e.DataView.Contains(Windows.ApplicationModel.DataTransfer.StandardDataFormats.Text))
+            {
+                var text = await e.DataView.GetTextAsync();
+                if (Guid.TryParse(text, out var sourceId))
+                {
+                    var groups = GroupService.Instance.Groups;
+                    var sourceGroup = groups.FirstOrDefault(g => g.Id == sourceId);
+                    if (sourceGroup != null && sourceGroup != _group)
+                    {
+                        int oldIndex = groups.IndexOf(sourceGroup);
+                        int newIndex = groups.IndexOf(_group);
+                        if (oldIndex >= 0 && newIndex >= 0)
+                        {
+                            groups.Move(oldIndex, newIndex);
+                            GroupService.Instance.Save();
+                            if (_isGlobalEditMode)
+                            {
+                                this.DispatcherQueue?.TryEnqueue(() => SetGlobalEditMode(true));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        catch { }
     }
 }

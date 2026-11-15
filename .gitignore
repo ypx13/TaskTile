@@ -1,4 +1,4 @@
-﻿## Build & Output
+## Build & Output
 bin/
 obj/
 publish_temp/
@@ -15,10 +15,19 @@ zip_stage/
 
 ## Temporary / Logs / Python scripts
 *.log
+*.binlog
 *.txt
 *.py
 *.backup
 *.tmp
+*.zip
+*.obj
+*.exp
+*.lib
+probe_*
+enable_settings_card.flag
+settings_now.png
+settings_screenshot.png
 thumbs.db
 ehthumbs.db
 Desktop.ini

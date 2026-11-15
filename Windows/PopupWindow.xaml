@@ -7,7 +7,7 @@
     xmlns:local="using:TaskTile.Popups" xmlns:popups="using:TaskTile.Popups"
     mc:Ignorable="d">
 
-    <Grid x:Name="_root" Background="Transparent" Opacity="0" VerticalAlignment="Stretch" PointerWheelChanged="ClassicSV_PointerWheelChanged">
+    <Grid x:Name="_root" Background="Transparent" Opacity="0" VerticalAlignment="Stretch">
         <Grid.RenderTransform>
             <TransformGroup>
                 <TranslateTransform x:Name="_rootTranslate" Y="0" />
@@ -48,27 +48,27 @@
                 </ResourceDictionary.ThemeDictionaries>
 
                 <Storyboard x:Key="_popIn" x:Name="_popIn">
-                    <DoubleAnimation x:Name="_popInOpacity" Storyboard.TargetName="_root" Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.140">
+                    <DoubleAnimation x:Name="_popInOpacity" Storyboard.TargetName="_root" Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.130">
                         <DoubleAnimation.EasingFunction>
                             <CubicEase EasingMode="EaseOut" />
                         </DoubleAnimation.EasingFunction>
                     </DoubleAnimation>
-                    <DoubleAnimation x:Name="_popInTranslateY" Storyboard.TargetName="_rootTranslate" Storyboard.TargetProperty="Y" From="12" To="0" Duration="0:0:0.140">
+                    <DoubleAnimation x:Name="_popInTranslateY" Storyboard.TargetName="_rootTranslate" Storyboard.TargetProperty="Y" From="14" To="0" Duration="0:0:0.170">
                         <DoubleAnimation.EasingFunction>
                             <CubicEase EasingMode="EaseOut" />
                         </DoubleAnimation.EasingFunction>
                     </DoubleAnimation>
-                    <DoubleAnimation x:Name="_popInTranslateX" Storyboard.TargetName="_rootTranslate" Storyboard.TargetProperty="X" From="0" To="0" Duration="0:0:0.140">
+                    <DoubleAnimation x:Name="_popInTranslateX" Storyboard.TargetName="_rootTranslate" Storyboard.TargetProperty="X" From="0" To="0" Duration="0:0:0.170">
                         <DoubleAnimation.EasingFunction>
                             <CubicEase EasingMode="EaseOut" />
                         </DoubleAnimation.EasingFunction>
                     </DoubleAnimation>
-                    <DoubleAnimation x:Name="_popInScaleX" Storyboard.TargetName="_rootScale" Storyboard.TargetProperty="ScaleX" From="0.98" To="1" Duration="0:0:0.140">
+                    <DoubleAnimation x:Name="_popInScaleX" Storyboard.TargetName="_rootScale" Storyboard.TargetProperty="ScaleX" From="0.99" To="1" Duration="0:0:0.160">
                         <DoubleAnimation.EasingFunction>
                             <CubicEase EasingMode="EaseOut" />
                         </DoubleAnimation.EasingFunction>
                     </DoubleAnimation>
-                    <DoubleAnimation x:Name="_popInScaleY" Storyboard.TargetName="_rootScale" Storyboard.TargetProperty="ScaleY" From="0.98" To="1" Duration="0:0:0.140">
+                    <DoubleAnimation x:Name="_popInScaleY" Storyboard.TargetName="_rootScale" Storyboard.TargetProperty="ScaleY" From="0.99" To="1" Duration="0:0:0.160">
                         <DoubleAnimation.EasingFunction>
                             <CubicEase EasingMode="EaseOut" />
                         </DoubleAnimation.EasingFunction>
@@ -83,7 +83,7 @@
         </Grid.Resources>
 
         <!-- Base container with padding, NO border to avoid clipping -->
-        <Border x:Name="_border" Padding="12" CornerRadius="4" BorderThickness="0">
+        <Border x:Name="_border" Padding="20,20,20,18" CornerRadius="{ThemeResource OverlayCornerRadius}" BorderThickness="0">
             <Grid x:Name="_content">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -91,24 +91,103 @@
                 </Grid.RowDefinitions>
 
                 <Grid x:Name="_headerGrid" Grid.Row="0" Margin="0,0,0,16">
-                    <TextBlock x:Name="_title" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorPrimaryBrush}" TextTrimming="CharacterEllipsis" />
+                    <!-- Inline Renameable Title Container -->
+                    <Grid x:Name="_titleContainer" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock x:Name="_title"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                                   TextTrimming="CharacterEllipsis"
+                                   PointerPressed="Title_PointerPressed"
+                                   ToolTipService.ToolTip="Click or right-click to edit or rename">
+                            <TextBlock.ContextFlyout>
+                                <MenuFlyout>
+                                    <MenuFlyoutItem Text="Edit app group" Click="EditGroup_Click">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xE70F;" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutItem Text="Edit app group (Parent)" Click="EditGroupParent_Click">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xE713;" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutSeparator />
+                                    <MenuFlyoutItem Text="Rename app group" Click="RenameGroup_Click">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xE8AC;" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                </MenuFlyout>
+                            </TextBlock.ContextFlyout>
+                        </TextBlock>
+                        <TextBox x:Name="_titleEditBox"
+                                 Visibility="Collapsed"
+                                 FontSize="14"
+                                 FontWeight="SemiBold"
+                                 Padding="6,2"
+                                 MinHeight="26"
+                                 VerticalAlignment="Center"
+                                 HorizontalAlignment="Center"
+                                 BorderThickness="0,0,0,2"
+                                 CornerRadius="4,4,0,0"
+                                 KeyDown="TitleEditBox_KeyDown"
+                                 LostFocus="TitleEditBox_LostFocus"/>
+                    </Grid>
+
+                    <!-- Quick Edit Icon Button (Header Right, AppGroup style) -->
+                    <Button x:Name="_headerEditBtn"
+                            Visibility="Collapsed"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Width="26" Height="26"
+                            Padding="0"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            CornerRadius="{ThemeResource ControlCornerRadius}"
+                            Click="EditGroup_Click"
+                            ToolTipService.ToolTip="Edit App Group">
+                        <FontIcon Glyph="&#xE70F;" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    </Button>
+
                     <StackPanel x:Name="_editModeHeaderPanel" Orientation="Horizontal" Spacing="6" Visibility="Collapsed" HorizontalAlignment="Right" VerticalAlignment="Center">
-                        <Button x:Name="_addAppBtn" ToolTipService.ToolTip="Add Application" Width="26" Height="26" Padding="0" Click="AddAppBtn_Click" CornerRadius="13" Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+                        <Button x:Name="_addAppBtn" ToolTipService.ToolTip="Add Application" Width="26" Height="26" Padding="0" CornerRadius="{ThemeResource ControlCornerRadius}" Background="{ThemeResource SubtleFillColorSecondaryBrush}">
                             <FontIcon Glyph="&#xE710;" FontSize="11" />
+                            <Button.Flyout>
+                                <MenuFlyout>
+                                    <MenuFlyoutItem Text="Specific file..." Click="AddSpecificFile_Click">
+                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8E5;" /></MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutItem Text="Installed app..." Click="AddInstalledApp_Click">
+                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE71D;" /></MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                </MenuFlyout>
+                            </Button.Flyout>
                         </Button>
-                        <Button x:Name="_doneEditBtn" ToolTipService.ToolTip="Done Editing" Width="26" Height="26" Padding="0" Click="DoneEditBtn_Click" CornerRadius="13" Style="{ThemeResource AccentButtonStyle}">
+                        <Button x:Name="_doneEditBtn" ToolTipService.ToolTip="Done Editing" Width="26" Height="26" Padding="0" Click="DoneEditBtn_Click" CornerRadius="{ThemeResource ControlCornerRadius}" Style="{ThemeResource AccentButtonStyle}">
                             <FontIcon Glyph="&#xE73E;" FontSize="11" />
                         </Button>
                     </StackPanel>
                 </Grid>
 
-                <Grid x:Name="_holder" Grid.Row="1">
+                <Grid x:Name="_holder" Grid.Row="1" ManipulationMode="None">
                     <!-- Classic -->
-                    <ScrollViewer x:Name="_classicSV" VerticalScrollBarVisibility="Hidden" VerticalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled">
-                        <StackPanel x:Name="_classicPagesPanel" Orientation="Vertical">
-                        <GridView x:Name="_classicR" ItemClick="App_ItemClick" Margin="0" HorizontalAlignment="Center" SelectionMode="None" IsItemClickEnabled="True" Visibility="Collapsed">
+                    <ScrollViewer x:Name="_classicSV" VerticalScrollBarVisibility="Hidden" VerticalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled" HorizontalScrollMode="Disabled" ManipulationMode="None">
+                        <StackPanel x:Name="_classicPagesPanel" Orientation="Vertical" ManipulationMode="None">
+                            <StackPanel.RenderTransform>
+                                <TranslateTransform Y="0" />
+                            </StackPanel.RenderTransform>
+                        <popups:VariableGridView x:Name="_classicR" ItemClick="App_ItemClick" Margin="0" HorizontalAlignment="Center" SelectionMode="None" IsItemClickEnabled="True" Visibility="Collapsed" CanDragItems="True" AllowDrop="True"
+                            ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollMode="Disabled"
+                            ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.HorizontalScrollMode="Disabled"
+                            ManipulationMode="None">
                             <GridView.ItemContainerStyle>
                                 <Style TargetType="GridViewItem">
+                                    <Setter Property="UseSystemFocusVisuals" Value="False"/>
+                                    <Setter Property="VariableSizedWrapGrid.ColumnSpan" Value="{Binding ColSpan}"/>
+                                    <Setter Property="VariableSizedWrapGrid.RowSpan" Value="{Binding RowSpan}"/>
                                     <Setter Property="Margin" Value="0"/>
                                     <Setter Property="Padding" Value="0"/>
                                     <Setter Property="MinWidth" Value="0"/>
@@ -121,27 +200,61 @@
                                                  <VisualStateManager.VisualStateGroups>
                                                      <VisualStateGroup x:Name="CommonStates">
                                                          <VisualState x:Name="Normal">
-                                                             <Storyboard>
-                                                                 <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.090" />
-                                                             </Storyboard>
+                                                             <VisualState.Setters>
+                                                                 <Setter Target="TileCard.Background" Value="Transparent" />
+                                                                 <Setter Target="TileCard.BorderBrush" Value="Transparent" />
+                                                             </VisualState.Setters>
                                                          </VisualState>
                                                          <VisualState x:Name="PointerOver">
                                                              <VisualState.Setters>
-                                                                 <Setter Target="HoverBg.BorderBrush" Value="{ThemeResource ControlElevationBorderBrush}" />
+                                                                 <Setter Target="TileCard.Background" Value="{ThemeResource SubtleFillColorSecondaryBrush}" />
+                                                                 <Setter Target="TileCard.BorderBrush" Value="{ThemeResource ControlElevationBorderBrush}" />
                                                              </VisualState.Setters>
-                                                             <Storyboard>
-                                                                 <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.070" />
-                                                             </Storyboard>
                                                          </VisualState>
                                                          <VisualState x:Name="Pressed">
+                                                             <VisualState.Setters>
+                                                                 <Setter Target="TileCard.Background" Value="{ThemeResource SubtleFillColorTertiaryBrush}" />
+                                                                 <Setter Target="TileCard.BorderBrush" Value="{ThemeResource ControlElevationBorderBrush}" />
+                                                             </VisualState.Setters>
+                                                         </VisualState>
+                                                     </VisualStateGroup>
+                                                     <VisualStateGroup x:Name="FocusStates">
+                                                         <VisualState x:Name="Focused">
                                                              <Storyboard>
-                                                                 <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="0.5" Duration="0:0:0.083" />
+                                                                 <DoubleAnimation Storyboard.TargetName="FocusRing" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.040" />
+                                                             </Storyboard>
+                                                         </VisualState>
+                                                         <VisualState x:Name="PointerFocused" />
+                                                         <VisualState x:Name="Unfocused">
+                                                             <Storyboard>
+                                                                 <DoubleAnimation Storyboard.TargetName="FocusRing" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.040" />
                                                              </Storyboard>
                                                          </VisualState>
                                                      </VisualStateGroup>
                                                  </VisualStateManager.VisualStateGroups>
 
-                                                 <Border x:Name="HoverBg" Opacity="0" CornerRadius="4" BorderThickness="1" Background="{ThemeResource SubtleFillColorSecondaryBrush}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="2" />
+                                                 <Border x:Name="TileCard"
+                                                         CornerRadius="{ThemeResource ControlCornerRadius}"
+                                                         BorderThickness="1"
+                                                         BackgroundSizing="InnerBorderEdge"
+                                                         Background="Transparent"
+                                                         BorderBrush="Transparent"
+                                                         HorizontalAlignment="Stretch"
+                                                         VerticalAlignment="Stretch"
+                                                         Margin="0">
+                                                     <Border.BackgroundTransition>
+                                                         <BrushTransition Duration="0:0:0.083" />
+                                                     </Border.BackgroundTransition>
+                                                 </Border>
+                                                 <Border x:Name="FocusRing"
+                                                         CornerRadius="{ThemeResource ControlCornerRadius}"
+                                                         BorderThickness="2"
+                                                         BorderBrush="{ThemeResource FocusStrokeColorOuterBrush}"
+                                                         HorizontalAlignment="Stretch"
+                                                         VerticalAlignment="Stretch"
+                                                         Opacity="0"
+                                                         Margin="-1"
+                                                         IsHitTestVisible="False" />
                                                  <ContentPresenter x:Name="ContentPresenter" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="0" Padding="0" />
                                              </Grid>
                                          </ControlTemplate>
@@ -151,17 +264,17 @@
                              </GridView.ItemContainerStyle>
                              <GridView.ItemsPanel>
                                  <ItemsPanelTemplate>
-                                     <VariableSizedWrapGrid x:Name="_classicWrapGrid" ItemWidth="88" ItemHeight="88" Orientation="Horizontal" MaximumRowsOrColumns="3" />
+                                     <VariableSizedWrapGrid x:Name="_classicWrapGrid" ItemWidth="80" ItemHeight="76" Orientation="Horizontal" MaximumRowsOrColumns="3" />
                                  </ItemsPanelTemplate>
                              </GridView.ItemsPanel>
                              <GridView.ItemContainerTransitions>
                                  <TransitionCollection>
-                                     <EntranceThemeTransition IsStaggeringEnabled="True"/>
+                                     <EntranceThemeTransition IsStaggeringEnabled="True" FromVerticalOffset="24"/>
                                  </TransitionCollection>
                              </GridView.ItemContainerTransitions>
                              <GridView.ItemTemplate>
                                  <DataTemplate x:DataType="popups:AppEntryViewModel">
-                                     <Grid Width="{x:Bind TileWidth, Mode=OneWay}" Height="{x:Bind TileHeight, Mode=OneWay}" CornerRadius="6" ToolTipService.Placement="Bottom" ToolTipService.ToolTip="{x:Bind Name}" Background="Transparent">
+                                     <Grid Width="{x:Bind TileWidth, Mode=OneWay}" Height="{x:Bind TileHeight, Mode=OneWay}" CornerRadius="{ThemeResource ControlCornerRadius}" ToolTipService.Placement="Bottom" ToolTipService.ToolTip="{x:Bind Name}" Background="Transparent">
                                          <Grid.ContextFlyout>
                                              <MenuFlyout>
                                                  <MenuFlyoutItem Text="Open" Click="Open_Click" Tag="{x:Bind ExePath}">
@@ -169,10 +282,13 @@
                                                          <FontIcon Glyph="&#xE8E5;" />
                                                      </MenuFlyoutItem.Icon>
                                                  </MenuFlyoutItem>
-                                                 <MenuFlyoutItem Text="Run as Administrator" Click="RunAdmin_Click" Tag="{x:Bind ExePath}">
+<MenuFlyoutItem Text="Run as Administrator" Click="RunAdmin_Click" Tag="{x:Bind ExePath}">
                                                      <MenuFlyoutItem.Icon>
                                                          <FontIcon Glyph="&#xE7EF;" />
                                                      </MenuFlyoutItem.Icon>
+                                                 </MenuFlyoutItem>
+                                                 <MenuFlyoutItem Text="Launch Options..." Click="LaunchOptions_Click" Tag="{x:Bind}">
+                                                     <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE756;" /></MenuFlyoutItem.Icon>
                                                  </MenuFlyoutItem>
                                                  <MenuFlyoutSeparator />
                                                  <MenuFlyoutItem Text="Open file location" Click="OpenLoc_Click" Tag="{x:Bind ExePath}">
@@ -191,50 +307,85 @@
                                          </Grid.ContextFlyout>
 
                                          <!-- 1x1 Standard layout -->
-                                         <StackPanel Spacing="6" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="{x:Bind SmallTileVisibility, Mode=OneWay}">
-                                             <Grid Width="32" Height="32">
-                                                 <Border CornerRadius="0" Width="32" Height="32" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                                 <Image Width="32" Height="32" Stretch="Uniform" Source="{x:Bind IconImage, Mode=OneWay}" />
-                                             </Grid>
-                                             <TextBlock FontSize="10.5" TextAlignment="Center" TextWrapping="Wrap" MaxLines="2" LineHeight="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind Name}" />
+                                         <StackPanel Spacing="3" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="{x:Bind SmallTileVisibility, Mode=OneWay}">
+                                             <Image Width="32" Height="32" Stretch="Uniform" HorizontalAlignment="Center" Source="{x:Bind IconImage, Mode=OneWay}" />
+                                             <TextBlock FontSize="11" TextAlignment="Center" TextWrapping="Wrap" MaxLines="2" LineHeight="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}" Text="{x:Bind Name}" MaxWidth="72" />
                                          </StackPanel>
 
                                          <!-- 2x1 Wide layout -->
-                                         <Grid HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="14,0,14,0" Visibility="{x:Bind WideTileVisibility, Mode=OneWay}">
+                                         <Grid HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="14,0" Visibility="{x:Bind WideTileVisibility, Mode=OneWay}">
                                              <Grid.ColumnDefinitions>
                                                  <ColumnDefinition Width="Auto" />
                                                  <ColumnDefinition Width="*" />
                                              </Grid.ColumnDefinitions>
                                              <Image Grid.Column="0" Width="36" Height="36" Stretch="Uniform" VerticalAlignment="Center" Source="{x:Bind IconImage, Mode=OneWay}" Margin="0,0,12,0" />
-                                             <TextBlock Grid.Column="1" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" MaxLines="2" LineHeight="16" Foreground="{ThemeResource TextFillColorPrimaryBrush}" Text="{x:Bind Name}" />
+                                             <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                                 <TextBlock FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" MaxLines="2" LineHeight="16" Foreground="{ThemeResource TextFillColorPrimaryBrush}" Text="{x:Bind Name}" />
+                                             </StackPanel>
                                          </Grid>
 
-                                         <!-- 2x2 Large layout -->
-                                         <StackPanel Spacing="8" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="{x:Bind LargeTileVisibility, Mode=OneWay}">
-                                             <Grid Width="56" Height="56">
-                                                 <Image Width="56" Height="56" Stretch="Uniform" Source="{x:Bind IconImage, Mode=OneWay}" />
-                                             </Grid>
-                                             <TextBlock FontSize="13" FontWeight="SemiBold" TextAlignment="Center" TextWrapping="Wrap" MaxLines="2" LineHeight="18" Foreground="{ThemeResource TextFillColorPrimaryBrush}" Text="{x:Bind Name}" MaxWidth="150" />
+                                         <!-- 1x2 Tall layout -->
+                                         <StackPanel Spacing="8" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="{x:Bind TallTileVisibility, Mode=OneWay}">
+                                             <Image Width="44" Height="44" Stretch="Uniform" HorizontalAlignment="Center" Source="{x:Bind IconImage, Mode=OneWay}" />
+                                             <TextBlock FontSize="11" FontWeight="SemiBold" TextAlignment="Center" TextWrapping="Wrap" MaxLines="3" LineHeight="15" Foreground="{ThemeResource TextFillColorPrimaryBrush}" Text="{x:Bind Name}" MaxWidth="72" />
+                                         </StackPanel>
+
+                                         <!-- 2x2 Large layout: hero centered presentation -->
+                                         <StackPanel Spacing="10" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="{x:Bind LargeTileVisibility, Mode=OneWay}">
+                                             <Image Width="54" Height="54" Stretch="Uniform" HorizontalAlignment="Center" Source="{x:Bind IconImage, Mode=OneWay}" />
+                                             <TextBlock FontSize="13" FontWeight="SemiBold" TextAlignment="Center" TextWrapping="Wrap" MaxLines="2" LineHeight="18" Foreground="{ThemeResource TextFillColorPrimaryBrush}" Text="{x:Bind Name}" MaxWidth="140" />
                                          </StackPanel>
 
                                          <!-- Edit Mode Remove Badge (Top-Right) -->
-                                         <Button Click="RemoveAppBtn_Click" Tag="{x:Bind}" Visibility="{x:Bind EditModeVisibility, Mode=OneWay}"
-                                                 HorizontalAlignment="Right" VerticalAlignment="Top" Width="20" Height="20" Padding="0" Margin="0,3,3,0"
-                                                 CornerRadius="10" Background="#E81123" BorderThickness="0" ToolTipService.ToolTip="Remove from group">
-                                             <FontIcon Glyph="&#xE711;" FontSize="9" Foreground="White" />
+                                          <!-- Badges (Notification Count & Admin Shield, Top-Right) -->
+                                          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,4,0" Spacing="3">
+                                              <!-- Live Notification Badge -->
+                                              <Border MinWidth="16" Height="16" CornerRadius="8" Padding="4,0,4,0"
+                                                      Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                                      BorderBrush="{ThemeResource ControlElevationBorderBrush}" BorderThickness="1"
+                                                      Visibility="{x:Bind NotificationBadgeVisibility, Mode=OneWay}"
+                                                      ToolTipService.ToolTip="{x:Bind NotificationBadgeTooltip, Mode=OneWay}">
+                                                  <TextBlock Text="{x:Bind NotificationBadgeText, Mode=OneWay}"
+                                                             FontSize="10" FontWeight="SemiBold"
+                                                             Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                                                             HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                              </Border>
+                                              <!-- Admin Shield Badge (Windows UAC Shield) -->
+                                              <Border Width="16" Height="16" CornerRadius="8"
+                                                      Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                                      BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                                                      Visibility="{x:Bind AdminShieldVisibility, Mode=OneWay}"
+                                                      ToolTipService.ToolTip="Always runs as administrator">
+                                                  <FontIcon Glyph="&#xE7EF;" FontSize="9" Foreground="{x:Bind AdminShieldBrush, Mode=OneWay}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                              </Border>
+                                          </StackPanel>
+                                          <Button Click="RemoveAppBtn_Click" PointerEntered="RemoveAppBtn_PointerEntered" PointerExited="RemoveAppBtn_PointerExited" Tag="{x:Bind}" Visibility="{x:Bind EditModeVisibility, Mode=OneWay}"
+                                                 HorizontalAlignment="Right" VerticalAlignment="Top" Width="20" Height="20" Padding="0" Margin="0,5,5,0"
+                                                 CornerRadius="{ThemeResource ControlCornerRadius}" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}" BorderThickness="1" BorderBrush="{ThemeResource ControlElevationBorderBrush}" ToolTipService.ToolTip="Remove from group">
+                                             <FontIcon Glyph="&#xE711;" FontSize="8" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                          </Button>
                                          <!-- Edit Mode Size Cycle Badge (Bottom-Right) -->
                                          <Button Click="CycleSizeBtn_Click" Tag="{x:Bind}" Visibility="{x:Bind EditModeVisibility, Mode=OneWay}"
                                                  ManipulationMode="TranslateX,TranslateY"
                                                  ManipulationDelta="SizeBadge_ManipulationDelta"
-                                                 HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="20" Height="20" Padding="0" Margin="0,0,3,3"
-                                                 CornerRadius="10" Background="{ThemeResource SubtleFillColorSecondaryBrush}" BorderThickness="1" BorderBrush="{ThemeResource ControlElevationBorderBrush}" ToolTipService.ToolTip="Click or drag to resize (1x1, 2x1, 2x2)">
-                                             <FontIcon Glyph="&#xE740;" FontSize="9" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                                                 HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="20" Height="20" Padding="0" Margin="0,0,5,5"
+                                                 CornerRadius="{ThemeResource ControlCornerRadius}" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}" BorderThickness="1" BorderBrush="{ThemeResource ControlElevationBorderBrush}" ToolTipService.ToolTip="Resize: click to cycle (1x1, 2x1, 1x2, 2x2) or drag">
+                                             <FontIcon Glyph="&#xE740;" FontSize="8" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                          </Button>
+
+                                         <!-- Running Indicator (Fluent 2 Taskbar Pill) -->
+                                         <Border x:Name="RunningIndicator"
+                                                 Width="16" Height="3" CornerRadius="1.5"
+                                                 Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                                 HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                                                 Margin="0,0,0,3"
+                                                 Visibility="{x:Bind RunningBarVisibility, Mode=OneWay}" />
+                                         <!-- Running Indicator Dot (Corner Dot) -->
+                                         <Border x:Name="RunningDotIndicator" Width="6" Height="6" CornerRadius="3" Background="{ThemeResource AccentFillColorDefaultBrush}" BorderThickness="1" BorderBrush="{ThemeResource SolidBackgroundFillColorBaseBrush}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,6,6,0" Visibility="{x:Bind RunningDotVisibility, Mode=OneWay}" />
                                      </Grid>
                                  </DataTemplate>
                              </GridView.ItemTemplate>
-                        </GridView>
+                        </popups:VariableGridView>
                         </StackPanel>
                     </ScrollViewer>
 
@@ -247,7 +398,7 @@
                         </GridView.ItemsPanel>
                         <GridView.ItemContainerTransitions>
                             <TransitionCollection>
-                                <EntranceThemeTransition IsStaggeringEnabled="True"/>
+                                <EntranceThemeTransition IsStaggeringEnabled="True" FromVerticalOffset="24"/>
                             </TransitionCollection>
                         </GridView.ItemContainerTransitions>
                         <GridView.ItemContainerStyle>
@@ -268,26 +419,30 @@
                                                 <VisualStateManager.VisualStateGroups>
                                                     <VisualStateGroup x:Name="CommonStates">
                                                         <VisualState x:Name="Normal">
-                                                            <Storyboard>
-                                                                <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.090" />
-                                                            </Storyboard>
+                                                            <VisualState.Setters>
+                                                                <Setter Target="TileCard.Background" Value="Transparent" />
+                                                                <Setter Target="TileCard.BorderBrush" Value="Transparent" />
+                                                            </VisualState.Setters>
                                                         </VisualState>
                                                         <VisualState x:Name="PointerOver">
                                                             <VisualState.Setters>
-                                                                <Setter Target="HoverBg.BorderBrush" Value="{ThemeResource ControlElevationBorderBrush}" />
+                                                                <Setter Target="TileCard.Background" Value="{ThemeResource SubtleFillColorSecondaryBrush}" />
+                                                                <Setter Target="TileCard.BorderBrush" Value="{ThemeResource ControlElevationBorderBrush}" />
                                                             </VisualState.Setters>
-                                                            <Storyboard>
-                                                                <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.070" />
-                                                            </Storyboard>
                                                         </VisualState>
                                                         <VisualState x:Name="Pressed">
-                                                            <Storyboard>
-                                                                <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="0.5" Duration="0:0:0.083" />
-                                                            </Storyboard>
+                                                            <VisualState.Setters>
+                                                                <Setter Target="TileCard.Background" Value="{ThemeResource SubtleFillColorTertiaryBrush}" />
+                                                                <Setter Target="TileCard.BorderBrush" Value="{ThemeResource ControlElevationBorderBrush}" />
+                                                            </VisualState.Setters>
                                                         </VisualState>
                                                     </VisualStateGroup>
                                                 </VisualStateManager.VisualStateGroups>
-                                                <Border x:Name="HoverBg" Opacity="0" CornerRadius="4" BorderThickness="1" Background="{ThemeResource SubtleFillColorSecondaryBrush}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="2,0,2,0" />
+                                                <Border x:Name="TileCard" CornerRadius="6" BorderThickness="1" BackgroundSizing="InnerBorderEdge" Background="Transparent" BorderBrush="Transparent" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="2,0,2,0">
+                                                    <Border.BackgroundTransition>
+                                                        <BrushTransition Duration="0:0:0.083" />
+                                                    </Border.BackgroundTransition>
+                                                </Border>
                                                 <ContentPresenter x:Name="ContentPresenter" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0" Padding="0" />
                                             </Grid>
                                         </ControlTemplate>
@@ -305,10 +460,13 @@
                                                     <FontIcon Glyph="&#xE8E5;" />
                                                 </MenuFlyoutItem.Icon>
                                             </MenuFlyoutItem>
-                                            <MenuFlyoutItem Text="Run as Administrator" Click="RunAdmin_Click" Tag="{x:Bind ExePath}">
+<MenuFlyoutItem Text="Run as Administrator" Click="RunAdmin_Click" Tag="{x:Bind ExePath}">
                                                 <MenuFlyoutItem.Icon>
                                                     <FontIcon Glyph="&#xE7EF;" />
                                                 </MenuFlyoutItem.Icon>
+                                            </MenuFlyoutItem>
+                                            <MenuFlyoutItem Text="Launch Options..." Click="LaunchOptions_Click" Tag="{x:Bind}">
+                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE756;" /></MenuFlyoutItem.Icon>
                                             </MenuFlyoutItem>
                                             <MenuFlyoutSeparator />
                                             <MenuFlyoutItem Text="Open file location" Click="OpenLoc_Click" Tag="{x:Bind ExePath}">
@@ -327,11 +485,42 @@
                                     </Grid.ContextFlyout>
                                     <Image Width="22" Height="22" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" Source="{x:Bind IconImage, Mode=OneWay}" />
 
+                                    <!-- Running Indicator (Fluent 2 Taskbar Pill) -->
+                                    <Border Width="12" Height="2.5" CornerRadius="1.25"
+                                            Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                            HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                                            Margin="0,0,0,1"
+                                            Visibility="{x:Bind RunningBarVisibility, Mode=OneWay}" />
+                                    <!-- Running Indicator Dot (Corner Dot) -->
+                                    <Border Width="5" Height="5" CornerRadius="2.5" Background="{ThemeResource AccentFillColorDefaultBrush}" BorderThickness="1" BorderBrush="{ThemeResource SolidBackgroundFillColorBaseBrush}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,2,0" Visibility="{x:Bind RunningDotVisibility, Mode=OneWay}" />
+
                                     <!-- Edit Mode Remove Badge -->
-                                    <Button Click="RemoveAppBtn_Click" Tag="{x:Bind}" Visibility="{x:Bind EditModeVisibility, Mode=OneWay}"
+                                    <!-- Badges (Notification Count & Admin Shield, Top-Right) -->
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,2,0" Spacing="2">
+                                        <!-- Live Notification Badge -->
+                                        <Border MinWidth="14" Height="14" CornerRadius="7" Padding="3,0,3,0"
+                                                Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                                BorderBrush="{ThemeResource ControlElevationBorderBrush}" BorderThickness="1"
+                                                Visibility="{x:Bind NotificationBadgeVisibility, Mode=OneWay}"
+                                                ToolTipService.ToolTip="{x:Bind NotificationBadgeTooltip, Mode=OneWay}">
+                                            <TextBlock Text="{x:Bind NotificationBadgeText, Mode=OneWay}"
+                                                       FontSize="9" FontWeight="SemiBold"
+                                                       Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <!-- Admin Shield Badge (Windows UAC Shield) -->
+                                        <Border Width="14" Height="14" CornerRadius="7"
+                                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                                                Visibility="{x:Bind AdminShieldVisibility, Mode=OneWay}"
+                                                ToolTipService.ToolTip="Always runs as administrator">
+                                            <FontIcon Glyph="&#xE7EF;" FontSize="8" Foreground="{x:Bind AdminShieldBrush, Mode=OneWay}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                    </StackPanel>
+                                          <Button Click="RemoveAppBtn_Click" PointerEntered="RemoveAppBtn_PointerEntered" PointerExited="RemoveAppBtn_PointerExited" Tag="{x:Bind}" Visibility="{x:Bind EditModeVisibility, Mode=OneWay}"
                                             HorizontalAlignment="Right" VerticalAlignment="Top" Width="14" Height="14" Padding="0" Margin="0,1,1,0"
-                                            CornerRadius="7" Background="#E81123" BorderThickness="0" ToolTipService.ToolTip="Remove from group">
-                                        <FontIcon Glyph="&#xE711;" FontSize="7" Foreground="White" />
+                                            CornerRadius="4" Background="{ThemeResource SubtleFillColorSecondaryBrush}" BorderThickness="1" BorderBrush="{ThemeResource ControlElevationBorderBrush}" ToolTipService.ToolTip="Remove from group">
+                                        <FontIcon Glyph="&#xE711;" FontSize="7" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                     </Button>
                                 </Grid>
                             </DataTemplate>
@@ -347,7 +536,7 @@
                         </GridView.ItemsPanel>
                         <GridView.ItemContainerTransitions>
                             <TransitionCollection>
-                                <EntranceThemeTransition IsStaggeringEnabled="True"/>
+                                <EntranceThemeTransition IsStaggeringEnabled="True" FromVerticalOffset="24"/>
                             </TransitionCollection>
                         </GridView.ItemContainerTransitions>
                         <GridView.ItemContainerStyle>
@@ -368,26 +557,30 @@
                                                 <VisualStateManager.VisualStateGroups>
                                                     <VisualStateGroup x:Name="CommonStates">
                                                         <VisualState x:Name="Normal">
-                                                            <Storyboard>
-                                                                <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.090" />
-                                                            </Storyboard>
+                                                            <VisualState.Setters>
+                                                                <Setter Target="TileCard.Background" Value="Transparent" />
+                                                                <Setter Target="TileCard.BorderBrush" Value="Transparent" />
+                                                            </VisualState.Setters>
                                                         </VisualState>
                                                         <VisualState x:Name="PointerOver">
                                                             <VisualState.Setters>
-                                                                <Setter Target="HoverBg.BorderBrush" Value="{ThemeResource ControlElevationBorderBrush}" />
+                                                                <Setter Target="TileCard.Background" Value="{ThemeResource SubtleFillColorSecondaryBrush}" />
+                                                                <Setter Target="TileCard.BorderBrush" Value="{ThemeResource ControlElevationBorderBrush}" />
                                                             </VisualState.Setters>
-                                                            <Storyboard>
-                                                                <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.070" />
-                                                            </Storyboard>
                                                         </VisualState>
                                                         <VisualState x:Name="Pressed">
-                                                            <Storyboard>
-                                                                <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="0.5" Duration="0:0:0.083" />
-                                                            </Storyboard>
+                                                            <VisualState.Setters>
+                                                                <Setter Target="TileCard.Background" Value="{ThemeResource SubtleFillColorTertiaryBrush}" />
+                                                                <Setter Target="TileCard.BorderBrush" Value="{ThemeResource ControlElevationBorderBrush}" />
+                                                            </VisualState.Setters>
                                                         </VisualState>
                                                     </VisualStateGroup>
                                                 </VisualStateManager.VisualStateGroups>
-                                                <Border x:Name="HoverBg" Opacity="0" CornerRadius="4" BorderThickness="1" Background="{ThemeResource SubtleFillColorSecondaryBrush}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="0,2,0,2" />
+                                                <Border x:Name="TileCard" CornerRadius="6" BorderThickness="1" BackgroundSizing="InnerBorderEdge" Background="Transparent" BorderBrush="Transparent" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="0,2,0,2">
+                                                    <Border.BackgroundTransition>
+                                                        <BrushTransition Duration="0:0:0.083" />
+                                                    </Border.BackgroundTransition>
+                                                </Border>
                                                 <ContentPresenter x:Name="ContentPresenter" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0" Padding="0" />
                                             </Grid>
                                         </ControlTemplate>
@@ -403,8 +596,11 @@
                                             <MenuFlyoutItem Text="Open" Click="Open_Click" Tag="{x:Bind ExePath}">
                                                 <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8E5;" /></MenuFlyoutItem.Icon>
                                             </MenuFlyoutItem>
-                                            <MenuFlyoutItem Text="Run as Administrator" Click="RunAdmin_Click" Tag="{x:Bind ExePath}">
+<MenuFlyoutItem Text="Run as Administrator" Click="RunAdmin_Click" Tag="{x:Bind ExePath}">
                                                 <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE7EF;" /></MenuFlyoutItem.Icon>
+                                            </MenuFlyoutItem>
+                                            <MenuFlyoutItem Text="Launch Options..." Click="LaunchOptions_Click" Tag="{x:Bind}">
+                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE756;" /></MenuFlyoutItem.Icon>
                                             </MenuFlyoutItem>
                                             <MenuFlyoutSeparator />
                                             <MenuFlyoutItem Text="Open file location" Click="OpenLoc_Click" Tag="{x:Bind ExePath}">
@@ -421,11 +617,42 @@
                                     </Grid.ContextFlyout>
                                     <Image Width="22" Height="22" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" Source="{x:Bind IconImage, Mode=OneWay}" />
 
+                                    <!-- Running Indicator (Fluent 2 Taskbar Pill) -->
+                                    <Border Width="12" Height="2.5" CornerRadius="1.25"
+                                            Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                            HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                                            Margin="0,0,0,2"
+                                            Visibility="{x:Bind RunningBarVisibility, Mode=OneWay}" />
+                                    <!-- Running Indicator Dot (Corner Dot) -->
+                                    <Border Width="5" Height="5" CornerRadius="2.5" Background="{ThemeResource AccentFillColorDefaultBrush}" BorderThickness="1" BorderBrush="{ThemeResource SolidBackgroundFillColorBaseBrush}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,2,0" Visibility="{x:Bind RunningDotVisibility, Mode=OneWay}" />
+
                                     <!-- Edit Mode Remove Badge -->
-                                    <Button Click="RemoveAppBtn_Click" Tag="{x:Bind}" Visibility="{x:Bind EditModeVisibility, Mode=OneWay}"
+                                    <!-- Badges (Notification Count & Admin Shield, Top-Right) -->
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,2,0" Spacing="2">
+                                        <!-- Live Notification Badge -->
+                                        <Border MinWidth="14" Height="14" CornerRadius="7" Padding="3,0,3,0"
+                                                Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                                BorderBrush="{ThemeResource ControlElevationBorderBrush}" BorderThickness="1"
+                                                Visibility="{x:Bind NotificationBadgeVisibility, Mode=OneWay}"
+                                                ToolTipService.ToolTip="{x:Bind NotificationBadgeTooltip, Mode=OneWay}">
+                                            <TextBlock Text="{x:Bind NotificationBadgeText, Mode=OneWay}"
+                                                       FontSize="9" FontWeight="SemiBold"
+                                                       Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <!-- Admin Shield Badge (Windows UAC Shield) -->
+                                        <Border Width="14" Height="14" CornerRadius="7"
+                                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                                                Visibility="{x:Bind AdminShieldVisibility, Mode=OneWay}"
+                                                ToolTipService.ToolTip="Always runs as administrator">
+                                            <FontIcon Glyph="&#xE7EF;" FontSize="8" Foreground="{x:Bind AdminShieldBrush, Mode=OneWay}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                    </StackPanel>
+                                          <Button Click="RemoveAppBtn_Click" PointerEntered="RemoveAppBtn_PointerEntered" PointerExited="RemoveAppBtn_PointerExited" Tag="{x:Bind}" Visibility="{x:Bind EditModeVisibility, Mode=OneWay}"
                                             HorizontalAlignment="Right" VerticalAlignment="Top" Width="14" Height="14" Padding="0" Margin="0,1,1,0"
-                                            CornerRadius="7" Background="#E81123" BorderThickness="0" ToolTipService.ToolTip="Remove from group">
-                                        <FontIcon Glyph="&#xE711;" FontSize="7" Foreground="White" />
+                                            CornerRadius="4" Background="{ThemeResource SubtleFillColorSecondaryBrush}" BorderThickness="1" BorderBrush="{ThemeResource ControlElevationBorderBrush}" ToolTipService.ToolTip="Remove from group">
+                                        <FontIcon Glyph="&#xE711;" FontSize="7" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                     </Button>
                                 </Grid>
                             </DataTemplate>
@@ -434,55 +661,64 @@
 
                     <!-- Modern -->
                     <ScrollViewer x:Name="_modernSV" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
-                        <GridView x:Name="_modernR" ItemClick="App_ItemClick" Padding="12" Margin="0" SelectionMode="None" IsItemClickEnabled="True"                           ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled" HorizontalAlignment="Center" HorizontalContentAlignment="Center">
+                        <GridView x:Name="_modernR" ItemClick="App_ItemClick" Padding="0" Margin="0" SelectionMode="None" IsItemClickEnabled="True" ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled" HorizontalAlignment="Center" HorizontalContentAlignment="Center">
                             <GridView.ItemsPanel>
                                 <ItemsPanelTemplate>
-                                    <ItemsWrapGrid ItemWidth="68" ItemHeight="68" Orientation="Horizontal" HorizontalAlignment="Center" />
+                                    <ItemsWrapGrid ItemWidth="56" ItemHeight="56" Orientation="Horizontal" HorizontalAlignment="Center" />
                                 </ItemsPanelTemplate>
                             </GridView.ItemsPanel>
                             <GridView.ItemContainerTransitions>
                                 <TransitionCollection>
-                                    <EntranceThemeTransition IsStaggeringEnabled="True"/>
+                                    <EntranceThemeTransition IsStaggeringEnabled="True" FromVerticalOffset="24"/>
                                 </TransitionCollection>
                             </GridView.ItemContainerTransitions>
                             <GridView.ItemContainerStyle>
                                 <Style TargetType="GridViewItem">
                                     <Setter Property="Margin" Value="0"/>
                                     <Setter Property="Padding" Value="0"/>
-                                    <Setter Property="Width" Value="68"/>
-                                    <Setter Property="Height" Value="68"/>
                                     <Setter Property="HorizontalAlignment" Value="Center"/>
                                     <Setter Property="VerticalAlignment" Value="Center"/>
                                     <Setter Property="Background" Value="Transparent"/>
                                     <Setter Property="Template">
                                         <Setter.Value>
                                             <ControlTemplate TargetType="GridViewItem">
-                                                <Grid x:Name="RootGrid" Background="Transparent" Width="68" Height="68" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <Grid x:Name="RootGrid" Background="Transparent" Width="52" Height="52" HorizontalAlignment="Center" VerticalAlignment="Center">
                                                     <VisualStateManager.VisualStateGroups>
                                                         <VisualStateGroup x:Name="CommonStates">
                                                             <VisualState x:Name="Normal">
-                                                                <Storyboard>
-                                                                    <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.090" />
-                                                                </Storyboard>
+                                                                <VisualState.Setters>
+                                                                    <Setter Target="TileCard.Background" Value="Transparent" />
+                                                                    <Setter Target="TileCard.BorderBrush" Value="Transparent" />
+                                                                </VisualState.Setters>
                                                             </VisualState>
                                                             <VisualState x:Name="PointerOver">
                                                                 <VisualState.Setters>
-                                                                    <Setter Target="HoverBg.BorderBrush" Value="{ThemeResource ControlElevationBorderBrush}" />
+                                                                    <Setter Target="TileCard.Background" Value="{ThemeResource SubtleFillColorSecondaryBrush}" />
+                                                                    <Setter Target="TileCard.BorderBrush" Value="{ThemeResource ControlElevationBorderBrush}" />
                                                                 </VisualState.Setters>
-                                                                <Storyboard>
-                                                                    <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.070" />
-                                                                </Storyboard>
                                                             </VisualState>
                                                             <VisualState x:Name="Pressed">
-                                                                <Storyboard>
-                                                                    <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="0.5" Duration="0:0:0.083" />
-                                                                </Storyboard>
+                                                                <VisualState.Setters>
+                                                                    <Setter Target="TileCard.Background" Value="{ThemeResource SubtleFillColorTertiaryBrush}" />
+                                                                    <Setter Target="TileCard.BorderBrush" Value="{ThemeResource ControlElevationBorderBrush}" />
+                                                                </VisualState.Setters>
                                                             </VisualState>
                                                         </VisualStateGroup>
                                                     </VisualStateManager.VisualStateGroups>
 
-                                                    <!-- Margin="2" pulls the hover effect inward, ensuring the 1px border is drawn safely inside the 68x68 cell bounds, completely preventing edge clipping! -->
-                                                    <Border x:Name="HoverBg" Opacity="0" CornerRadius="8" BorderThickness="1" Background="{ThemeResource SubtleFillColorSecondaryBrush}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="2" />
+                                                    <Border x:Name="TileCard"
+                                                            CornerRadius="{ThemeResource ControlCornerRadius}"
+                                                            BorderThickness="1"
+                                                            BackgroundSizing="InnerBorderEdge"
+                                                            Background="Transparent"
+                                                            BorderBrush="Transparent"
+                                                            HorizontalAlignment="Stretch"
+                                                            VerticalAlignment="Stretch"
+                                                            Margin="0">
+                                                        <Border.BackgroundTransition>
+                                                            <BrushTransition Duration="0:0:0.083" />
+                                                        </Border.BackgroundTransition>
+                                                    </Border>
                                                     <ContentPresenter x:Name="ContentPresenter" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0" Padding="0" />
                                                 </Grid>
                                             </ControlTemplate>
@@ -492,14 +728,17 @@
                             </GridView.ItemContainerStyle>
                             <GridView.ItemTemplate>
                                 <DataTemplate x:DataType="popups:AppEntryViewModel">
-                                    <Grid Width="60" Height="60"                                     CornerRadius="8"                                        ToolTipService.Placement="Bottom" ToolTipService.ToolTip="{x:Bind Name}">
+                                    <Grid Width="52" Height="52" CornerRadius="{ThemeResource ControlCornerRadius}" ToolTipService.Placement="Bottom" ToolTipService.ToolTip="{x:Bind Name}">
                                         <Grid.ContextFlyout>
                                             <MenuFlyout>
                                                 <MenuFlyoutItem Text="Open" Click="Open_Click" Tag="{x:Bind ExePath}">
                                                     <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8E5;" /></MenuFlyoutItem.Icon>
                                                 </MenuFlyoutItem>
-                                                <MenuFlyoutItem Text="Run as Administrator" Click="RunAdmin_Click" Tag="{x:Bind ExePath}">
+<MenuFlyoutItem Text="Run as Administrator" Click="RunAdmin_Click" Tag="{x:Bind ExePath}">
                                                     <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE7EF;" /></MenuFlyoutItem.Icon>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutItem Text="Launch Options..." Click="LaunchOptions_Click" Tag="{x:Bind}">
+                                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE756;" /></MenuFlyoutItem.Icon>
                                                 </MenuFlyoutItem>
                                                 <MenuFlyoutSeparator />
                                                 <MenuFlyoutItem Text="Open file location" Click="OpenLoc_Click" Tag="{x:Bind ExePath}">
@@ -516,19 +755,50 @@
                                         </Grid.ContextFlyout>
                                         <Image Width="28" Height="28" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" Source="{x:Bind IconImage, Mode=OneWay}" />
 
+                                        <!-- Running Indicator (Fluent 2 Taskbar Pill) -->
+                                        <Border Width="16" Height="3" CornerRadius="1.5"
+                                                Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                                HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                                                Margin="0,0,0,3"
+                                                Visibility="{x:Bind RunningBarVisibility, Mode=OneWay}" />
+                                        <!-- Running Indicator Dot (Corner Dot) -->
+                                        <Border Width="6" Height="6" CornerRadius="3" Background="{ThemeResource AccentFillColorDefaultBrush}" BorderThickness="1" BorderBrush="{ThemeResource SolidBackgroundFillColorBaseBrush}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,5,5,0" Visibility="{x:Bind RunningDotVisibility, Mode=OneWay}" />
+
                                         <!-- Edit Mode Remove Badge -->
-                                        <Button Click="RemoveAppBtn_Click" Tag="{x:Bind}" Visibility="{x:Bind EditModeVisibility, Mode=OneWay}"
-                                                HorizontalAlignment="Right" VerticalAlignment="Top" Width="16" Height="16" Padding="0" Margin="0,2,2,0"
-                                                CornerRadius="8" Background="#E81123" BorderThickness="0" ToolTipService.ToolTip="Remove from group">
-                                            <FontIcon Glyph="&#xE711;" FontSize="7" Foreground="White" />
+                                        <!-- Badges (Notification Count & Admin Shield, Top-Right) -->
+                                      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,4,0" Spacing="3">
+                                          <!-- Live Notification Badge -->
+                                          <Border MinWidth="16" Height="16" CornerRadius="8" Padding="4,0,4,0"
+                                                  Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                                  BorderBrush="{ThemeResource ControlElevationBorderBrush}" BorderThickness="1"
+                                                  Visibility="{x:Bind NotificationBadgeVisibility, Mode=OneWay}"
+                                                  ToolTipService.ToolTip="{x:Bind NotificationBadgeTooltip, Mode=OneWay}">
+                                              <TextBlock Text="{x:Bind NotificationBadgeText, Mode=OneWay}"
+                                                         FontSize="10" FontWeight="SemiBold"
+                                                         Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                                                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                          </Border>
+                                          <!-- Admin Shield Badge (Windows UAC Shield) -->
+                                          <Border Width="16" Height="16" CornerRadius="8"
+                                                  Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                                  BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                                                  Visibility="{x:Bind AdminShieldVisibility, Mode=OneWay}"
+                                                  ToolTipService.ToolTip="Always runs as administrator">
+                                              <FontIcon Glyph="&#xE7EF;" FontSize="9" Foreground="{x:Bind AdminShieldBrush, Mode=OneWay}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                          </Border>
+                                      </StackPanel>
+                                          <Button Click="RemoveAppBtn_Click" PointerEntered="RemoveAppBtn_PointerEntered" PointerExited="RemoveAppBtn_PointerExited" Tag="{x:Bind}" Visibility="{x:Bind EditModeVisibility, Mode=OneWay}"
+                                                HorizontalAlignment="Right" VerticalAlignment="Top" Width="20" Height="20" Padding="0" Margin="0,4,4,0"
+                                                CornerRadius="{ThemeResource ControlCornerRadius}" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}" BorderThickness="1" BorderBrush="{ThemeResource ControlElevationBorderBrush}" ToolTipService.ToolTip="Remove from group">
+                                            <FontIcon Glyph="&#xE711;" FontSize="8" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                         </Button>
                                         <!-- Edit Mode Size Cycle Badge -->
                                         <Button Click="CycleSizeBtn_Click" Tag="{x:Bind}" Visibility="{x:Bind EditModeVisibility, Mode=OneWay}"
                                                 ManipulationMode="TranslateX,TranslateY"
                                                 ManipulationDelta="SizeBadge_ManipulationDelta"
-                                                HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="16" Height="16" Padding="0" Margin="0,0,2,2"
-                                                CornerRadius="8" Background="{ThemeResource SubtleFillColorSecondaryBrush}" BorderThickness="1" BorderBrush="{ThemeResource ControlElevationBorderBrush}" ToolTipService.ToolTip="Change tile size">
-                                            <FontIcon Glyph="&#xE740;" FontSize="7" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                                                HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="20" Height="20" Padding="0" Margin="0,0,4,4"
+                                                CornerRadius="{ThemeResource ControlCornerRadius}" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}" BorderThickness="1" BorderBrush="{ThemeResource ControlElevationBorderBrush}" ToolTipService.ToolTip="Change tile size">
+                                            <FontIcon Glyph="&#xE740;" FontSize="8" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                         </Button>
                                     </Grid>
                                 </DataTemplate>
@@ -541,7 +811,7 @@
                         <ListView x:Name="_listR" ItemClick="App_ItemClick" Margin="0" Padding="0" SelectionMode="None" IsItemClickEnabled="True">
                             <ListView.ItemContainerTransitions>
                                 <TransitionCollection>
-                                    <EntranceThemeTransition IsStaggeringEnabled="True"/>
+                                    <EntranceThemeTransition IsStaggeringEnabled="True" FromVerticalOffset="24"/>
                                 </TransitionCollection>
                             </ListView.ItemContainerTransitions>
                             <ListView.ItemContainerStyle>
@@ -559,27 +829,31 @@
                                                     <VisualStateManager.VisualStateGroups>
                                                         <VisualStateGroup x:Name="CommonStates">
                                                             <VisualState x:Name="Normal">
-                                                                <Storyboard>
-                                                                    <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.090" />
-                                                                </Storyboard>
+                                                                <VisualState.Setters>
+                                                                    <Setter Target="TileCard.Background" Value="Transparent" />
+                                                                    <Setter Target="TileCard.BorderBrush" Value="Transparent" />
+                                                                </VisualState.Setters>
                                                             </VisualState>
                                                             <VisualState x:Name="PointerOver">
                                                                 <VisualState.Setters>
-                                                                    <Setter Target="HoverBg.BorderBrush" Value="{ThemeResource ControlElevationBorderBrush}" />
+                                                                    <Setter Target="TileCard.Background" Value="{ThemeResource SubtleFillColorSecondaryBrush}" />
+                                                                    <Setter Target="TileCard.BorderBrush" Value="{ThemeResource ControlElevationBorderBrush}" />
                                                                 </VisualState.Setters>
-                                                                <Storyboard>
-                                                                    <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.070" />
-                                                                </Storyboard>
                                                             </VisualState>
                                                             <VisualState x:Name="Pressed">
-                                                                <Storyboard>
-                                                                    <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="0.5" Duration="0:0:0.083" />
-                                                                </Storyboard>
+                                                                <VisualState.Setters>
+                                                                    <Setter Target="TileCard.Background" Value="{ThemeResource SubtleFillColorTertiaryBrush}" />
+                                                                    <Setter Target="TileCard.BorderBrush" Value="{ThemeResource ControlElevationBorderBrush}" />
+                                                                </VisualState.Setters>
                                                             </VisualState>
                                                         </VisualStateGroup>
                                                     </VisualStateManager.VisualStateGroups>
                                                     <!-- Margin="1" keeps the border safely inside the layout bounds -->
-                                                    <Border x:Name="HoverBg" Opacity="0" CornerRadius="4" BorderThickness="1" Background="{ThemeResource SubtleFillColorSecondaryBrush}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="1" />
+                                                    <Border x:Name="TileCard" CornerRadius="6" BorderThickness="1" BackgroundSizing="InnerBorderEdge" Background="Transparent" BorderBrush="Transparent" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="1">
+                                                        <Border.BackgroundTransition>
+                                                            <BrushTransition Duration="0:0:0.083" />
+                                                        </Border.BackgroundTransition>
+                                                    </Border>
                                                     <ContentPresenter x:Name="ContentPresenter" HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="0" Padding="0" />
                                                 </Grid>
                                             </ControlTemplate>
@@ -596,8 +870,11 @@
                                                 <MenuFlyoutItem Text="Open" Click="Open_Click" Tag="{x:Bind ExePath}">
                                                     <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8E5;" /></MenuFlyoutItem.Icon>
                                                 </MenuFlyoutItem>
-                                                <MenuFlyoutItem Text="Run as Administrator" Click="RunAdmin_Click" Tag="{x:Bind ExePath}">
+<MenuFlyoutItem Text="Run as Administrator" Click="RunAdmin_Click" Tag="{x:Bind ExePath}">
                                                     <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE7EF;" /></MenuFlyoutItem.Icon>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutItem Text="Launch Options..." Click="LaunchOptions_Click" Tag="{x:Bind}">
+                                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE756;" /></MenuFlyoutItem.Icon>
                                                 </MenuFlyoutItem>
                                                 <MenuFlyoutSeparator />
                                                 <MenuFlyoutItem Text="Open file location" Click="OpenLoc_Click" Tag="{x:Bind ExePath}">
@@ -615,7 +892,15 @@
                                         <Grid HorizontalAlignment="Stretch">
                                             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" HorizontalAlignment="Left">
                                                 <Grid Width="36" Height="36" VerticalAlignment="Center" CornerRadius="0">
-                                                    <Image Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Center" Source="{x:Bind IconImage, Mode=OneWay}" />
+                                                    <Image Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Center" HorizontalAlignment="Center" Source="{x:Bind IconImage, Mode=OneWay}" />
+                                                    <!-- Running Indicator (Fluent 2 Taskbar Pill under icon) -->
+                                                    <Border Width="12" Height="2" CornerRadius="1"
+                                                            Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                                            HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                                                            Margin="0,0,0,3"
+                                                            Visibility="{x:Bind RunningBarVisibility, Mode=OneWay}" />
+                                                    <!-- Running Indicator Dot (Corner Dot) -->
+                                                    <Border Width="5" Height="5" CornerRadius="2.5" Background="{ThemeResource AccentFillColorDefaultBrush}" BorderThickness="1" BorderBrush="{ThemeResource SolidBackgroundFillColorBaseBrush}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,2,0" Visibility="{x:Bind RunningDotVisibility, Mode=OneWay}" />
                                                 </Grid>
                                                 <Grid Width="170" Height="36">
                                                     <Grid.Clip>
@@ -630,11 +915,34 @@
                                             </StackPanel>
 
                                             <!-- Edit Mode Remove Badge -->
-                                            <Button Click="RemoveAppBtn_Click" Tag="{x:Bind}" Visibility="{x:Bind EditModeVisibility, Mode=OneWay}"
-                                                    HorizontalAlignment="Right" VerticalAlignment="Center" Width="20" Height="20" Padding="0" Margin="0,0,4,0"
-                                                    CornerRadius="10" Background="#E81123" BorderThickness="0" ToolTipService.ToolTip="Remove from group">
-                                                <FontIcon Glyph="&#xE711;" FontSize="9" Foreground="White" />
-                                            </Button>
+                                            <!-- Edit Mode Remove Badge (Top-Right) -->
+                                           <!-- Badges (Notification Count & Admin Shield, Top-Right) -->
+                                          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,4,0" Spacing="3">
+                                              <!-- Live Notification Badge -->
+                                              <Border MinWidth="16" Height="16" CornerRadius="8" Padding="4,0,4,0"
+                                                      Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                                      BorderBrush="{ThemeResource ControlElevationBorderBrush}" BorderThickness="1"
+                                                      Visibility="{x:Bind NotificationBadgeVisibility, Mode=OneWay}"
+                                                      ToolTipService.ToolTip="{x:Bind NotificationBadgeTooltip, Mode=OneWay}">
+                                                  <TextBlock Text="{x:Bind NotificationBadgeText, Mode=OneWay}"
+                                                             FontSize="10" FontWeight="SemiBold"
+                                                             Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                                                             HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                              </Border>
+                                              <!-- Admin Shield Badge (Windows UAC Shield) -->
+                                              <Border Width="16" Height="16" CornerRadius="8"
+                                                      Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                                      BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                                                      Visibility="{x:Bind AdminShieldVisibility, Mode=OneWay}"
+                                                      ToolTipService.ToolTip="Always runs as administrator">
+                                                  <FontIcon Glyph="&#xE7EF;" FontSize="9" Foreground="{x:Bind AdminShieldBrush, Mode=OneWay}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                              </Border>
+                                          </StackPanel>
+                                          <Button Click="RemoveAppBtn_Click" PointerEntered="RemoveAppBtn_PointerEntered" PointerExited="RemoveAppBtn_PointerExited" Tag="{x:Bind}" Visibility="{x:Bind EditModeVisibility, Mode=OneWay}"
+                                                  HorizontalAlignment="Right" VerticalAlignment="Top" Width="20" Height="20" Padding="0" Margin="0,2,2,0"
+                                                  CornerRadius="{ThemeResource ControlCornerRadius}" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}" BorderThickness="1" BorderBrush="{ThemeResource ControlElevationBorderBrush}" ToolTipService.ToolTip="Remove from group">
+                                              <FontIcon Glyph="&#xE711;" FontSize="8" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                          </Button>
                                         </Grid>
                                     </Grid>
                                  </DataTemplate>
@@ -657,7 +965,7 @@
                                   </GridView.ItemsPanel>
                                   <GridView.ItemContainerTransitions>
                                       <TransitionCollection>
-                                          <EntranceThemeTransition IsStaggeringEnabled="True"/>
+                                          <EntranceThemeTransition IsStaggeringEnabled="True" FromVerticalOffset="24"/>
                                       </TransitionCollection>
                                   </GridView.ItemContainerTransitions>
                                   <GridView.ItemContainerStyle>
@@ -676,31 +984,30 @@
                                                           <VisualStateManager.VisualStateGroups>
                                                               <VisualStateGroup x:Name="CommonStates">
                                                                   <VisualState x:Name="Normal">
-                                                                      <Storyboard>
-                                                                          <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.090" />
-                                                                      </Storyboard>
+                                                                      <VisualState.Setters>
+                                                                          <Setter Target="TileCard.Background" Value="Transparent" />
+                                                                          <Setter Target="TileCard.BorderBrush" Value="Transparent" />
+                                                                      </VisualState.Setters>
                                                                   </VisualState>
                                                                   <VisualState x:Name="PointerOver">
                                                                       <VisualState.Setters>
-                                                                          <Setter Target="HoverBg.Background" Value="{ThemeResource TileControlFillSecondary}" />
-                                                                          <Setter Target="HoverBg.BorderBrush" Value="{ThemeResource TileControlStrokeDefault}" />
+                                                                          <Setter Target="TileCard.Background" Value="{ThemeResource SubtleFillColorSecondaryBrush}" />
+                                                                          <Setter Target="TileCard.BorderBrush" Value="{ThemeResource ControlElevationBorderBrush}" />
                                                                       </VisualState.Setters>
-                                                                      <Storyboard>
-                                                                          <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.070" />
-                                                                      </Storyboard>
                                                                   </VisualState>
                                                                   <VisualState x:Name="Pressed">
                                                                       <VisualState.Setters>
-                                                                          <Setter Target="HoverBg.Background" Value="{ThemeResource TileControlFillTertiary}" />
-                                                                          <Setter Target="HoverBg.BorderBrush" Value="{ThemeResource TileControlStrokeSecondary}" />
+                                                                          <Setter Target="TileCard.Background" Value="{ThemeResource SubtleFillColorTertiaryBrush}" />
+                                                                          <Setter Target="TileCard.BorderBrush" Value="{ThemeResource ControlElevationBorderBrush}" />
                                                                       </VisualState.Setters>
-                                                                      <Storyboard>
-                                                                          <DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="0.7" Duration="0:0:0.050" />
-                                                                      </Storyboard>
                                                                   </VisualState>
                                                               </VisualStateGroup>
                                                           </VisualStateManager.VisualStateGroups>
-                                                          <Border x:Name="HoverBg" Opacity="0" CornerRadius="4" BorderThickness="1" Background="{ThemeResource TileControlFillSecondary}" BorderBrush="{ThemeResource TileControlStrokeDefault}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="2" />
+                                                          <Border x:Name="TileCard" CornerRadius="{ThemeResource ControlCornerRadius}" BorderThickness="1" BackgroundSizing="InnerBorderEdge" Background="Transparent" BorderBrush="Transparent" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="2">
+                                                              <Border.BackgroundTransition>
+                                                                  <BrushTransition Duration="0:0:0.083" />
+                                                              </Border.BackgroundTransition>
+                                                          </Border>
                                                           <ContentPresenter x:Name="ContentPresenter" HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="0" Padding="0" />
                                                       </Grid>
                                                   </ControlTemplate>
@@ -710,14 +1017,17 @@
                                   </GridView.ItemContainerStyle>
                                   <GridView.ItemTemplate>
                                       <DataTemplate x:DataType="popups:AppEntryViewModel">
-                                          <Grid CornerRadius="4" ToolTipService.Placement="Bottom" ToolTipService.ToolTip="{x:Bind Name}" HorizontalAlignment="Stretch" VerticalAlignment="Center" Padding="6,2,6,2">
+                                          <Grid CornerRadius="{ThemeResource ControlCornerRadius}" ToolTipService.Placement="Bottom" ToolTipService.ToolTip="{x:Bind Name}" HorizontalAlignment="Stretch" VerticalAlignment="Center" Padding="6,2,6,2">
                                               <Grid.ContextFlyout>
                                                   <MenuFlyout>
                                                       <MenuFlyoutItem Text="Open" Click="Open_Click" Tag="{x:Bind ExePath}">
                                                           <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8E5;" /></MenuFlyoutItem.Icon>
                                                       </MenuFlyoutItem>
-                                                      <MenuFlyoutItem Text="Run as Administrator" Click="RunAdmin_Click" Tag="{x:Bind ExePath}">
+<MenuFlyoutItem Text="Run as Administrator" Click="RunAdmin_Click" Tag="{x:Bind ExePath}">
                                                           <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE7EF;" /></MenuFlyoutItem.Icon>
+                                                      </MenuFlyoutItem>
+                                                      <MenuFlyoutItem Text="Launch Options..." Click="LaunchOptions_Click" Tag="{x:Bind}">
+                                                          <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE756;" /></MenuFlyoutItem.Icon>
                                                       </MenuFlyoutItem>
                                                       <MenuFlyoutSeparator />
                                                       <MenuFlyoutItem Text="Open file location" Click="OpenLoc_Click" Tag="{x:Bind ExePath}">
@@ -733,15 +1043,47 @@
                                                   </MenuFlyout>
                                               </Grid.ContextFlyout>
                                               <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" HorizontalAlignment="Left">
-                                                  <Image Width="24" Height="24" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" Source="{x:Bind IconImage, Mode=OneWay}" />
+                                                  <Grid Width="26" Height="28" VerticalAlignment="Center">
+                                                      <Image Width="24" Height="24" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Top" Source="{x:Bind IconImage, Mode=OneWay}" />
+                                                      <!-- Running Indicator (Fluent 2 Taskbar Pill) -->
+                                                      <Border Width="12" Height="2" CornerRadius="1"
+                                                              Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                                              HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                                                              Margin="0,0,0,1"
+                                                              Visibility="{x:Bind RunningBarVisibility, Mode=OneWay}" />
+                                                       <!-- Running Indicator Dot (Corner Dot) -->
+                                                       <Border Width="5" Height="5" CornerRadius="2.5" Background="{ThemeResource AccentFillColorDefaultBrush}" BorderThickness="1" BorderBrush="{ThemeResource SolidBackgroundFillColorBaseBrush}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,1,1,0" Visibility="{x:Bind RunningDotVisibility, Mode=OneWay}" />
+                                                  </Grid>
                                                   <TextBlock Text="{x:Bind Name}" FontSize="12" FontWeight="Normal" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorPrimaryBrush}" TextTrimming="CharacterEllipsis" MaxWidth="110" Visibility="{x:Bind LabelVisibility, Mode=OneWay}" />
                                               </StackPanel>
 
                                               <!-- Edit Mode Remove Badge -->
-                                              <Button Click="RemoveAppBtn_Click" Tag="{x:Bind}" Visibility="{x:Bind EditModeVisibility, Mode=OneWay}"
-                                                      HorizontalAlignment="Right" VerticalAlignment="Top" Width="14" Height="14" Padding="0" Margin="0,1,1,0"
-                                                      CornerRadius="7" Background="#E81123" BorderThickness="0" ToolTipService.ToolTip="Remove from group">
-                                                  <FontIcon Glyph="&#xE711;" FontSize="7" Foreground="White" />
+                                               <!-- Badges (Notification Count & Admin Shield, Top-Right) -->
+                                          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,4,0" Spacing="3">
+                                              <!-- Live Notification Badge -->
+                                              <Border MinWidth="16" Height="16" CornerRadius="8" Padding="4,0,4,0"
+                                                      Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                                      BorderBrush="{ThemeResource ControlElevationBorderBrush}" BorderThickness="1"
+                                                      Visibility="{x:Bind NotificationBadgeVisibility, Mode=OneWay}"
+                                                      ToolTipService.ToolTip="{x:Bind NotificationBadgeTooltip, Mode=OneWay}">
+                                                  <TextBlock Text="{x:Bind NotificationBadgeText, Mode=OneWay}"
+                                                             FontSize="10" FontWeight="SemiBold"
+                                                             Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                                                             HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                              </Border>
+                                              <!-- Admin Shield Badge (Windows UAC Shield) -->
+                                              <Border Width="16" Height="16" CornerRadius="8"
+                                                      Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                                      BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                                                      Visibility="{x:Bind AdminShieldVisibility, Mode=OneWay}"
+                                                      ToolTipService.ToolTip="Always runs as administrator">
+                                                  <FontIcon Glyph="&#xE7EF;" FontSize="9" Foreground="{x:Bind AdminShieldBrush, Mode=OneWay}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                              </Border>
+                                          </StackPanel>
+                                          <Button Click="RemoveAppBtn_Click" PointerEntered="RemoveAppBtn_PointerEntered" PointerExited="RemoveAppBtn_PointerExited" Tag="{x:Bind}" Visibility="{x:Bind EditModeVisibility, Mode=OneWay}"
+                                                      HorizontalAlignment="Right" VerticalAlignment="Top" Width="20" Height="20" Padding="0" Margin="0,2,2,0"
+                                                      CornerRadius="{ThemeResource ControlCornerRadius}" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}" BorderThickness="1" BorderBrush="{ThemeResource ControlElevationBorderBrush}" ToolTipService.ToolTip="Remove from group">
+                                                  <FontIcon Glyph="&#xE711;" FontSize="8" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                               </Button>
                                           </Grid>
                                       </DataTemplate>
@@ -757,7 +1099,28 @@
                                       <ColumnDefinition Width="*" />
                                       <ColumnDefinition Width="Auto" />
                                   </Grid.ColumnDefinitions>
-                                  <TextBlock x:Name="_cardFooterName" Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Left" FontSize="14" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" TextTrimming="CharacterEllipsis" Margin="4,0,0,0" />
+                                  <TextBlock x:Name="_cardFooterName" Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Left" FontSize="14" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" TextTrimming="CharacterEllipsis" Margin="4,0,0,0">
+                                      <TextBlock.ContextFlyout>
+                                          <MenuFlyout>
+                                              <MenuFlyoutItem Text="Edit app group" Click="EditGroup_Click">
+                                                  <MenuFlyoutItem.Icon>
+                                                      <FontIcon Glyph="&#xE70F;" />
+                                                  </MenuFlyoutItem.Icon>
+                                              </MenuFlyoutItem>
+                                              <MenuFlyoutItem Text="Edit app group (Parent)" Click="EditGroupParent_Click">
+                                                  <MenuFlyoutItem.Icon>
+                                                      <FontIcon Glyph="&#xE713;" />
+                                                  </MenuFlyoutItem.Icon>
+                                              </MenuFlyoutItem>
+                                              <MenuFlyoutSeparator />
+                                              <MenuFlyoutItem Text="Rename app group" Click="RenameGroup_Click">
+                                                  <MenuFlyoutItem.Icon>
+                                                      <FontIcon Glyph="&#xE8AC;" />
+                                                  </MenuFlyoutItem.Icon>
+                                              </MenuFlyoutItem>
+                                          </MenuFlyout>
+                                      </TextBlock.ContextFlyout>
+                                  </TextBlock>
                                   <Button x:Name="_cardEditBtn" Grid.Column="1" Click="EditGroup_Click" ToolTipService.ToolTip="Edit this Group" Width="28" Height="28" Padding="0" Background="Transparent" BorderThickness="0" CornerRadius="4">
                                       <FontIcon Glyph="&#xE70F;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                   </Button>
@@ -769,30 +1132,9 @@
         </Border>
 
         <StackPanel x:Name="_pageDots" Orientation="Vertical" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="2" Margin="0,0,2,0" Visibility="Collapsed" Background="Transparent" Padding="4" PointerEntered="PageDots_PointerEntered" PointerExited="PageDots_PointerExited" />
-
-        <!-- Directional Comic/Speech Bubble Rename Overlay -->
-        <Grid x:Name="_renameBubbleGrid" Visibility="Collapsed" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="#50000000">
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="0" MaxWidth="280">
-                <!-- Upward Speech Bubble Tail pointing towards title -->
-                <Polygon x:Name="_renameBubbleTail" Points="0,10 10,0 20,10" Fill="{ThemeResource SolidBackgroundFillColorBaseBrush}" Stroke="{ThemeResource ControlElevationBorderBrush}" StrokeThickness="1" HorizontalAlignment="Center" Margin="0,0,0,-1" />
-                <!-- Bubble Card -->
-                <Border Background="{ThemeResource SolidBackgroundFillColorBaseBrush}" BorderBrush="{ThemeResource ControlElevationBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="14,12,14,14">
-                    <StackPanel Spacing="10">
-                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                            <FontIcon Glyph="&#xE8AC;" FontSize="14" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                            <TextBlock Text="Rename Group" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
-                        </StackPanel>
-                        <TextBox x:Name="_renameBox" PlaceholderText="New group name..." HorizontalAlignment="Stretch" KeyDown="RenameBox_KeyDown" />
-                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-                            <Button x:Name="_renameCancelBtn" Content="Cancel" Click="RenameCancel_Click" Padding="12,4,12,4" CornerRadius="6" />
-                            <Button x:Name="_renameSaveBtn" Content="Save" Click="RenameSave_Click" Style="{ThemeResource AccentButtonStyle}" Padding="16,4,16,4" CornerRadius="6" />
-                        </StackPanel>
-                    </StackPanel>
-                </Border>
-            </StackPanel>
-        </Grid>
     </Grid>
 </Window>
+
 
 
 

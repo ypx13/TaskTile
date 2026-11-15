@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ContentDialog
+    x:Class="TaskTile.Controls.SelectGroupTypeDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="What kind of group?"
+    CloseButtonText="Cancel"
+    CornerRadius="{ThemeResource OverlayCornerRadius}">
+
+    <StackPanel Spacing="10" Width="380" Margin="0,8,0,0">
+        <!-- Apps Option -->
+        <Button x:Name="AppsButton"
+                Click="AppsButton_Click"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Stretch"
+                Padding="16"
+                CornerRadius="{ThemeResource ControlCornerRadius}"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1">
+            <Grid ColumnSpacing="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <FontIcon Glyph="&#xECAA;" FontSize="32" VerticalAlignment="Center" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                    <TextBlock Text="Apps" FontWeight="SemiBold" FontSize="15"/>
+                    <TextBlock Text="Launch apps from a popup" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                </StackPanel>
+            </Grid>
+        </Button>
+
+        <!-- Files Option -->
+        <Button x:Name="FilesButton"
+                Click="FilesButton_Click"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Stretch"
+                Padding="16"
+                CornerRadius="{ThemeResource ControlCornerRadius}"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1">
+            <Grid ColumnSpacing="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <FontIcon Glyph="&#xE8B7;" FontSize="32" VerticalAlignment="Center" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="Files" FontWeight="SemiBold" FontSize="15"/>
+                        <Border CornerRadius="4" Background="{ThemeResource SubtleFillColorSecondaryBrush}" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Padding="6,1" VerticalAlignment="Center">
+                            <TextBlock Text="Folder" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontWeight="Medium"/>
+                        </Border>
+                    </StackPanel>
+                    <TextBlock Text="Open files with their default apps" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                </StackPanel>
+            </Grid>
+        </Button>
+
+        <!-- Radial Menu Option -->
+        <Button x:Name="RadialButton"
+                Click="RadialButton_Click"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Stretch"
+                Padding="16"
+                CornerRadius="{ThemeResource ControlCornerRadius}"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1">
+            <Grid ColumnSpacing="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <FontIcon Glyph="&#xEE94;" FontSize="32" VerticalAlignment="Center" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="Radial menu (Pie menu)" FontWeight="SemiBold" FontSize="15"/>
+                        <Border CornerRadius="4" Background="{ThemeResource SubtleFillColorSecondaryBrush}" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Padding="6,1" VerticalAlignment="Center">
+                            <TextBlock Text="Pie Menu" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontWeight="Medium"/>
+                        </Border>
+                    </StackPanel>
+                    <TextBlock Text="Spawns a circular menu orbiting around your cursor via shortcut" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Grid>
+        </Button>
+    </StackPanel>
+</ContentDialog>

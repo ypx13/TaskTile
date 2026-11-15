@@ -21,60 +21,123 @@
                 <Setter Property="Padding" Value="0,4" />
             </Style>
         </Grid.Resources>
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="48" x:Name="AppTitleBarRow"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
         <!-- Native SystemTrayManager used instead of H.NotifyIcon -->
 
         <Grid x:Name="AppTitleBar"
+              Grid.Row="0"
               Height="48"
-              VerticalAlignment="Top" />
+              Canvas.ZIndex="100">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="48" x:Name="TitleBarNavCol"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Column 0: Width = 48 matches NavView CompactPaneLength (48) -->
+            <Button x:Name="TitleBarPaneToggleBtn"
+                    Grid.Column="0"
+                    Click="TitleBarPaneToggleBtn_Click"
+                    Width="40" Height="36"
+                    Padding="0"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    CornerRadius="{ThemeResource ControlCornerRadius}"
+                    ToolTipService.ToolTip="Toggle Navigation">
+                <FontIcon Glyph="&#xE700;" FontSize="15" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+            </Button>
+
+            <!-- Column 1: App Icon and Title, Drag Region -->
+            <Grid x:Name="TitleBarDragRegion" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8" Margin="4,0,0,0">
+                    <Image x:Name="AppLogoImage"
+                           Width="18" Height="18"
+                           VerticalAlignment="Center"/>
+
+                    <TextBlock Text="TaskTile"
+                               FontSize="12"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"/>
+
+                    <TextBlock Text="Beta v0.7.5"
+                               FontSize="12"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+        </Grid>
 
         <Image x:Name="FrostedOverlay"
+               Grid.Row="0"
+               Grid.RowSpan="2"
                Source="ms-appx:///Assets/scratches.png"
                Stretch="UniformToFill"
                Opacity="0.4"
                Visibility="Collapsed" />
 
         <NavigationView x:Name="NavView"
+                        Grid.Row="1"
                         PaneDisplayMode="Left"
+                        IsPaneToggleButtonVisible="False"
                         IsBackButtonVisible="Collapsed"
                         IsSettingsVisible="True"
+                        Margin="0,-8,0,0"
                         SelectionChanged="NavView_SelectionChanged">
-            
-            <NavigationView.PaneHeader>
-                <StackPanel Orientation="Horizontal" Spacing="8"
-                            Padding="12,0,12,0"
-                            Height="40"
-                            VerticalAlignment="Center">
-                    <TextBlock Text="TaskTile"
-                               FontSize="16"
-                               FontWeight="Bold"
-                               VerticalAlignment="Center"/>
-                    <Border Background="{StaticResource TaskTileCyanBrush}"
-                            CornerRadius="4"
-                            Padding="6,2"
-                            VerticalAlignment="Center">
-                        <TextBlock Text="BETA"
-                                   FontSize="10"
-                                   FontWeight="Normal"
-                                   Foreground="Black"
-                                   VerticalAlignment="Center"/>
-                    </Border>
-                </StackPanel>
-            </NavigationView.PaneHeader>
-            
             <NavigationView.MenuItems>
-                <NavigationViewItem x:Name="HomeItem" Tag="Home" Content="Home" PointerEntered="Item_PointerEntered" PointerExited="Item_PointerExited" PointerPressed="Item_PointerPressed">
+                <NavigationViewItem x:Name="HomeItem" Tag="Home" Content="Home">
                     <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE80F;" FontFamily="Segoe Fluent Icons" />
+                        <FontIcon Glyph="&#xE80F;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem x:Name="GroupsItem" Tag="Groups" Content="Groups" PointerEntered="Item_PointerEntered" PointerExited="Item_PointerExited" PointerPressed="Item_PointerPressed">
+                <NavigationViewItem x:Name="GroupsItem" Tag="Groups" Content="Groups">
                     <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xF168;" FontFamily="Segoe Fluent Icons" />
+                        <FontIcon Glyph="&#xF168;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
             </NavigationView.MenuItems>
 
-            <Frame x:Name="ContentFrame" />
+            <Frame x:Name="ContentFrame" Margin="0,8,0,0"/>
         </NavigationView>
+
+        <!-- Polite In-App Notification Toast Banner -->
+        <Border x:Name="InAppNotificationBanner"
+                Grid.Row="1"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Bottom"
+                Margin="0,0,0,24"
+                MaxWidth="480"
+                CornerRadius="{ThemeResource OverlayCornerRadius}"
+                Background="{ThemeResource SolidBackgroundFillColorSecondaryBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                Padding="16,12"
+                Canvas.ZIndex="999"
+                Visibility="Collapsed">
+            <Grid ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <FontIcon Glyph="&#xE718;" FontSize="18" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
+
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                    <TextBlock x:Name="NotificationTitleText" Text="Shortcut Created" FontWeight="SemiBold" FontSize="13"/>
+                    <TextBlock x:Name="NotificationMessageText" Text="Due to Windows 11 policies, drag this shortcut to your taskbar to pin it politely." FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="WrapWholeWords"/>
+                </StackPanel>
+
+                <Button x:Name="NotificationActionBtn" Grid.Column="2" Content="Open Desktop" Click="NotificationActionBtn_Click" VerticalAlignment="Center" Padding="8,4" FontSize="12"/>
+                <Button x:Name="NotificationDismissBtn" Grid.Column="3" Background="Transparent" BorderThickness="0" Width="26" Height="26" Padding="0" VerticalAlignment="Center" Click="NotificationDismissBtn_Click">
+                    <FontIcon Glyph="&#xE711;" FontSize="10"/>
+                </Button>
+            </Grid>
+        </Border>
     </Grid>
 </Window>

@@ -1,4 +1,4 @@
-﻿<div align="center">
+<div align="center">
 
 <img src="Assets/newicon.png" alt="TaskTile Icon" width="128" height="128" />
 
@@ -87,6 +87,16 @@ icon extraction pipelines and animation, style programming and auto-hide trackin
 
 ---
 
+## 🙏 Credits & Acknowledgements
+
+TaskTile is built with love and stands on the shoulders of the great Windows developer community:
+
+* **[Windows App SDK](https://github.com/microsoft/WindowsAppSDK) & [WinUI 3](https://github.com/microsoft/microsoft-ui-xaml)** — For the modern Fluent 2 design language, native controls, and windowing framework.
+* **[System.Drawing.Common](https://www.nuget.org/packages/System.Drawing.Common)** — For bitmap processing, color matrix filters, and icon generation routines.
+* **Windows Shell & DWM Community** — Special thanks to community discussions and documentation exploring ShellCOM, TaskbandPin interfaces, and low-level Desktop Window Manager APIs.
+
+---
+
 ## 📄 License & Terms
 
 see the full [LICENSE](LICENSE) file for legal details. But I'm going to simply explain it here ⬇️
@@ -99,5 +109,5 @@ see the full [LICENSE](LICENSE) file for legal details. But I'm going to simply 
   * Upon the official v1.0 milestone, the project will open under a **Non-Commercial Community License** allowing forks and community editions, provided that **mandatory attribution (credit to ypx13)** and **strict non-commercial terms** are honored.
 
 <p align="center">
-  <sub>baked with 💖 using WinUI 3 & .NET 8 • TaskTile by ypx13</sub>
+  <sub>baked with 💖 using WinUI 3 & .NET 8 • TaskTile by ypx.13</sub>
 </p>

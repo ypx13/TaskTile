@@ -8,9 +8,9 @@ namespace TaskTile.Helpers {
         private static IntPtr _hwnd = IntPtr.Zero;
         private static IntPtr _hIcon = IntPtr.Zero;
         private static IntPtr _hMenu = IntPtr.Zero;
-        private static NativeMethods.WndProcDelegate _wndProcDelegate;
-        private static Action _onShowCallback;
-        private static Action _onExitCallback;
+        private static NativeMethods.WndProcDelegate? _wndProcDelegate;
+        private static Action? _onShowCallback;
+        private static Action? _onExitCallback;
         private static bool _isInitialized = false;
         private static bool _isVisible = false;
         private static int WM_TASKBARCREATED;
@@ -40,12 +40,18 @@ namespace TaskTile.Helpers {
         }
 
         public static void ShowSystemTray() {
+            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] ShowSystemTray called, _isInitialized={_isInitialized}, _isVisible={_isVisible}");
             if (!_isInitialized) return;
             if (_isVisible) return;
 
-            EnsureWindow();
-            CreateTrayIcon();
-            _isVisible = true;
+            try {
+                EnsureWindow();
+                CreateTrayIcon();
+                _isVisible = true;
+                System.Diagnostics.Debug.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] ShowSystemTray succeeded, _hwnd={_hwnd}");
+            } catch (Exception ex) {
+                System.Diagnostics.Debug.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] ShowSystemTray failed: {ex}");
+            }
         }
 
         public static void HideSystemTray() {

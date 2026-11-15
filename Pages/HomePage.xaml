@@ -22,57 +22,96 @@
                 Opacity="0.8"/>
         </StackPanel>
 
-        <!-- Banner — Custom grid to strictly lock the button to the right -->
+        <!-- Banner — Fluent InfoBar Card (Image 2 style: direct colored icon, horizontal actions) -->
         <Border x:Name="GettingStartedBanner"
                 Grid.Row="1"
                 Margin="28,4,28,24"
-                Background="{ThemeResource SystemFillColorNeutralBackgroundBrush}"
+                Background="{ThemeResource LayerOnAcrylicFillColorDefaultBrush}"
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="1"
-                CornerRadius="4"
-                Padding="16,12,16,12"
+                CornerRadius="{ThemeResource OverlayCornerRadius}"
+                Padding="16,12"
                 Visibility="Visible">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <FontIcon Grid.Column="0" Glyph="&#xE946;" FontSize="16" Margin="0,0,12,0" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                <TextBlock Grid.Column="1" VerticalAlignment="Center" TextWrapping="WrapWholeWords">
-                    <Run FontWeight="SemiBold" Text="Fun Fact! "/>
-                    <Run x:Name="BannerMessageRun" Text="..."/>
-                </TextBlock>
-                <Button x:Name="DismissFlyoutButton"
-                        Grid.Column="2"
-                        Background="Transparent"
-                        BorderThickness="0"
-                        Width="30" Height="30"
-                        Padding="0"
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Center"
-                        ToolTipService.ToolTip="Dismiss">
-                    <FontIcon Glyph="&#xE711;" FontSize="12"/>
-                    <Button.Flyout>
-                        <Flyout x:Name="DismissFlyout" Placement="Bottom">
-                            <StackPanel Spacing="12" Width="220">
-                                <Grid>
-                                    <TextBlock Text="Dismiss tips?" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                    <Button Background="Transparent" BorderThickness="0" Width="28" Height="28" Padding="0" HorizontalAlignment="Right" Click="CloseFlyout_Click">
-                                        <FontIcon Glyph="&#xE711;" FontSize="10"/>
-                                    </Button>
-                                </Grid>
-                                <TextBlock Text="Do you want to stop seeing these helpful tips?" 
-                                           TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Margin="0,-4,0,0"/>
-                                <StackPanel Spacing="8" Margin="0,4,0,0">
-                                    <Button Content="Forever" HorizontalAlignment="Stretch" Click="DismissForever_Click"/>
-                                    <Button Content="For today" HorizontalAlignment="Stretch" Click="DismissToday_Click"/>
-                                    <Button Content="Only this time" HorizontalAlignment="Stretch" Click="DismissOnce_Click"/>
+
+                <!-- 3D Flippable Banner Content -->
+                <Grid x:Name="BannerContentGrid" Grid.Column="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Direct Icon (Image 2 style: icon itself is colored, perfectly aligned with title) -->
+                    <FontIcon x:Name="BannerIcon"
+                              Grid.Column="0"
+                              FontFamily="Segoe Fluent Icons"
+                              Glyph="&#xF167;"
+                              FontSize="16"
+                              Foreground="#0078D4"
+                              VerticalAlignment="Top"
+                              Margin="0,1,12,0"/>
+
+                    <!-- Text Content: Header on top, description below — starts at top together with icon -->
+                    <StackPanel Grid.Column="1" VerticalAlignment="Top" Spacing="2">
+                        <TextBlock x:Name="BannerTitleText"
+                                   Text="Fun Fact"
+                                   FontWeight="SemiBold"
+                                   FontSize="14"/>
+                        <TextBlock x:Name="BannerMessageText"
+                                   Text="..."
+                                   FontSize="13"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                   TextWrapping="WrapWholeWords"
+                                   LineHeight="18"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Actions: Refresh and Dismiss in a clean horizontal row -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="12,-2,0,0">
+                    <Button x:Name="RefreshTipButton"
+                            Click="RefreshTipButton_Click"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Width="28" Height="28"
+                            Padding="0"
+                            CornerRadius="{ThemeResource ControlCornerRadius}"
+                            ToolTipService.ToolTip="Next tip or fun fact">
+                        <FontIcon x:Name="RefreshTipIcon" Glyph="&#xE72C;" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    </Button>
+
+                    <Button x:Name="DismissFlyoutButton"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Width="28" Height="28"
+                            Padding="0"
+                            CornerRadius="{ThemeResource ControlCornerRadius}"
+                            ToolTipService.ToolTip="Dismiss">
+                        <FontIcon Glyph="&#xE711;" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        <Button.Flyout>
+                            <Flyout x:Name="DismissFlyout" Placement="Bottom">
+                                <StackPanel Spacing="12" Width="220">
+                                    <Grid>
+                                        <TextBlock Text="Dismiss tips?" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                        <Button Background="Transparent" BorderThickness="0" Width="28" Height="28" Padding="0" HorizontalAlignment="Right" Click="CloseFlyout_Click">
+                                            <FontIcon Glyph="&#xE711;" FontSize="10"/>
+                                        </Button>
+                                    </Grid>
+                                    <TextBlock Text="Do you want to stop seeing these helpful tips?" 
+                                               TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Margin="0,-4,0,0"/>
+                                    <StackPanel Spacing="8" Margin="0,4,0,0">
+                                        <Button Content="Forever" HorizontalAlignment="Stretch" Click="DismissForever_Click"/>
+                                        <Button Content="For today" HorizontalAlignment="Stretch" Click="DismissToday_Click"/>
+                                        <Button Content="Only this time" HorizontalAlignment="Stretch" Click="DismissOnce_Click"/>
+                                    </StackPanel>
                                 </StackPanel>
-                            </StackPanel>
-                        </Flyout>
-                    </Button.Flyout>
-                </Button>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+                </StackPanel>
             </Grid>
         </Border>
 

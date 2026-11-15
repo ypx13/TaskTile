@@ -1,4 +1,3 @@
-using Microsoft.UI.Composition;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
@@ -7,9 +6,6 @@ using TaskTile.Services;
 using TaskTile.Helpers;
 using TaskTile.Pages;
 using Microsoft.UI.Windowing;
-using Microsoft.UI.Xaml.Hosting;
-using Microsoft.UI.Xaml.Input;
-using System.Numerics;
 using Windows.Graphics;
 using Microsoft.UI.Composition.SystemBackdrops;
 using Microsoft.UI;
@@ -23,39 +19,66 @@ namespace TaskTile;
 
 public sealed partial class MainWindow : Window
 {
-    private Compositor? _compositor;
-    private Visual? _homeVisual;
-    private Visual? _groupsVisual;
-    private SpringVector3NaturalMotionAnimation? _springAnimation;
     private TaskTile.Popups.PopupWindow? _cachedPopupWindow;
 
     public MainWindow()
     {
         this.InitializeComponent();
 
-        this.RootGrid.Loaded += async (s, e) => {
-            SetupComposition();
-
+        this.RootGrid.Loaded += (s, e) => {
             // Default selection and navigation
             if (NavView.MenuItems.Count > 0)
             {
                 NavView.SelectedItem = NavView.MenuItems[0];
                 ContentFrame.Navigate(typeof(HomePage));
             }
-
-            // Hook burger/settings – retry until found
-            await TryHookNavigationJuice();
         };
-
-        // Also re-hook after pane opens (template parts may not exist until then)
-        NavView.PaneOpened += async (s, e) => await TryHookNavigationJuice();
 
         SettingsService.Load();
         
         App.MainWindowInstance = this;
         this.AppWindow.Closing += AppWindow_Closing;
         this.Activated += MainWindow_Activated;
+        RootGrid.KeyDown += RootGrid_KeyDown;
         SetupWindow(); // Must be called before window is shown!
+    }
+
+    private readonly System.Text.StringBuilder _secretBuffer = new();
+    private DateTime _lastSecretTime = DateTime.MinValue;
+
+    private void RootGrid_KeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
+    {
+        if ((DateTime.Now - _lastSecretTime).TotalSeconds > 3)
+            _secretBuffer.Clear();
+
+        _lastSecretTime = DateTime.Now;
+
+        char c = (char)0;
+        var key = e.Key;
+        if (key >= Windows.System.VirtualKey.A && key <= Windows.System.VirtualKey.Z)
+            c = (char)('a' + (key - Windows.System.VirtualKey.A));
+        else if (key >= Windows.System.VirtualKey.Number0 && key <= Windows.System.VirtualKey.Number9)
+            c = (char)('0' + (key - Windows.System.VirtualKey.Number0));
+
+        if (c != (char)0)
+        {
+            _secretBuffer.Append(c);
+            if (_secretBuffer.Length > 20)
+                _secretBuffer.Remove(0, _secretBuffer.Length - 20);
+
+            string buf = _secretBuffer.ToString();
+            if (buf.EndsWith("tasktile26") || buf.EndsWith("26tasktile"))
+            {
+                _secretBuffer.Clear();
+                SettingsService.Current.PersistentDebugMode = true;
+                SettingsService.Save();
+                NavigateTo(typeof(TaskTile.Pages.SettingsPage));
+                if (ContentFrame.Content is TaskTile.Pages.SettingsPage sp)
+                {
+                    sp.ShowDebugPanel();
+                }
+            }
+        }
     }
 
     private bool _isInitialized = false;
@@ -67,8 +90,14 @@ public sealed partial class MainWindow : Window
             _isInitialized = true;
             try
             {
-                var iconPath = System.IO.Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "Assets", "Square44x44Logo.targetsize-256.png");
+                var iconPath = System.IO.Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "Assets", "newicon.ico");
                 if (System.IO.File.Exists(iconPath)) this.AppWindow.SetIcon(iconPath);
+
+                var logoPath = System.IO.Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "Assets", "newicon.png");
+                if (System.IO.File.Exists(logoPath))
+                {
+                    AppLogoImage.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri(logoPath));
+                }
             } catch { }
 
             ApplySettings();
@@ -90,6 +119,9 @@ public sealed partial class MainWindow : Window
 
             InitializeBackgroundPopup();
             StartPipeServer();
+
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+            HotkeyService.Instance.Initialize(hwnd, this.DispatcherQueue);
         }
     }
 
@@ -101,15 +133,25 @@ public sealed partial class MainWindow : Window
                     using var server = new NamedPipeServerStream("TaskTilePipe", PipeDirection.In, 1, PipeTransmissionMode.Message, PipeOptions.Asynchronous);
                     await server.WaitForConnectionAsync();
                     using var reader = new StreamReader(server);
-                    string? groupId = await reader.ReadLineAsync();
-                    if (!string.IsNullOrEmpty(groupId)) {
+                    string? msg = await reader.ReadLineAsync();
+                    if (!string.IsNullOrEmpty(msg)) {
                         DispatcherQueue.TryEnqueue(() => {
-                            if (groupId == "SHOW_MAIN") {
+                            if (msg == "SHOW_MAIN") {
+                                AppWindow.Show();
                                 var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
                                 App.ShowWindow(hwnd, 9); // SW_RESTORE
                                 App.SetForegroundWindow(hwnd);
+                            } else if (msg.StartsWith("EDIT_GROUP:")) {
+                                string gid = msg.Substring("EDIT_GROUP:".Length);
+                                ShowGroup(gid, "edit");
+                            } else if (msg.StartsWith("SETTINGS_GROUP:")) {
+                                string gid = msg.Substring("SETTINGS_GROUP:".Length);
+                                OpenGroupParentSettings(gid);
+                            } else if (msg.StartsWith("RENAME_GROUP:")) {
+                                string gid = msg.Substring("RENAME_GROUP:".Length);
+                                ShowGroup(gid, "rename");
                             } else {
-                                ShowGroup(groupId);
+                                ShowGroup(msg);
                             }
                         });
                     }
@@ -140,11 +182,17 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    public void ShowGroup(string groupId)
+    public void ShowGroup(string groupId, string? action = null)
     {
+        var group = GroupService.Instance.Groups.FirstOrDefault(g => g.Id.ToString() == groupId);
+        if (group != null && group.GroupType == Models.GroupType.Radial)
+        {
+            RadialMenuManager.Show(group);
+            return;
+        }
         if (SettingsService.Current.StartPopupsInBackground && _cachedPopupWindow != null)
         {
-            _cachedPopupWindow.LoadGroup(groupId);
+            _cachedPopupWindow.LoadGroup(groupId, action);
             _cachedPopupWindow.AppWindow.Show();
             _cachedPopupWindow.Activate();
             
@@ -153,11 +201,37 @@ public sealed partial class MainWindow : Window
         }
         else
         {
-            var popup = new TaskTile.Popups.PopupWindow(groupId);
+            var popup = new TaskTile.Popups.PopupWindow(groupId, action);
             popup.Activate();
             
             var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(popup);
             TaskTile.NativeMethods.SetForegroundWindow(hwnd);
+        }
+    }
+
+    public void OpenGroupParentSettings(string groupId)
+    {
+        if (!Guid.TryParse(groupId, out var gid)) return;
+        this.AppWindow.Show();
+        var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+        App.ShowWindow(hwnd, 9); // SW_RESTORE
+        App.SetForegroundWindow(hwnd);
+        NavigateTo(typeof(TaskTile.Pages.GroupsPage));
+        this.Activate();
+
+        if (ContentFrame.Content is TaskTile.Pages.GroupsPage gp)
+        {
+            gp.OpenGroupFullSettings(gid);
+        }
+        else
+        {
+            DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+            {
+                if (ContentFrame.Content is TaskTile.Pages.GroupsPage gp2)
+                {
+                    gp2.OpenGroupFullSettings(gid);
+                }
+            });
         }
     }
 
@@ -170,35 +244,17 @@ public sealed partial class MainWindow : Window
 
     // Removed old TrayMenu event handlers as we now use SystemTrayManager
 
-    private void SetupComposition()
-    {
-        _compositor = ElementCompositionPreview.GetElementVisual(RootGrid).Compositor;
-        
-        if (HomeItem.Icon is FontIcon homeIcon)
-        {
-            _homeVisual = ElementCompositionPreview.GetElementVisual(homeIcon);
-            _homeVisual.CenterPoint = new Vector3(10, 10, 0);
-        }
-
-        if (GroupsItem.Icon is FontIcon groupsIcon)
-        {
-            _groupsVisual = ElementCompositionPreview.GetElementVisual(groupsIcon);
-            _groupsVisual.CenterPoint = new Vector3(10, 10, 0);
-        }
-
-        _springAnimation = _compositor.CreateSpringVector3Animation();
-        _springAnimation.Target = "Scale";
-        _springAnimation.DampingRatio = 0.5f;
-        _springAnimation.Period = TimeSpan.FromSeconds(0.12);
-    }
-
     private void SetupWindow()
     {
         this.ExtendsContentIntoTitleBar = true;
+        this.SetTitleBar(TitleBarDragRegion);
         var appWindow = this.AppWindow;
         if (appWindow.TitleBar != null)
         {
             appWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
+            int tbHeight = appWindow.TitleBar.Height > 0 ? appWindow.TitleBar.Height : 48;
+            AppTitleBar.Height = tbHeight;
+            AppTitleBarRow.Height = new GridLength(tbHeight);
         }
         appWindow.Resize(new SizeInt32(1100, 750));
         Center();
@@ -320,9 +376,103 @@ public sealed partial class MainWindow : Window
                 AppWindow.TitleBar.ButtonPressedForegroundColor  = btnColor;
                 AppWindow.TitleBar.ButtonInactiveForegroundColor = Windows.UI.Color.FromArgb(120, btnColor.R, btnColor.G, btnColor.B);
             }
+
+            GroupsItem.Content = s.UseNichesTerminology ? "Niches" : "Groups";
         } catch { }
     }
 
+    private string? _pendingNotificationPath;
+
+    public void ShowInAppNotification(string title, string message, string? filePath = null)
+    {
+        this.DispatcherQueue?.TryEnqueue(() =>
+        {
+            _pendingNotificationPath = filePath;
+            NotificationTitleText.Text = title;
+            NotificationMessageText.Text = message;
+
+            if (filePath == "FIX_POLICY")
+            {
+                NotificationActionBtn.Content = "Allow Pinning";
+                NotificationActionBtn.Visibility = Visibility.Visible;
+            }
+            else if (filePath != null && (filePath == "CONFIRM_PIN" || filePath.StartsWith("CONFIRM_PIN:")))
+            {
+                NotificationActionBtn.Content = "Pin Now";
+                NotificationActionBtn.Visibility = Visibility.Visible;
+            }
+            else if (!string.IsNullOrEmpty(filePath))
+            {
+                bool isDesktop = false;
+                try
+                {
+                    string desktopDir = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+                    if (filePath.StartsWith(desktopDir, StringComparison.OrdinalIgnoreCase))
+                        isDesktop = true;
+                }
+                catch { }
+
+                NotificationActionBtn.Content = isDesktop ? "Show on Desktop" : "Show in Folder";
+                NotificationActionBtn.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                NotificationActionBtn.Visibility = Visibility.Collapsed;
+            }
+
+            InAppNotificationBanner.Visibility = Visibility.Visible;
+
+            var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(6) };
+            timer.Tick += (s, e) =>
+            {
+                timer.Stop();
+                InAppNotificationBanner.Visibility = Visibility.Collapsed;
+            };
+            timer.Start();
+        });
+    }
+
+    private void NotificationActionBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (_pendingNotificationPath == "FIX_POLICY")
+        {
+            TaskbarService.AllowPinningPolicy();
+            ShowInAppNotification("Policy Updated", "Taskbar pinning policy has been enabled. You can now pin your groups!", null);
+            return;
+        }
+        if (_pendingNotificationPath != null && _pendingNotificationPath.StartsWith("CONFIRM_PIN:"))
+        {
+            string rawId = _pendingNotificationPath.Substring("CONFIRM_PIN:".Length);
+            InAppNotificationBanner.Visibility = Visibility.Collapsed;
+            if (Guid.TryParse(rawId, out var gId))
+            {
+                var grp = GroupService.Instance.Groups.FirstOrDefault(g => g.Id == gId);
+                if (grp != null)
+                {
+                    TaskbarService.ExecutePin(grp);
+                }
+            }
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(_pendingNotificationPath))
+        {
+            try
+            {
+                if (System.IO.File.Exists(_pendingNotificationPath))
+                    System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{_pendingNotificationPath}\"");
+                else
+                    System.Diagnostics.Process.Start("explorer.exe", Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory));
+            }
+            catch { }
+        }
+        InAppNotificationBanner.Visibility = Visibility.Collapsed;
+    }
+
+    private void NotificationDismissBtn_Click(object sender, RoutedEventArgs e)
+    {
+        InAppNotificationBanner.Visibility = Visibility.Collapsed;
+    }
 
     public void NavigateTo(Type pageType)
     {
@@ -352,111 +502,9 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void Item_PointerEntered(object sender, PointerRoutedEventArgs e)
+    private void TitleBarPaneToggleBtn_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is NavigationViewItem item)
-        {
-            var tag = item.Tag?.ToString();
-            // Animate only the icon visual, not the whole row
-            if (tag == "Home" && _homeVisual != null) AnimateVisual(_homeVisual, true);
-            else if (tag == "Groups" && _groupsVisual != null) AnimateVisual(_groupsVisual, true);
-        }
-    }
-
-    private void Item_PointerExited(object sender, PointerRoutedEventArgs e)
-    {
-        if (sender is NavigationViewItem item)
-        {
-            var tag = item.Tag?.ToString();
-            if (tag == "Home" && _homeVisual != null) AnimateVisual(_homeVisual, false);
-            else if (tag == "Groups" && _groupsVisual != null) AnimateVisual(_groupsVisual, false);
-        }
-    }
-
-    private void Item_PointerPressed(object sender, PointerRoutedEventArgs e)
-    {
-        if (sender is NavigationViewItem item)
-        {
-            var tag = item.Tag?.ToString();
-            if (tag == "Home" && _homeVisual != null) BounceVisual(_homeVisual);
-            else if (tag == "Groups" && _groupsVisual != null) BounceVisual(_groupsVisual);
-        }
-    }
-
-    // Tracks hooked elements so we don't double-attach
-    private readonly System.Collections.Generic.HashSet<string> _hookedNames = new();
-
-    private async System.Threading.Tasks.Task TryHookNavigationJuice(int retries = 5)
-    {
-        for (int attempt = 0; attempt < retries; attempt++)
-        {
-            if (WalkAndHook(NavView)) return;
-            await System.Threading.Tasks.Task.Delay(120);
-        }
-    }
-
-    private bool WalkAndHook(DependencyObject parent)
-    {
-        bool foundAll = false;
-        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
-        {
-            var child = VisualTreeHelper.GetChild(parent, i);
-            if (child is FrameworkElement fe &&
-                (fe.Name == "TogglePaneButton" || fe.Name == "SettingsNavPaneItem") &&
-                !_hookedNames.Contains(fe.Name))
-            {
-                _hookedNames.Add(fe.Name);
-                foundAll = true;
-                fe.AddHandler(UIElement.PointerEnteredEvent,  new PointerEventHandler((_, _) => AnimateDynamicIcon(fe, true)),  true);
-                fe.AddHandler(UIElement.PointerExitedEvent,   new PointerEventHandler((_, _) => AnimateDynamicIcon(fe, false)), true);
-                fe.AddHandler(UIElement.PointerPressedEvent,  new PointerEventHandler((_, _) => BounceDynamicIcon(fe)),        true);
-            }
-            WalkAndHook(child);
-        }
-        return foundAll;
-    }
-
-    // Animate an icon-level visual (squish on enter, spring on exit)
-    private void AnimateVisual(Visual visual, bool enter)
-    {
-        if (_compositor == null) return;
-        if (enter)
-        {
-            var anim = _compositor.CreateVector3KeyFrameAnimation();
-            anim.InsertKeyFrame(1.0f, new Vector3(1.2f, 0.8f, 1.0f));
-            anim.Duration = TimeSpan.FromSeconds(0.15);
-            visual.StartAnimation("Scale", anim);
-        }
-        else if (_springAnimation != null)
-        {
-            _springAnimation.FinalValue = new Vector3(1.0f, 1.0f, 1.0f);
-            visual.StartAnimation("Scale", _springAnimation);
-        }
-    }
-
-    private void BounceVisual(Visual visual)
-    {
-        if (_compositor == null || _springAnimation == null) return;
-        visual.Scale = new Vector3(0.75f, 0.75f, 1.0f);
-        _springAnimation.FinalValue = new Vector3(1.0f, 1.0f, 1.0f);
-        visual.StartAnimation("Scale", _springAnimation);
-    }
-
-    // Animate a whole FrameworkElement (hamburger / settings button)
-    private void AnimateDynamicIcon(FrameworkElement item, bool enter)
-    {
-        var visual = ElementCompositionPreview.GetElementVisual(item);
-        if (_compositor == null) return;
-        visual.CenterPoint = new Vector3((float)item.ActualWidth / 2, (float)item.ActualHeight / 2, 0);
-        AnimateVisual(visual, enter);
-    }
-
-    private void BounceDynamicIcon(FrameworkElement item)
-    {
-        var visual = ElementCompositionPreview.GetElementVisual(item);
-        if (_compositor == null || _springAnimation == null) return;
-        visual.CenterPoint = new Vector3((float)item.ActualWidth / 2, (float)item.ActualHeight / 2, 0);
-        BounceVisual(visual);
+        NavView.IsPaneOpen = !NavView.IsPaneOpen;
     }
 
     private void AppWindow_Closing(AppWindow sender, AppWindowClosingEventArgs args)

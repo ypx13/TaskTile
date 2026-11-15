@@ -9,6 +9,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Animation;
 using TaskTile.Services;
 
 namespace TaskTile.Pages;
@@ -16,15 +17,19 @@ namespace TaskTile.Pages;
 public sealed partial class HomePage : Page
 {
     private Compositor? _compositor;
-    private readonly List<string> _funFacts = new()
+    private record TipOrFact(bool IsTip, string Title, string Content);
+
+    private readonly List<TipOrFact> _tipsAndFacts = new()
     {
-        "TaskTile actually rhymes with \"Tactile\", now that was necessary to point out.",
-        "Your most used group is just one click away from the tray.",
-        "While making the presentation image, i actually used a drawing app called IbisPaint.",
-        "Most of the cool animations you see here, are animated \U0001f60e.",
-        "TaskTile is 100% native using WinUI3 and C#, meaning it will sync well with your Windows 11 PC.",
-        "You can hold on the settings icon with your mouse and flick it to rotate it.",
-        "No need to click every icon in the aisle, just shift-select the pack inside."
+        new(false, "Fun Fact", "My vision for the first ever prototype build of TaskTile wasn't gonna be like how it came, but instead would have \"Niches\" instead of app groups and would look like the Vistor ID style."),
+        new(false, "Fun Fact", "TaskTile actually rhymes with \"Tactile\", now that was necessary to point out."),
+        new(false, "Fun Fact", "While making the presentation image, i actually used a drawing app called IbisPaint."),
+        new(false, "Fun Fact", "Most of the cool animations you see here, are animated \U0001f60e."),
+        new(false, "Fun Fact", "TaskTile is 100% native using WinUI3 and C#, meaning it will sync well with your Windows 11 PC."),
+        new(false, "Fun Fact", "Did you know? Every version of TaskTile had code-names, like the version your using right now is code-named \"shifu\"!"),
+        new(true,  "Tip", "Your most used group is just one click away from the tray."),
+        new(true,  "Tip", "You can hold on the settings icon with your mouse and flick it to rotate it."),
+        new(true,  "Tip", "No need to click every icon in the aisle, just shift-select the pack inside.")
     };
 
     // Dismiss preference keys — stored as plain text files in AppData\Local\TaskTile
@@ -73,8 +78,8 @@ public sealed partial class HomePage : Page
         SetupCardVisual(PinnedCard);
     }
 
-    private const string CurrentVersion = "0.7";
-    private const string VersionName = "Borders, Corners, and alot of folders";
+    private const string CurrentVersion = "0.7.5";
+    private const string VersionName = "Refreshes and just freshes!";
 
     private async Task ShowChangelogIfNeededAsync()
     {
@@ -88,59 +93,81 @@ public sealed partial class HomePage : Page
         {
             try
             {
-                var changelogPanel = new StackPanel { Spacing = 12 };
+                var changelogPanel = new StackPanel { Spacing = 8 };
 
                 var res = Application.Current.Resources;
-                var accentBg = res.TryGetValue("AccentFillColorDefaultBrush", out var b1) ? (Microsoft.UI.Xaml.Media.Brush)b1 : GetAccentBrush();
-                var textOnAccent = res.TryGetValue("TextOnAccentFillColorPrimaryBrush", out var b2) ? (Microsoft.UI.Xaml.Media.Brush)b2 : new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.White);
                 var accentText = res.TryGetValue("AccentTextFillColorPrimaryBrush", out var b3) ? (Microsoft.UI.Xaml.Media.Brush)b3 : GetAccentBrush();
                 var textSecondary = res.TryGetValue("TextFillColorSecondaryBrush", out var b4) ? (Microsoft.UI.Xaml.Media.Brush)b4 : new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray);
+                var cardBg = res.TryGetValue("CardBackgroundFillColorDefaultBrush", out var bCard) ? (Microsoft.UI.Xaml.Media.Brush)bCard : new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(12, 255, 255, 255));
+                var cardStroke = res.TryGetValue("CardStrokeColorDefaultBrush", out var bStroke) ? (Microsoft.UI.Xaml.Media.Brush)bStroke : new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(16, 255, 255, 255));
+                var badgeBg = res.TryGetValue("SubtleFillColorSecondaryBrush", out var bBadge) ? (Microsoft.UI.Xaml.Media.Brush)bBadge : new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(20, 255, 255, 255));
 
                 var badge = new Border
                 {
-                    Background = accentBg,
-                    CornerRadius = new CornerRadius(8),
-                    Padding = new Thickness(12, 6, 12, 6),
+                    Background = badgeBg,
+                    BorderBrush = cardStroke,
+                    BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(14),
+                    Padding = new Thickness(12, 5, 12, 5),
                     HorizontalAlignment = HorizontalAlignment.Left,
+                    Margin = new Thickness(0, 0, 0, 6),
                     Child = new TextBlock
                     {
                         Text = $"v{CurrentVersion} — {VersionName}",
                         FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-                        Foreground = textOnAccent,
-                        FontSize = 13
+                        Foreground = accentText,
+                        FontSize = 12
                     }
                 };
                 changelogPanel.Children.Add(badge);
 
                 var changes = new (string icon, string title, string desc)[]
                 {
-                    ("\uE80F", "Home & Welcome", "Redesigned Home page and added a welcome for first time users."),
-                    ("\uE81E", "Layouts Polished", "Polished Classic Grid, Compact, and List layouts. Added a new Dialog-ish style!"),
-                    ("\uE70F", "In-App Editing", "Added editing directly from the app group pop-up 🧪 (Experimental)."),
-                    ("\uE713", "Customization Galore", "Added global settings, title location in group settings, and a ton of customization options!"),
-                    ("\uE8B8", "Acrylic & Visuals", "FIXED ACRYLIC 😭, added WinUI3 style hover, and a couple of animations here and there."),
-                    ("\uE83B", "Folders & Groups", "Added Dynamic folder groups and manual positioning. Changed Group-settings from a dialog to a pop-up."),
-                    ("\uE9D9", "Fixes & Goodies", "Fixed some bugs (group-gate), added 'other-taskbar' detection, delete data, fun-facts/tips, and a tray-icon.")
+                    ("\uE74C", "Visitor ID & Niches", "Authentic Visitor ID card layout with 1:1 square icon plates, zero dead space, and optional Niches terminology."),
+                    ("\uEE94", "Radial Menu & Gestures", "Spawns a circular menu orbiting around your cursor with double-press train launch and in-situ edit mode."),
+                    ("\uE8D8", "Tactile Spring Bounce", "Cards spring bounce in anticipation then organically wiggle when entering edit mode with drag reordering."),
+                    ("\uE713", "Fluent 2 Quick Settings", "Redesigned card settings with native grouped rows, instant theme toggle, and right-aligned controls."),
+                    ("\uE8B7", "Dynamic Folder Support", "Full file & subfolder navigation with authentic high-res shell icon extraction."),
+                    ("\uE718", "Polite Taskbar & Start", "Desktop & Start menu shortcuts with browser-style consent and system policy diagnostics."),
+                    ("\uE790", "Performance & 60Hz Animations", "Smooth Fluent 2D slide-and-fade transitions, zero-flicker popup cache, and instant load times.")
                 };
 
                 foreach (var (icon, title, desc) in changes)
                 {
-                    var row = new Grid { Margin = new Thickness(0, 2, 0, 2) };
-                    row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
+                    var card = new Border
+                    {
+                        Background = cardBg,
+                        BorderBrush = cardStroke,
+                        BorderThickness = new Thickness(1),
+                        CornerRadius = new CornerRadius(8),
+                        Padding = new Thickness(12, 10, 12, 10)
+                    };
+
+                    var row = new Grid();
+                    row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(42) });
                     row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
-                    var iconBlock = new FontIcon
+                    var iconBadge = new Border
                     {
-                        Glyph = icon,
-                        FontSize = 18,
-                        FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Segoe Fluent Icons"),
-                        Foreground = accentText,
-                        VerticalAlignment = VerticalAlignment.Top,
-                        Margin = new Thickness(0, 2, 0, 0)
+                        Width = 32,
+                        Height = 32,
+                        CornerRadius = new CornerRadius(6),
+                        Background = badgeBg,
+                        VerticalAlignment = VerticalAlignment.Center,
+                        HorizontalAlignment = HorizontalAlignment.Left,
+                        Child = new FontIcon
+                        {
+                            Glyph = icon,
+                            FontSize = 14,
+                            FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Segoe Fluent Icons"),
+                            Foreground = accentText,
+                            HorizontalAlignment = HorizontalAlignment.Center,
+                            VerticalAlignment = VerticalAlignment.Center
+                        }
                     };
-                    Grid.SetColumn(iconBlock, 0);
+                    Grid.SetColumn(iconBadge, 0);
 
-                    var textStack = new StackPanel { Spacing = 2 };
+                    var textStack = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
                     textStack.Children.Add(new TextBlock
                     {
                         Text = title,
@@ -152,13 +179,14 @@ public sealed partial class HomePage : Page
                         Text = desc,
                         FontSize = 12,
                         Foreground = textSecondary,
-                        TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap
+                        TextWrapping = Microsoft.UI.Xaml.TextWrapping.WrapWholeWords
                     });
                     Grid.SetColumn(textStack, 1);
 
-                    row.Children.Add(iconBlock);
+                    row.Children.Add(iconBadge);
                     row.Children.Add(textStack);
-                    changelogPanel.Children.Add(row);
+                    card.Child = row;
+                    changelogPanel.Children.Add(card);
                 }
 
                 var dialog = new ContentDialog
@@ -168,11 +196,11 @@ public sealed partial class HomePage : Page
                     XamlRoot = this.XamlRoot,
                     Content = new ScrollViewer
                     {
-                        MaxHeight = 420,
+                        MaxHeight = 440,
                         Content = changelogPanel,
                         VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
                         HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-                        Padding = new Thickness(0, 4, 12, 0)
+                        Padding = new Thickness(0, 4, 10, 0)
                     }
                 };
 
@@ -210,11 +238,141 @@ public sealed partial class HomePage : Page
         PickFunFact();
     }
 
+    private int _currentTipIndex = -1;
+
     private void PickFunFact()
     {
-        var tip = _funFacts[new Random().Next(_funFacts.Count)];
-        BannerMessageRun.Text = tip;
+        if (_tipsAndFacts.Count == 0) return;
+        int nextIndex;
+        do
+        {
+            nextIndex = new Random().Next(_tipsAndFacts.Count);
+        } while (_tipsAndFacts.Count > 1 && nextIndex == _currentTipIndex);
+        _currentTipIndex = nextIndex;
+
+        var item = _tipsAndFacts[_currentTipIndex];
+        BannerTitleText.Text = item.Title;
+        BannerMessageText.Text = item.Content;
+
+        if (item.IsTip)
+        {
+            // Blue icon for Tips (Image 2 style: icon itself is blue, no circle bg)
+            BannerIcon.Glyph = "\uF167";
+            BannerIcon.Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0, 120, 212));
+        }
+        else
+        {
+            // Yellow/amber icon for Fun Facts (Image 2 style: icon itself is yellow, no circle bg)
+            BannerIcon.Glyph = "\uEA80";
+            BannerIcon.Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 255, 185, 0));
+        }
+
         GettingStartedBanner.Visibility = Visibility.Visible;
+    }
+
+    private void RefreshTipButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var iconVisual = Microsoft.UI.Xaml.Hosting.ElementCompositionPreview.GetElementVisual(RefreshTipIcon);
+            var comp = iconVisual.Compositor;
+            iconVisual.CenterPoint = new System.Numerics.Vector3(6f, 6f, 0f);
+            var spinAnim = comp.CreateScalarKeyFrameAnimation();
+            spinAnim.InsertKeyFrame(0.0f, 0f);
+            spinAnim.InsertKeyFrame(1.0f, 360f);
+            spinAnim.Duration = TimeSpan.FromMilliseconds(300);
+            iconVisual.StartAnimation("RotationAngleInDegrees", spinAnim);
+        }
+        catch { }
+
+        bool animationsEnabled = true;
+        try
+        {
+            var uiSettings = new Windows.UI.ViewManagement.UISettings();
+            animationsEnabled = uiSettings.AnimationsEnabled && !SettingsService.Current.DisableAnimation;
+        }
+        catch { }
+
+        if (!animationsEnabled)
+        {
+            PickFunFact();
+            return;
+        }
+
+        try
+        {
+            if (BannerContentGrid.RenderTransform is not TranslateTransform tt)
+            {
+                tt = new TranslateTransform();
+                BannerContentGrid.RenderTransform = tt;
+            }
+
+            var sbOut = new Storyboard();
+
+            var fadeOut = new DoubleAnimation
+            {
+                To = 0.0,
+                Duration = TimeSpan.FromMilliseconds(120),
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
+            };
+            Storyboard.SetTarget(fadeOut, BannerContentGrid);
+            Storyboard.SetTargetProperty(fadeOut, "Opacity");
+
+            var slideOut = new DoubleAnimation
+            {
+                To = -8.0,
+                Duration = TimeSpan.FromMilliseconds(120),
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
+            };
+            Storyboard.SetTarget(slideOut, tt);
+            Storyboard.SetTargetProperty(slideOut, "Y");
+
+            sbOut.Children.Add(fadeOut);
+            sbOut.Children.Add(slideOut);
+
+            sbOut.Completed += (s, ev) =>
+            {
+                PickFunFact();
+                tt.Y = 8.0;
+
+                var sbIn = new Storyboard();
+
+                var fadeIn = new DoubleAnimation
+                {
+                    To = 1.0,
+                    Duration = TimeSpan.FromMilliseconds(160),
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+                };
+                Storyboard.SetTarget(fadeIn, BannerContentGrid);
+                Storyboard.SetTargetProperty(fadeIn, "Opacity");
+
+                var slideIn = new DoubleAnimation
+                {
+                    To = 0.0,
+                    Duration = TimeSpan.FromMilliseconds(160),
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+                };
+                Storyboard.SetTarget(slideIn, tt);
+                Storyboard.SetTargetProperty(slideIn, "Y");
+
+                sbIn.Children.Add(fadeIn);
+                sbIn.Children.Add(slideIn);
+
+                sbIn.Completed += (s2, ev2) =>
+                {
+                    BannerContentGrid.Opacity = 1.0;
+                    tt.Y = 0.0;
+                };
+
+                sbIn.Begin();
+            };
+
+            sbOut.Begin();
+        }
+        catch
+        {
+            PickFunFact();
+        }
     }
 
     private void DismissForever_Click(object sender, RoutedEventArgs e)

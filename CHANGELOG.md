@@ -2,6 +2,71 @@
 
 All notable changes to TaskTile will be documented in this file.
 
+## [v0.7.5] - Beta Update - 2026-11-15
+
+### Added
+- **Grayscale Taskbar Icon**: Added toggle in Settings to display the group icon in clean grayscale on the taskbar while the popup window is open, automatically restoring full color when dismissed.
+- **Background Popup Memory Trimming**: Enhanced instant launch preload with background working set trimming, dropping unused memory pages whenever popups are hidden so TaskTile stays light on RAM.
+
+### Fixed & Refined
+- **Fluent 2 Badge Polish**: Replaced hard-to-read accent color badges with subtle, high-contrast Fluent 2 neutral pill tags that look clean and readable across any accent color.
+- **Icon Rendering Consistency**: Fixed administrator badge icon inheriting yellow accent colors and updated system tray icon to outline chevron.
+- **Dependency & Cleanup**: Removed unused third-party packages, cleaned build artifacts, and eliminated compiler warnings.
+
+## [v0.8] - Refreshes and just freshes! - 2026-09-26
+
+### Added
+- **Native Taskbar Pinning & Unpinning**: Built an in-process Explorer bridge (`TaskbarPinBridge.dll` via `CLSID_PinManager` and `IPinManagerInterop2`) for zero-drag 1-click pinning and unpinning directly to/from the Windows 11 taskbar.
+- **Instant Taskbar Pinning**: Added an option in Settings to pin immediately to the taskbar upon clicking Pin without requiring a confirmation consent prompt.
+- **Enhanced App Picker with High-Res Icons & File Paths**:
+  - Redesigned app selection dialog with expanded sizing (480px width, 320px height) and comfortable 48px row heights.
+  - Displays high-resolution application icons and target file paths directly under app titles.
+  - Added settings options to toggle app icons and file paths on or off.
+- **Experimental Features Safety Dialog**:
+  - Displays a dedicated warning dialog when toggling experimental features on, featuring a Fluent warning symbol, 3D character art, and confirmation prompts (`Okay` / `Nevermind`).
+
+### Fixed
+- **Taskbar Unpinning**: Resolved duplicate shortcut collisions in `User Pinned\TaskBar` by cleaning up stale shortcuts before pinning and recursively unpinning all matching group shortcuts from the taskbar.
+- **Quick Settings Layout**: Restored original layout proportions, borders, and paddings, and removed the redundant chevron icon from the footer.
+
+## [v0.8.4] - 2026-09-20
+
+### Added
+- **Radial Multi-Press Gestures**:
+  - **Double Press Shortcut**: Launches all applications in the radial menu in a staggered delayed train sequence with sequential icon pulse animations, then automatically closes.
+  - **Triple Press Shortcut**: Enters in-situ Edit Mode on the floating radial menu without needing to open settings.
+- **Radial In-Situ Edit Mode**:
+  - Displays dark subtle remove `X` badges (`SubtleFillColorSecondaryBrush`, `ControlElevationBorderBrush`, `TextFillColorPrimaryBrush`) on each app tile.
+  - Adds an interactive `+ Add` button into the ring offering both Installed App and File Browser options.
+  - Displays a floating center pill ("Editing [GroupName]" + "Done" button) and pauses hitbox auto-dismissal while editing.
+- **Right-Click Context Menu**:
+  - Right-clicking any floating app tile reveals options for Open, Run as administrator, Open file location, Edit group, Remove from radial menu, and Group settings in TaskTile.
+  - Pauses hitbox exit and window deactivation dismissal while flyouts are open.
+- **Delayed Train Bloom Entrance Animation**:
+  - Circular bloom where items launch clockwise in rapid succession (`i * 35ms` stagger) from the cursor center with springy `BackEase` overshoot.
+- **Floating Icon-Only Styling**:
+  - Removed circular background plate and center dismiss button for a pure floating icon presentation with tight dynamic spacing.
+
+## [v0.8.3] - 2026-09-19
+
+### Fixed
+- **3D Metro Flip Transition**: Clicking the settings button on a group card now directly triggers a fast 3D Metro flip transition (0 -> 90 -> 0) with scale enlargement into full settings; non-MixUI plays a clean native Fluent slide transition.
+- **In-Popup Reordering**: Enabled native drag-and-drop item reordering in edit mode by dynamically managing `GridView.SelectionMode = Single`.
+- **Done Edit Mode Gray Screen / Crash**: Fixed by preserving active visual tree structures and eliminating redundant `LoadAndPosition()` calls upon exiting edit mode.
+- **Tile Overlapping**: Applied `VariableSizedWrapGrid.ColumnSpan` and `RowSpan` bindings and container lifecycle hooks to properly allocate multi-span tiles without overlapping adjacent cells.
+- **Rename Window Expansion Bug**: Replaced outer `AppWindow.Size` with client-area `AppWindow.ClientSize` to prevent the popup window from expanding repeatedly when renaming is cancelled.
+- **MixUI Rename Bubble Fallback**: Guaranteed `SettingsService.Load()` is called at process launch and window creation so the directional comic speech bubble always displays reliably when MixUI is enabled.
+
+### Added
+- **Proper 4-Size Tile Support (1x1 Small, 2x1 Wide, 1x2 Tall, 2x2 Large)**: Full support across `PopupWindow` and `GroupsPage` with dedicated responsive layouts:
+  - 1x1 Small: 84x84 classic tile.
+  - 2x1 Wide: 176x84 horizontal banner tile.
+  - 1x2 Tall: 84x176 vertical tall card tile.
+  - 2x2 Large: 176x176 prominent large tile.
+- **Add App Options with Detached Floating Picker**: Clicking `+` now presents a menu with:
+  - **Specific file...**: Opens the file picker.
+  - **Installed app...**: Opens a floating detached picker window placed adjacent to the popup with real-time app search and 1-click addition.
+
 ## [v0.8.2] - 2026-09-19
 
 ### Fixed

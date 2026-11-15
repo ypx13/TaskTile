@@ -20,7 +20,8 @@ public sealed class CreateFileGroupDialog : ContentDialog
 
     public CreateFileGroupDialog()
     {
-        Title = "New File Group";
+        bool useNiches = SettingsService.Current.UseNichesTerminology;
+        Title = useNiches ? "New File Niche" : "New File Group";
         PrimaryButtonText   = "Create";
         CloseButtonText     = "Cancel";
         DefaultButton       = ContentDialogButton.Primary;
@@ -28,7 +29,7 @@ public sealed class CreateFileGroupDialog : ContentDialog
 
         _nameBox = new TextBox
         {
-            PlaceholderText = "Group name…",
+            PlaceholderText = useNiches ? "Niche name…" : "Group name…",
             Margin = new Thickness(0, 0, 0, 12)
         };
         _nameBox.TextChanged += (_, _) => UpdateCreateEnabled();

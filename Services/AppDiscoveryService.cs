@@ -60,11 +60,14 @@ public class AppDiscoveryService
                         if (string.IsNullOrEmpty(targetPath) || !File.Exists(targetPath)) continue;
                         if (results.ContainsKey(name)) continue;
 
+                        string icon = IconHelper.GetOrExtractIcon(targetPath);
+                        if (string.IsNullOrEmpty(icon)) icon = IconHelper.GetOrExtractIcon(lnk);
+
                         results[name] = new AppEntry
                         {
                             Name = name,
                             ExePath = targetPath,
-                            IconPath = "" // icon shown via FontIcon fallback in UI
+                            IconPath = icon
                         };
                     }
                     catch { /* skip broken shortcuts quietly */ }

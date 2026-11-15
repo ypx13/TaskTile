@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ContentDialog
+    x:Class="TaskTile.Controls.AnimatedBackupDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    CornerRadius="{ThemeResource OverlayCornerRadius}"
+    PrimaryButtonText="Done"
+    DefaultButton="Primary">
+
+    <!-- Root Grid allows NoclipCanvas to render on top of EVERYTHING and outside the stage box -->
+    <Grid Width="500">
+        <StackPanel Spacing="16">
+            <!-- Header with inline shifu badge so it never gets clipped -->
+            <StackPanel Spacing="3">
+                <TextBlock Text="Backing Up TaskTile" Style="{ThemeResource SubtitleTextBlockStyle}" FontWeight="SemiBold"/>
+                <TextBlock x:Name="StatusSubtext" Text="Packing up your settings and groups..." Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
+            </StackPanel>
+
+            <!-- Animation Stage Box -->
+            <Border x:Name="StageBorder"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="12" Height="220" Padding="12">
+                <Canvas x:Name="StageCanvas" Width="476" Height="196">
+
+                    <!-- Left: TaskTile Folder -->
+                    <Grid x:Name="TaskTileFolder" Canvas.Left="36" Canvas.Top="60" Width="84" Height="110">
+                        <Grid.RenderTransform>
+                            <ScaleTransform x:Name="TaskTileFolderScale" ScaleX="1" ScaleY="1" CenterX="42" CenterY="55"/>
+                        </Grid.RenderTransform>
+                        <StackPanel HorizontalAlignment="Center" Spacing="4">
+                            <Border x:Name="TaskTileFolderBorder" Width="72" Height="62" CornerRadius="8" Background="{ThemeResource SubtleFillColorSecondaryBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1.5">
+                                <Grid>
+                                    <Border Width="28" Height="6" CornerRadius="3,3,0,0" Background="{ThemeResource CardStrokeColorDefaultBrush}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="6,-6,0,0"/>
+                                    <FontIcon Glyph="&#xED25;" FontSize="26" Foreground="{ThemeResource TextFillColorPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                            <TextBlock Text="TaskTile" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Right: Backup Folder -->
+                    <Grid x:Name="BackupFolder" Canvas.Left="356" Canvas.Top="60" Width="84" Height="110">
+                        <Grid.RenderTransform>
+                            <ScaleTransform x:Name="BackupFolderScale" ScaleX="1" ScaleY="1" CenterX="42" CenterY="55"/>
+                        </Grid.RenderTransform>
+                        <StackPanel HorizontalAlignment="Center" Spacing="4">
+                            <Border x:Name="BackupFolderBorder" Width="72" Height="62" CornerRadius="8" Background="{ThemeResource SubtleFillColorSecondaryBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1.5">
+                                <Grid>
+                                    <Border Width="28" Height="6" CornerRadius="3,3,0,0" Background="{ThemeResource CardStrokeColorDefaultBrush}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="6,-6,0,0"/>
+                                    <FontIcon x:Name="BackupFolderIcon" Glyph="&#xEA35;" FontSize="26" Foreground="{ThemeResource TextFillColorPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+
+                                    <!-- Zipper Visual Track across top of folder -->
+                                    <Border x:Name="ZipperVisual" Width="14" Height="10" CornerRadius="2" Background="{ThemeResource AccentFillColorDefaultBrush}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,4,0" Visibility="Collapsed">
+                                        <FontIcon Glyph="&#xE7AC;" FontSize="8" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </Grid>
+                            </Border>
+                            <TextBlock x:Name="BackupFolderLabel" Text="Backup" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- The 3D GIF Little Guy (Runner) -->
+                    <!-- NOTE: ScaleTransform MUST precede TranslateTransform so flipping facing direction does not offset/teleport X -->
+                    <Grid x:Name="RunnerContainer" Canvas.Left="120" Canvas.Top="62" Width="60" Height="110">
+                        <Grid.RenderTransform>
+                            <TransformGroup>
+                                <ScaleTransform x:Name="RunnerFlip" ScaleX="1" ScaleY="1" CenterX="30" CenterY="55"/>
+                                <TranslateTransform x:Name="RunnerTranslate" X="0" Y="0"/>
+                            </TransformGroup>
+                        </Grid.RenderTransform>
+
+                        <!-- The Animated GIF Image -->
+                        <Image x:Name="RunnerGifImage"
+                               Width="56" Height="108"
+                               Stretch="Uniform"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Bottom"/>
+                    </Grid>
+                </Canvas>
+            </Border>
+
+            <!-- Progress bar and action status -->
+            <StackPanel Spacing="6">
+                <ProgressBar x:Name="BackupProgressBar" Value="0" Maximum="100" HorizontalAlignment="Stretch"/>
+                <Grid Margin="0,0,2,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" x:Name="StatusDetailText" Text="Preparing backup..." FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Grid.Column="1" x:Name="PercentageText" Text="0%" FontSize="12" FontWeight="SemiBold" Margin="8,0,0,0" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                </Grid>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- NOCLIP OVERLAY CANVAS: Unbounded layer on top of the entire dialog -->
+        <Canvas x:Name="NoclipCanvas" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" IsHitTestVisible="False" Canvas.ZIndex="99999">
+            <!-- Flying Zip Box that NOCLIPS completely out of the stage container & dialog -->
+            <Border x:Name="FlyingZipBox"
+                    Canvas.Left="390" Canvas.Top="115"
+                    Width="44" Height="44"
+                    CornerRadius="10"
+                    Background="{ThemeResource AccentFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource SolidBackgroundFillColorBaseBrush}"
+                    BorderThickness="2"
+                    Visibility="Collapsed"
+                    Opacity="0">
+                <Border.RenderTransform>
+                    <TransformGroup>
+                        <TranslateTransform x:Name="FlyingZipTranslate" X="0" Y="0"/>
+                        <RotateTransform x:Name="FlyingZipRotate" Angle="0" CenterX="22" CenterY="22"/>
+                        <ScaleTransform x:Name="FlyingZipScale" ScaleX="1" ScaleY="1" CenterX="22" CenterY="22"/>
+                    </TransformGroup>
+                </Border.RenderTransform>
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="1">
+                    <FontIcon Glyph="&#xEA35;" FontSize="18" Foreground="White" HorizontalAlignment="Center"/>
+                    <TextBlock Text=".ZIP" FontSize="9" FontWeight="ExtraBold" Foreground="White" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+        </Canvas>
+    </Grid>
+</ContentDialog>

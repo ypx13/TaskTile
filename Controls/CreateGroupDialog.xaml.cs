@@ -12,6 +12,7 @@ namespace TaskTile.Controls;
 public sealed partial class CreateGroupDialog : ContentDialog
 {
     public AppGroup? ResultGroup { get; private set; }
+    public GroupType TargetGroupType { get; set; } = GroupType.Apps;
 
     private System.Collections.ObjectModel.ObservableCollection<AppEntry> _allApps = new();
     private System.Collections.ObjectModel.ObservableCollection<AppEntry> _displayApps = new();
@@ -19,12 +20,16 @@ public sealed partial class CreateGroupDialog : ContentDialog
     public CreateGroupDialog()
     {
         this.InitializeComponent();
+        bool useNiches = SettingsService.Current.UseNichesTerminology;
+        if (DialogTitleText != null) DialogTitleText.Text = useNiches ? "Create Niche" : "Create Group";
+        if (GroupNameHeader != null) GroupNameHeader.Text = useNiches ? "Niche name" : "Group name";
         this.Opened += async (_, _) => await LoadAppsAsync();
     }
 
     private async Task LoadAppsAsync()
     {
         LoadingRing.IsActive = true;
+        LoadingRing.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
         AppListView.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
 
         var discovered = await Task.Run(() => AppDiscoveryService.GetInstalledApps());
@@ -34,40 +39,24 @@ public sealed partial class CreateGroupDialog : ContentDialog
         ApplyFilter(string.Empty);
 
         LoadingRing.IsActive = false;
+        LoadingRing.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
         AppListView.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
     }
 
     private readonly HashSet<string> _selectedExePaths = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, AppEntry> _selectedAppsMap = new(StringComparer.OrdinalIgnoreCase);
-    private bool _isFiltering = false;
 
     private void ApplyFilter(string query)
     {
-        _isFiltering = true;
-        try
-        {
-            var filtered = string.IsNullOrWhiteSpace(query)
-                ? _allApps.ToList()
-                : _allApps.Where(a => a.Name.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
+        var filtered = string.IsNullOrWhiteSpace(query)
+            ? _allApps.ToList()
+            : _allApps.Where(a => a.Name.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
 
-            _displayApps.Clear();
-            foreach (var item in filtered)
-            {
-                _displayApps.Add(item);
-            }
-
-            foreach (var item in _displayApps)
-            {
-                if (!string.IsNullOrEmpty(item.ExePath) && _selectedExePaths.Contains(item.ExePath))
-                {
-                    if (!AppListView.SelectedItems.Contains(item))
-                        AppListView.SelectedItems.Add(item);
-                }
-            }
-        }
-        finally
+        _displayApps.Clear();
+        foreach (var item in filtered)
         {
-            _isFiltering = false;
+            item.IsSelected = !string.IsNullOrEmpty(item.ExePath) && _selectedExePaths.Contains(item.ExePath);
+            _displayApps.Add(item);
         }
     }
 
@@ -76,29 +65,23 @@ public sealed partial class CreateGroupDialog : ContentDialog
         ApplyFilter(SearchBox.Text);
     }
 
-    private void AppListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void AppListView_ItemClick(object sender, ItemClickEventArgs e)
     {
-        if (_isFiltering) return;
-
-        foreach (var item in e.AddedItems.OfType<AppEntry>())
+        if (e.ClickedItem is AppEntry item && !string.IsNullOrEmpty(item.ExePath))
         {
-            if (!string.IsNullOrEmpty(item.ExePath))
+            item.IsSelected = !item.IsSelected;
+            if (item.IsSelected)
             {
                 _selectedExePaths.Add(item.ExePath);
                 _selectedAppsMap[item.ExePath] = item;
             }
-        }
-
-        foreach (var item in e.RemovedItems.OfType<AppEntry>())
-        {
-            if (!string.IsNullOrEmpty(item.ExePath))
+            else
             {
                 _selectedExePaths.Remove(item.ExePath);
                 _selectedAppsMap.Remove(item.ExePath);
             }
+            UpdateSelectedCountUI();
         }
-
-        UpdateSelectedCountUI();
     }
 
     private void UpdateSelectedCountUI()
@@ -148,9 +131,10 @@ public sealed partial class CreateGroupDialog : ContentDialog
 
         var appEntry = new AppEntry
         {
-            Name     = friendlyName,
-            ExePath  = selectedFile.Path,
-            IconPath = IconHelper.GetOrExtractIcon(selectedFile.Path),
+            Name       = friendlyName,
+            ExePath    = selectedFile.Path,
+            IconPath   = IconHelper.GetOrExtractIcon(selectedFile.Path),
+            IsSelected = true
         };
 
         _allApps.Insert(0, appEntry);
@@ -160,11 +144,8 @@ public sealed partial class CreateGroupDialog : ContentDialog
         ApplyFilter(string.Empty);
         UpdateSelectedCountUI();
         
-        // Slight delay to allow UI to generate the container
         _ = DispatcherQueue.TryEnqueue(() =>
         {
-            if (!_displayApps.Contains(appEntry)) return;
-            AppListView.SelectedItems.Add(appEntry);
             AppListView.ScrollIntoView(appEntry);
         });
     }
@@ -188,6 +169,7 @@ public sealed partial class CreateGroupDialog : ContentDialog
         }
 
         LoadingRing.IsActive = true;
+        LoadingRing.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
         AppListView.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
 
 
@@ -204,7 +186,9 @@ public sealed partial class CreateGroupDialog : ContentDialog
         ResultGroup = new AppGroup
         {
             Name = name,
-            Apps = selectedApps
+            Apps = selectedApps,
+            GroupType = TargetGroupType,
+            Shortcut = TargetGroupType == GroupType.Radial ? "Ctrl+Shift+A" : ""
         };
 
         this.Hide();

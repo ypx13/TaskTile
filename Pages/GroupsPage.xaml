@@ -6,6 +6,62 @@
     xmlns:controls="using:TaskTile.Controls"
     Background="Transparent">
 
+    <Page.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Default">
+                    <!-- Dark Theme (Default) -->
+                    <LinearGradientBrush x:Key="AppGroupPreviewBackgroundBrush" StartPoint="0.5,0" EndPoint="0.5,1">
+                        <GradientStop Color="#E62C2C2C" Offset="0.0"/>
+                        <GradientStop Color="#E62C2C2C" Offset="0.40"/>
+                        <GradientStop Color="#882C2C2C" Offset="0.70"/>
+                        <GradientStop Color="#252C2C2C" Offset="0.90"/>
+                        <GradientStop Color="#002C2C2C" Offset="1.0"/>
+                    </LinearGradientBrush>
+                    <LinearGradientBrush x:Key="AppGroupPreviewBorderBrush" StartPoint="0.5,0" EndPoint="0.5,1">
+                        <GradientStop Color="#28FFFFFF" Offset="0.0"/>
+                        <GradientStop Color="#28FFFFFF" Offset="0.40"/>
+                        <GradientStop Color="#14FFFFFF" Offset="0.70"/>
+                        <GradientStop Color="#05FFFFFF" Offset="0.90"/>
+                        <GradientStop Color="#00FFFFFF" Offset="1.0"/>
+                    </LinearGradientBrush>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <LinearGradientBrush x:Key="AppGroupPreviewBackgroundBrush" StartPoint="0.5,0" EndPoint="0.5,1">
+                        <GradientStop Color="#E62C2C2C" Offset="0.0"/>
+                        <GradientStop Color="#E62C2C2C" Offset="0.40"/>
+                        <GradientStop Color="#882C2C2C" Offset="0.70"/>
+                        <GradientStop Color="#252C2C2C" Offset="0.90"/>
+                        <GradientStop Color="#002C2C2C" Offset="1.0"/>
+                    </LinearGradientBrush>
+                    <LinearGradientBrush x:Key="AppGroupPreviewBorderBrush" StartPoint="0.5,0" EndPoint="0.5,1">
+                        <GradientStop Color="#28FFFFFF" Offset="0.0"/>
+                        <GradientStop Color="#28FFFFFF" Offset="0.40"/>
+                        <GradientStop Color="#14FFFFFF" Offset="0.70"/>
+                        <GradientStop Color="#05FFFFFF" Offset="0.90"/>
+                        <GradientStop Color="#00FFFFFF" Offset="1.0"/>
+                    </LinearGradientBrush>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Light">
+                    <LinearGradientBrush x:Key="AppGroupPreviewBackgroundBrush" StartPoint="0.5,0" EndPoint="0.5,1">
+                        <GradientStop Color="#F0F6F6F6" Offset="0.0"/>
+                        <GradientStop Color="#F0F6F6F6" Offset="0.40"/>
+                        <GradientStop Color="#90F6F6F6" Offset="0.70"/>
+                        <GradientStop Color="#25F6F6F6" Offset="0.90"/>
+                        <GradientStop Color="#00F6F6F6" Offset="1.0"/>
+                    </LinearGradientBrush>
+                    <LinearGradientBrush x:Key="AppGroupPreviewBorderBrush" StartPoint="0.5,0" EndPoint="0.5,1">
+                        <GradientStop Color="#20000000" Offset="0.0"/>
+                        <GradientStop Color="#20000000" Offset="0.40"/>
+                        <GradientStop Color="#10000000" Offset="0.70"/>
+                        <GradientStop Color="#03000000" Offset="0.90"/>
+                        <GradientStop Color="#00000000" Offset="1.0"/>
+                    </LinearGradientBrush>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Page.Resources>
+
     <Grid>
         <!-- Groups List Root (flips 3D out when settings opened) -->
         <Grid x:Name="GroupsListRoot">
@@ -14,17 +70,20 @@
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <!-- Header -->
-            <StackPanel Grid.Row="0" Margin="28,28,28,16" Spacing="4">
-                <TextBlock Text="Groups" Style="{ThemeResource TitleLargeTextBlockStyle}"/>
-                <TextBlock
-                    Text="Create and manage your app groups."
-                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                    Style="{ThemeResource BodyTextBlockStyle}"/>
-            </StackPanel>
+            <!-- Header with Title -->
+            <Grid Grid.Row="0" Margin="28,24,28,16">
+                <StackPanel Spacing="4" VerticalAlignment="Center">
+                    <TextBlock x:Name="PageTitleText" Text="Groups" Style="{ThemeResource TitleLargeTextBlockStyle}"/>
+                    <TextBlock
+                        x:Name="PageSubtitleText"
+                        Text="Create and manage your app groups."
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{ThemeResource BodyTextBlockStyle}"/>
+                </StackPanel>
+            </Grid>
 
-            <!-- Groups grid and Empty state -->
-            <Grid Grid.Row="1" Margin="28,4,28,100">
+            <!-- Groups grid, Empty state, and Bottom-Right Action Button -->
+            <Grid Grid.Row="1">
 
                 <!-- Empty state -->
                 <StackPanel x:Name="EmptyState"
@@ -35,18 +94,18 @@
                     <FontIcon Glyph="&#xF168;" FontSize="48"
                               HorizontalAlignment="Center"
                               Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
-                    <TextBlock Text="No groups yet"
+                    <TextBlock x:Name="EmptyStateTitleText" Text="No groups yet"
                                HorizontalAlignment="Center"
                                Style="{ThemeResource SubtitleTextBlockStyle}"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                    <TextBlock Text="Click the + button below to create your first group."
+                    <TextBlock x:Name="EmptyStateSubtitleText" Text="Click the 'New group' button below to create your first group."
                                HorizontalAlignment="Center"
                                Foreground="{ThemeResource TextFillColorTertiaryBrush}"
                                Style="{ThemeResource BodyTextBlockStyle}"/>
                 </StackPanel>
 
                 <!-- ItemsRepeater with LinedFlowLayout (layout set in code-behind) -->
-                <ScrollViewer HorizontalScrollMode="Disabled" VerticalScrollBarVisibility="Auto">
+                <ScrollViewer HorizontalScrollMode="Disabled" VerticalScrollBarVisibility="Auto" Padding="28,4,28,84">
                     <ItemsRepeater x:Name="GroupsItemsView">
                         <ItemsRepeater.ItemTemplate>
                             <DataTemplate>
@@ -56,64 +115,165 @@
                     </ItemsRepeater>
                 </ScrollViewer>
 
-            </Grid>
+                <!-- Bottom-Right Action Buttons -->
+                <StackPanel Orientation="Horizontal"
+                            Spacing="10"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Bottom"
+                            Margin="0,0,32,28">
+                    <!-- Check Button to exit reorder/edit mode and save -->
+                    <Button x:Name="DoneReorderButton"
+                            Click="DoneReorderButton_Click"
+                            Style="{ThemeResource AccentButtonStyle}"
+                            Height="44"
+                            Width="44"
+                            Padding="0"
+                            CornerRadius="{ThemeResource ControlCornerRadius}"
+                            ToolTipService.ToolTip="Done reordering"
+                            Visibility="Collapsed">
+                        <FontIcon Glyph="&#xE73E;" FontSize="18"/>
+                    </Button>
 
-            <!-- Floating + button -->
-            <Button
-                x:Name="AddGroupButton"
-                Grid.Row="1"
-                VerticalAlignment="Bottom"
-                HorizontalAlignment="Right"
-                Margin="0,0,28,32"
-                Width="52" Height="52"
-                CornerRadius="8"
-                Click="AddGroupButton_Click"
-                Style="{ThemeResource AccentButtonStyle}"
-                ToolTipService.ToolTip="Create new group">
-                <FontIcon Glyph="&#xE710;" FontSize="20"/>
-            </Button>
+                    <!-- Taller New Group Button on Bottom-Right with Flyout -->
+                    <Button x:Name="AddGroupButton"
+                            Style="{ThemeResource AccentButtonStyle}"
+                            Height="44"
+                            Padding="18,0"
+                            CornerRadius="{ThemeResource ControlCornerRadius}"
+                            ToolTipService.ToolTip="Create a new group">
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE710;" FontSize="14" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="AddGroupButtonText" Text="New group" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <Button.Flyout>
+                            <Flyout x:Name="NewGroupFlyout" Placement="TopEdgeAlignedRight">
+                                <StackPanel Spacing="6" Width="290" Margin="-4">
+                                    <TextBlock x:Name="FlyoutHeaderTitle" Text="Create new group" FontWeight="SemiBold" FontSize="14" Margin="6,4,6,6" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+
+                                    <Button x:Name="NewAppGroupBtn"
+                                            Click="NewAppGroupBtn_Click"
+                                            HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch"
+                                            Padding="12,10"
+                                            CornerRadius="{ThemeResource ControlCornerRadius}">
+                                        <Grid ColumnSpacing="14">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <FontIcon Glyph="&#xECAA;" FontFamily="{ThemeResource SymbolThemeFontFamily}" FontSize="24" VerticalAlignment="Center" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                                <TextBlock Text="Apps" FontWeight="SemiBold" FontSize="14"/>
+                                                <TextBlock Text="Launch apps from a popup" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Button>
+
+                                    <Button x:Name="NewFileGroupBtn"
+                                            Click="NewFileGroupBtn_Click"
+                                            HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch"
+                                            Padding="12,10"
+                                            CornerRadius="{ThemeResource ControlCornerRadius}">
+                                        <Grid ColumnSpacing="14">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <FontIcon Glyph="&#xE8B7;" FontFamily="{ThemeResource SymbolThemeFontFamily}" FontSize="24" VerticalAlignment="Center" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                                <TextBlock Text="Files" FontWeight="SemiBold" FontSize="14"/>
+                                                <TextBlock Text="Open files with their default apps" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Button>
+
+                                    <Button x:Name="NewRadialGroupBtn"
+                                            Visibility="Collapsed"
+                                            Click="NewRadialGroupBtn_Click"
+                                            HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch"
+                                            Padding="12,10"
+                                            CornerRadius="{ThemeResource ControlCornerRadius}">
+                                        <Grid ColumnSpacing="14">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <FontIcon Glyph="&#xEE94;" FontFamily="{ThemeResource SymbolThemeFontFamily}" FontSize="24" VerticalAlignment="Center" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                                <TextBlock Text="Radial Menu (Pie)" FontWeight="SemiBold" FontSize="14"/>
+                                                <TextBlock Text="Quick launcher around your cursor" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Button>
+                                </StackPanel>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+                </StackPanel>
+
+            </Grid>
         </Grid>
 
         <!-- Fullscreen / Dedicated Group Settings Tab with 'X' in top-left -->
-        <Grid x:Name="FullGroupSettingsOverlay" Visibility="Collapsed" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <Grid x:Name="FullGroupSettingsOverlay" Visibility="Collapsed" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" Margin="0,-24,0,0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <!-- Header with 'X' button on top-left -->
-            <Grid Grid.Row="0" Margin="24,20,24,14" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="0,0,0,1" Padding="0,0,0,14">
+            <!-- Header: Clean Fluent 2 title bar with back button, large group name, and subtle actions -->
+            <Grid Grid.Row="0" Margin="24,10,24,12" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="0,0,0,1" Padding="0,0,0,10">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
+                <!-- Fluent 2 native WinUI 3 back button -->
                 <Button x:Name="CloseFullSettingsBtn" Grid.Column="0"
                         Click="CloseFullSettingsBtn_Click"
-                        Width="36" Height="36" Padding="0"
-                        Background="Transparent" BorderThickness="0"
+                        Width="36" Height="36"
+                        Padding="0"
                         CornerRadius="{ThemeResource ControlCornerRadius}"
-                        ToolTipService.ToolTip="Close settings (Back to Groups)">
-                    <FontIcon Glyph="&#xE711;" FontSize="14"/>
+                        Background="Transparent"
+                        BorderThickness="0"
+                        VerticalAlignment="Center"
+                        ToolTipService.ToolTip="Back to groups">
+                    <FontIcon Glyph="&#xE72B;" FontSize="14" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                 </Button>
 
-                <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center" Spacing="3">
-                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                        <TextBlock Text="Group Settings —" Style="{ThemeResource TitleTextBlockStyle}" VerticalAlignment="Center"/>
-                        <TextBox x:Name="FullSettingsGroupNameBox" PlaceholderText="Group Name" FontSize="18" FontWeight="Bold" Width="260" VerticalAlignment="Center" TextChanged="FullSettingsGroupNameBox_TextChanged"/>
-                    </StackPanel>
-                    <TextBlock Text="Customize layout style, spacing, backdrops, and launcher behavior"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"/>
+                <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" Spacing="2">
+                    <TextBox x:Name="FullSettingsGroupNameBox"
+                             PlaceholderText="Group Name"
+                             FontSize="20"
+                             FontWeight="SemiBold"
+                             MinWidth="140" MaxWidth="380"
+                             HorizontalAlignment="Left"
+                             CornerRadius="{ThemeResource ControlCornerRadius}"
+                             Background="Transparent"
+                             BorderBrush="Transparent"
+                             BorderThickness="1"
+                             Padding="4,2"
+                             VerticalAlignment="Center"
+                             ToolTipService.ToolTip="Click to rename group"
+                             TextChanged="FullSettingsGroupNameBox_TextChanged"/>
+                    <TextBlock Text="Customize layout, appearance, and launcher behavior"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12"
+                               Margin="4,0,0,0"/>
                 </StackPanel>
 
                 <Button x:Name="FullDeleteGroupBtn" Grid.Column="2"
                         Click="FullDeleteGroupBtn_Click"
-                        Padding="12,6"
+                        Padding="14,6"
                         CornerRadius="{ThemeResource ControlCornerRadius}"
+                        Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                        BorderThickness="0"
+                        VerticalAlignment="Center"
                         ToolTipService.ToolTip="Delete this group">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <FontIcon Glyph="&#xE74D;" FontSize="13" Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
+                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE74D;" FontSize="12" Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
                         <TextBlock Text="Delete Group" Foreground="{ThemeResource SystemFillColorCriticalBrush}" FontSize="12" FontWeight="SemiBold"/>
                     </StackPanel>
                 </Button>
@@ -136,11 +296,21 @@
                             <StackPanel Spacing="12">
                                 <Grid>
                                     <TextBlock Text="Applications in Group" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center"/>
-                                    <Button x:Name="FullAddAppBtn" Click="FullAddAppBtn_Click" HorizontalAlignment="Right" Padding="10,4" CornerRadius="{ThemeResource ControlCornerRadius}">
+                                    <Button x:Name="FullAddAppBtn" HorizontalAlignment="Right" Padding="10,4" CornerRadius="{ThemeResource ControlCornerRadius}">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                             <FontIcon Glyph="&#xE710;" FontSize="11"/>
                                             <TextBlock Text="Add App" FontSize="12"/>
                                         </StackPanel>
+                                        <Button.Flyout>
+                                            <MenuFlyout>
+                                                <MenuFlyoutItem Text="Specific file..." Click="FullAddFile_Click">
+                                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8E5;" /></MenuFlyoutItem.Icon>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutItem Text="Installed app..." Click="FullAddInstalledApp_Click">
+                                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE71D;" /></MenuFlyoutItem.Icon>
+                                                </MenuFlyoutItem>
+                                            </MenuFlyout>
+                                        </Button.Flyout>
                                     </Button>
                                 </Grid>
                                 <ListView x:Name="FullAppsListView" SelectionMode="None" MaxHeight="220" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" CornerRadius="6">
@@ -151,24 +321,16 @@
                                                     <ColumnDefinition Width="*"/>
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
-                                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                                    <FontIcon Glyph="&#xE71D;" FontSize="14" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
-                                                    <TextBlock Text="{Binding Name}" FontWeight="Medium" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="160"/>
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                                    <Grid Width="22" Height="22" VerticalAlignment="Center">
+                                                        <FontIcon Glyph="&#xE71D;" FontSize="13" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        <Image Source="{Binding IconPath}" Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Grid>
+                                                    <TextBlock Text="{Binding Name}" FontWeight="Medium" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="210"/>
                                                 </StackPanel>
-                                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                                                    <Button Click="FullAppMoveUp_Click" Tag="{Binding}" ToolTipService.ToolTip="Move Up" Width="28" Height="28" Padding="0" Background="Transparent" BorderThickness="0">
-                                                        <FontIcon Glyph="&#xE74A;" FontSize="11"/>
-                                                    </Button>
-                                                    <Button Click="FullAppMoveDown_Click" Tag="{Binding}" ToolTipService.ToolTip="Move Down" Width="28" Height="28" Padding="0" Background="Transparent" BorderThickness="0">
-                                                        <FontIcon Glyph="&#xE74B;" FontSize="11"/>
-                                                    </Button>
-                                                    <Button Click="FullAppCycleSize_Click" Tag="{Binding}" ToolTipService.ToolTip="Cycle Tile Size (1x1, 2x1, 2x2)" Width="28" Height="28" Padding="0" Background="Transparent" BorderThickness="0">
-                                                        <FontIcon Glyph="&#xE740;" FontSize="11"/>
-                                                    </Button>
-                                                    <Button Click="FullAppDelete_Click" Tag="{Binding}" ToolTipService.ToolTip="Remove App" Width="28" Height="28" Padding="0" Background="Transparent" BorderThickness="0">
-                                                        <FontIcon Glyph="&#xE74D;" FontSize="11" Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
-                                                    </Button>
-                                                </StackPanel>
+                                                <Button Grid.Column="1" Click="FullAppDelete_Click" Tag="{Binding}" ToolTipService.ToolTip="Remove App" Width="28" Height="28" Padding="0" Background="Transparent" BorderThickness="0" CornerRadius="{ThemeResource ControlCornerRadius}">
+                                                    <FontIcon Glyph="&#xE74D;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                </Button>
                                             </Grid>
                                         </DataTemplate>
                                     </ListView.ItemTemplate>
@@ -177,7 +339,7 @@
                         </Border>
 
                         <!-- Layout Card -->
-                        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        <Border x:Name="FullLayoutCard" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                 BorderThickness="1" CornerRadius="{ThemeResource OverlayCornerRadius}" Padding="16">
                             <StackPanel Spacing="12">
@@ -197,18 +359,7 @@
                                 </ComboBox>
 
                                 <StackPanel Spacing="2">
-                                    <Grid>
-                                        <TextBlock Text="Taskbar Gap / Offset" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                        <TextBlock x:Name="FullTaskbarOffsetValText" Text="12px" FontSize="12" HorizontalAlignment="Right" Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
-                                    </Grid>
-                                    <Slider x:Name="FullTaskbarOffsetSlider" Minimum="0" Maximum="60" StepFrequency="1" ValueChanged="FullGapSettingChanged"/>
-                                </StackPanel>
-
-                                <StackPanel Spacing="2">
-                                    <Grid>
-                                        <TextBlock Text="App Tile Spacing / Gap" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                        <TextBlock x:Name="FullTileSpacingValText" Text="8px" FontSize="12" HorizontalAlignment="Right" Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
-                                    </Grid>
+                                    <TextBlock Text="App Tile Spacing" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                     <Slider x:Name="FullTileSpacingSlider" Minimum="2" Maximum="24" StepFrequency="1" ValueChanged="FullGapSettingChanged"/>
                                 </StackPanel>
 
@@ -224,7 +375,7 @@
                         </Border>
 
                         <!-- Labels & Title Card -->
-                        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        <Border x:Name="FullTitleLabelsCard" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                 BorderThickness="1" CornerRadius="{ThemeResource OverlayCornerRadius}" Padding="16">
                             <StackPanel Spacing="12">
@@ -234,18 +385,81 @@
                                 <ToggleSwitch x:Name="FullMarqueeAppLabelsToggle" Header="Marquee long app labels (List)" Toggled="FullSettingChanged"/>
                                 <ToggleSwitch x:Name="FullScrollAppLabelsToggle" Header="Scroll long app labels (List)" Toggled="FullSettingChanged"/>
                                 <ToggleSwitch x:Name="FullShowCardLabelsToggle" Header="Show app labels (Dialog-ish)" Toggled="FullSettingChanged" Visibility="Collapsed"/>
-                                <StackPanel Spacing="4">
-                                    <TextBlock Text="Title alignment (0=Left, 1=Center, 2=Right)" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                    <Slider x:Name="FullTitleAlignmentSlider" Minimum="-1" Maximum="2" StepFrequency="1" TickFrequency="1" ValueChanged="FullSettingChanged"/>
+                                <StackPanel Spacing="6" Margin="0,4,0,0">
+                                    <Grid>
+                                        <StackPanel VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="Title Alignment" FontWeight="Medium" FontSize="13"/>
+                                            <TextBlock Text="Set alignment for this group's popup title (Left, Center, Right)" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <Slider x:Name="FullTitleAlignmentSlider"
+                                            Minimum="0" Maximum="2" StepFrequency="1" TickFrequency="1" TickPlacement="Outside"
+                                            HorizontalAlignment="Stretch" Margin="0,2,0,0"
+                                            ValueChanged="FullTitleAlignmentSlider_ValueChanged"/>
+
+                                    <!-- Slide-in preview container: Height animates 0 → 48 (compact preview with bottom fade) -->
+                                    <Grid x:Name="FullTitlePreviewContainer" Height="0" Margin="0,4,0,0" Visibility="Collapsed">
+                                        <Grid x:Name="FullTitlePreviewHost" HorizontalAlignment="Center" Width="200" Height="46" Margin="0,4,0,0"
+                                              Opacity="0" VerticalAlignment="Top">
+                                            <Border x:Name="FullSimulatedAppGroup"
+                                                    CornerRadius="12,12,0,0"
+                                                    Background="{ThemeResource AppGroupPreviewBackgroundBrush}"
+                                                    BorderBrush="{ThemeResource AppGroupPreviewBorderBrush}"
+                                                    BorderThickness="1.5,1.5,1.5,0">
+                                                <Grid x:Name="FullPreviewTitleHost" Margin="14,8,14,0" VerticalAlignment="Top">
+                                                    <TextBlock x:Name="FullPreviewTitleText"
+                                                               Text="Sample"
+                                                               FontSize="13.5"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                                                               HorizontalAlignment="Left"
+                                                               VerticalAlignment="Center">
+                                                        <TextBlock.RenderTransform>
+                                                            <TranslateTransform x:Name="FullPreviewTitleTransform" X="0"/>
+                                                        </TextBlock.RenderTransform>
+                                                    </TextBlock>
+                                                </Grid>
+                                            </Border>
+                                        </Grid>
+                                    </Grid>
                                 </StackPanel>
                             </StackPanel>
                         </Border>
                     </StackPanel>
 
-                    <!-- Right Column: Materials & Behavior -->
+                    <!-- Right Column: Materials, Behavior & Radial -->
                     <StackPanel Grid.Column="1" Spacing="16">
+                        <!-- Radial Menu (Pie Menu) Settings Card -->
+                        <Border x:Name="FullRadialSettingsCard" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1" CornerRadius="{ThemeResource OverlayCornerRadius}" Padding="16" Visibility="Collapsed">
+                            <StackPanel Spacing="14">
+                                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <FontIcon Glyph="&#xEB54;" FontSize="20" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Radial Menu (Pie Menu)" FontWeight="SemiBold" FontSize="14"/>
+                                        <TextBlock Text="Wraps apps in a circular wheel around your cursor" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <TextBox x:Name="FullRadialShortcutBox" Header="Global Shortcut" PlaceholderText="e.g. Ctrl+Shift+A" TextChanged="FullRadialShortcutBox_TextChanged">
+                                    <TextBox.Description>Press this shortcut anywhere in Windows to trigger this radial menu</TextBox.Description>
+                                </TextBox>
+
+                                <TextBlock Text="Supported modifiers: Ctrl, Shift, Alt, Win + any letter or function key (e.g. Ctrl+Shift+A, Alt+Space, Ctrl+Alt+1)." FontSize="11" Foreground="{ThemeResource TextFillColorTertiaryBrush}" TextWrapping="WrapWholeWords"/>
+
+                                <Button x:Name="FullTestRadialBtn" HorizontalAlignment="Stretch" Click="FullTestRadialBtn_Click" Padding="12,8">
+                                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                                        <FontIcon Glyph="&#xEB54;" FontSize="13"/>
+                                        <TextBlock Text="Test Radial Menu at Cursor" FontSize="13" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </Border>
+
                         <!-- Materials & Backdrops -->
-                        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        <Border x:Name="FullStylingCard" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                 BorderThickness="1" CornerRadius="{ThemeResource OverlayCornerRadius}" Padding="16">
                             <StackPanel Spacing="12">
@@ -267,13 +481,52 @@
                                     <x:String>UWP Background</x:String>
                                     <x:String>One-Tone</x:String>
                                 </ComboBox>
+                                <ComboBox x:Name="FullRunningIndicatorStyleCombo" Header="Running app indicator" SelectionChanged="FullSettingChanged" HorizontalAlignment="Stretch">
+                                    <x:String>Global Default</x:String>
+                                    <x:String>Taskbar Bar</x:String>
+                                    <x:String>Corner Dot</x:String>
+                                </ComboBox>
                                 <ToggleSwitch x:Name="FullDisableRoundedCornersToggle" Header="Disable rounded corners (Windows 10 style)" Toggled="FullSettingChanged"/>
                                 <ToggleSwitch x:Name="FullDisableFloatToggle" Header="Disable floating gap" Toggled="FullSettingChanged"/>
+                                <ToggleSwitch x:Name="FullOverrideBorderColorToggle" Header="Custom border color" Toggled="FullSettingChanged"/>
+                                <Button x:Name="FullBorderColorButton" Content="Choose border color..." HorizontalAlignment="Stretch" Visibility="Collapsed">
+                                    <Button.Flyout>
+                                        <Flyout>
+                                            <ColorPicker x:Name="FullCustomBorderColorPicker"
+                                                         ColorSpectrumShape="Box"
+                                                         IsMoreButtonVisible="True"
+                                                         IsColorSliderVisible="True"
+                                                         IsColorChannelTextInputVisible="True"
+                                                         IsHexInputVisible="True"
+                                                         IsAlphaEnabled="False"
+                                                         IsAlphaSliderVisible="True"
+                                                         IsAlphaTextInputVisible="True"
+                                                         ColorChanged="FullCustomBorderColorPicker_ColorChanged"/>
+                                        </Flyout>
+                                    </Button.Flyout>
+                                </Button>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Folder Icon & Shortcuts Card -->
+                        <Border x:Name="FullFolderIconCard" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1" CornerRadius="{ThemeResource OverlayCornerRadius}" Padding="16">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="Folder Icon &amp; Shortcut" FontWeight="SemiBold" FontSize="14"/>
+                                <ComboBox x:Name="FullFolderIconStyleCombo" Header="Folder Icon Style (Taskbar Shortcut)" SelectionChanged="FullSettingChanged" HorizontalAlignment="Stretch">
+                                    <x:String>Transparent (Default)</x:String>
+                                    <x:String>Normal (Dark)</x:String>
+                                    <x:String>UWP Style</x:String>
+                                </ComboBox>
+                                <ToggleSwitch x:Name="FullMonochromeFolderIconToggle" Header="Monochrome folder icon" Toggled="FullSettingChanged"/>
+                                <Button x:Name="FullCustomIconButton" Content="Choose custom icon for folder" HorizontalAlignment="Stretch" Click="FullCustomIconButton_Click"/>
+                                <Button x:Name="FullClearCustomIconButton" Content="Reset custom icon" HorizontalAlignment="Stretch" Click="FullClearCustomIconButton_Click" Visibility="Collapsed"/>
                             </StackPanel>
                         </Border>
 
                         <!-- Behavior & Launch Position -->
-                        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        <Border x:Name="FullBehaviorCard" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                 BorderThickness="1" CornerRadius="{ThemeResource OverlayCornerRadius}" Padding="16">
                             <StackPanel Spacing="12">
@@ -286,6 +539,11 @@
                                     <ComboBoxItem Content="Right"/>
                                     <ComboBoxItem Content="Center"/>
                                 </ComboBox>
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="Taskbar Gap" FontWeight="Medium" FontSize="13"/>
+                                    <TextBlock Text="Distance between taskbar edge and this group's popup" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    <Slider x:Name="FullTaskbarGapSlider" Minimum="0" Maximum="48" StepFrequency="1" ValueChanged="FullTaskbarGapSlider_ValueChanged" HorizontalAlignment="Stretch"/>
+                                </StackPanel>
                                 <ToggleSwitch x:Name="FullMakeMainFocusToggle" Header="Make main focus (Dim desktop)" Toggled="FullSettingChanged" Visibility="Collapsed"/>
                                 <ToggleSwitch x:Name="FullDisableAnimationToggle" Header="Disable entrance animation" Toggled="FullSettingChanged"/>
                                 <ToggleSwitch x:Name="FullDisableAutoHideToggle" Header="Disable auto-hide on focus lost" Toggled="FullSettingChanged"/>
