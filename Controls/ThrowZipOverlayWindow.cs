@@ -7,10 +7,7 @@ using System.Threading.Tasks;
 
 namespace TaskTile.Controls
 {
-    /// <summary>
-    /// Pure Win32 48x48 layered window that throws the backup ZIP across the desktop
-    /// directly into File Explorer with zero black box, zero swapchain artifacts, and true per-pixel alpha.
-    /// </summary>
+
     public sealed class ThrowZipOverlayWindow
     {
         [StructLayout(LayoutKind.Sequential)]
@@ -124,15 +121,13 @@ namespace TaskTile.Controls
                 int frames = 32;
                 for (int f = 0; f <= frames; f++)
                 {
-                    double t = (double)f / frames;
-                    // Ease-in-out quadratic for smooth acceleration and catch deceleration
+                    double t = (double)f / frames
                     double ease = t < 0.5 ? 2.0 * t * t : 1.0 - Math.Pow(-2.0 * t + 2.0, 2.0) / 2.0;
 
                     int curX = (int)Math.Round(startX + (targetX - startX) * ease) - 24;
-                    // Parabolic arc rising 120px above the linear path
                     int curY = (int)Math.Round(startY + (targetY - startY) * ease - Math.Sin(t * Math.PI) * 120) - 24;
 
-                    double angle = t * 540.0; // 1.5 rotations
+                    double angle = t * 540.0;ions
                     double scale = t < 0.5 ? 1.0 + t * 0.4 : 1.2 - (t - 0.5) * 0.4;
 
                     using var bmp = CreateZipBitmap(angle, scale);
@@ -142,7 +137,6 @@ namespace TaskTile.Controls
                     await Task.Delay(16);
                 }
 
-                // Settle pulse and fade out on catch
                 for (int f = 1; f <= 5; f++)
                 {
                     byte alpha = (byte)Math.Max(0, 255 - f * 50);
@@ -179,13 +173,11 @@ namespace TaskTile.Controls
             g.ScaleTransform((float)scale, (float)scale);
             g.TranslateTransform(-24f, -24f);
 
-            // Soft drop shadow
             using (var shadowBrush = new SolidBrush(Color.FromArgb(50, 0, 0, 0)))
             {
                 FillRoundedRectangle(g, shadowBrush, new Rectangle(6, 6, 36, 36), 8);
             }
 
-            // Windows 11 Fluent Blue Badge
             using (var badgeBrush = new LinearGradientBrush(
                 new Point(0, 5), new Point(0, 41),
                 Color.FromArgb(255, 0, 120, 215),
@@ -194,13 +186,11 @@ namespace TaskTile.Controls
                 FillRoundedRectangle(g, badgeBrush, new Rectangle(5, 5, 36, 36), 8);
             }
 
-            // Crisp inner border
             using (var borderPen = new Pen(Color.FromArgb(220, 255, 255, 255), 1.5f))
             {
                 DrawRoundedRectangle(g, borderPen, new Rectangle(5, 5, 36, 36), 8);
             }
 
-            // Zipper teeth in center
             using (var zipPen = new Pen(Color.White, 1.5f))
             {
                 g.DrawLine(zipPen, 23, 8, 23, 23);
@@ -211,13 +201,11 @@ namespace TaskTile.Controls
                 }
             }
 
-            // Gold zipper slider
             using (var pullBrush = new SolidBrush(Color.FromArgb(255, 255, 205, 0)))
             {
                 g.FillRectangle(pullBrush, 21, 23, 6, 5);
             }
 
-            // Bold "ZIP" tag
             using (var textFont = new Font("Segoe UI", 7.5f, FontStyle.Bold))
             using (var textBrush = new SolidBrush(Color.White))
             {
