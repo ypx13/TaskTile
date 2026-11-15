@@ -60,7 +60,7 @@
                         </StackPanel>
                     </Grid>
 
-                    <!-- The 3D GIF Little Guy (Runner) -->
+                    <!-- de little guy -->
                     <!-- NOTE: ScaleTransform MUST precede TranslateTransform so flipping facing direction does not offset/teleport X -->
                     <Grid x:Name="RunnerContainer" Canvas.Left="120" Canvas.Top="62" Width="60" Height="110">
                         <Grid.RenderTransform>
