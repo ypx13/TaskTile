@@ -30,6 +30,7 @@ public sealed partial class HomePage : Page
         new(true,  "Tip", "Your most used group is just one click away from the tray."),
         new(true,  "Tip", "You can hold on the settings icon with your mouse and flick it to rotate it."),
         new(true,  "Tip", "No need to click every icon in the aisle, just shift-select the pack inside.")
+        new(true,  "shifu", "po, you are a code master, if you actually compiled the app but i forgot to add the instructions on how to, you  are master.")
     };
 
     // Dismiss preference keys — stored as plain text files in AppData\Local\TaskTile
