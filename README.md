@@ -79,7 +79,7 @@ TaskTile might be the **first 100% native C# and WinUI 3 app group launcher/task
 
 ## developer's note
 
-> *"Why do updates take so long?"*
+> *"why do updates take so long???!"*
 
 TaskTile is being built by a **solo developer** (`ypx13`) who is learning advanced WinUI 3, XAML, and Windows API internals as he builds. 
 
@@ -87,13 +87,14 @@ icon extraction pipelines and animation, style programming and auto-hide trackin
 
 ---
 
-## 🙏 Credits & Acknowledgements
+## credits
 
-TaskTile is built with love and stands on the shoulders of the great Windows developer community:
+TaskTile is built with SWEAT and TEARS, but i do have to say it basically is getting carried by these very cool communities, people and things:
 
-* **[Windows App SDK](https://github.com/microsoft/WindowsAppSDK) & [WinUI 3](https://github.com/microsoft/microsoft-ui-xaml)** — For the modern Fluent 2 design language, native controls, and windowing framework.
-* **[System.Drawing.Common](https://www.nuget.org/packages/System.Drawing.Common)** — For bitmap processing, color matrix filters, and icon generation routines.
-* **Windows Shell & DWM Community** — Special thanks to community discussions and documentation exploring ShellCOM, TaskbandPin interfaces, and low-level Desktop Window Manager APIs.
+* **[Windows App SDK](https://github.com/microsoft/WindowsAppSDK) & [WinUI 3](https://github.com/microsoft/microsoft-ui-xaml)** — for the awesome design, native controls, and windowing framework.
+* **[System.Drawing.Common](https://www.nuget.org/packages/System.Drawing.Common)** — for bitmap processing, color matrix filters, and icon generation routines.
+* **Windows Shell & DWM Community** — special thanks to community discussions and documentation exploring ShellCOM, TaskbandPin interfaces, and low-level Desktop Window Manager APIs.
+* **Google, not AI overview totally** - lots and lots of research!
 
 ---
 
