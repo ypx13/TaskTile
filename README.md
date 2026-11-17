@@ -70,7 +70,7 @@ TaskTile might be the **first 100% native C# and WinUI 3 app group launcher/task
 
 ## quick start
 
-1. **download**: grab `TaskTile.zip` from the [releases](https://github.com/ypx13/TaskTile/releases) page.
+1. **download**: grab `TaskTile_v0.7.5-beta.zip` from the [releases](https://github.com/ypx13/TaskTile/releases) page.
 2. **extract**: unzip the folder anywhere you want. TaskTile is currently portable, but there will be an installer soon.
 3. **create a group**: launch `TaskTile.exe` and customize your first app or file group.
 4. **pin to taskbar**: click **Desktop Shortcut** on your card and pin the generated shortcut directly to your taskbar.
